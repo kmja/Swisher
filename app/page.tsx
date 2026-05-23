@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
@@ -61,7 +62,11 @@ export default function Page() {
 
   const [tipPercent, setTipPercent] = useState(0);
 
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
+
   const fileRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   // Switch language; carry over the meal label only if it is still the
   // untouched default, and remember the choice.
@@ -192,6 +197,42 @@ export default function Page() {
   function spreadEverything() {
     const everyone = namedDiners.map((d) => d.id);
     setItems((prev) => prev.map((it) => ({ ...it, sharers: everyone })));
+  }
+
+  // --- live room -------------------------------------------------------------
+  const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && isValidPhone(payerPhone);
+
+  async function createRoom() {
+    if (!roomReady || creatingRoom) return;
+    setCreatingRoom(true);
+    setRoomError(null);
+    try {
+      const res = await fetch("/api/room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payeeName: diners[0].name,
+          payeeNumber: payerPhone,
+          message,
+          tipPercent,
+          items: validItems.map((it) => ({
+            description: it.description.trim() || t.rowFallback,
+            priceOre: parseAmountToOre(it.priceInput) ?? 0,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not create the room.");
+      try {
+        localStorage.setItem(`swisher-room:${data.id}`, data.personId);
+      } catch {
+        /* storage unavailable */
+      }
+      router.push(`/room/${data.id}`);
+    } catch (err) {
+      setRoomError(err instanceof Error ? err.message : "Could not create the room.");
+      setCreatingRoom(false);
+    }
   }
 
   // --- compute ---------------------------------------------------------------
@@ -361,6 +402,20 @@ export default function Page() {
             {payerPhone && !isValidPhone(payerPhone) && (
               <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
             )}
+          </div>
+
+          <div className="rounded-2xl bg-swish/5 p-4 ring-1 ring-swish/20">
+            <h2 className="text-lg font-bold">{t.liveRoomTitle}</h2>
+            <p className="mt-1 text-sm text-gray-600">{t.liveRoomHint}</p>
+            <button
+              type="button"
+              onClick={createRoom}
+              disabled={!roomReady || creatingRoom}
+              className="mt-3 w-full rounded-xl bg-swish px-4 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+            >
+              {creatingRoom ? t.creatingRoom : t.createRoom}
+            </button>
+            {roomError && <p className="mt-2 text-sm text-red-600">{roomError}</p>}
           </div>
 
           <div>

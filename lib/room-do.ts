@@ -15,6 +15,8 @@ export type RoomState = {
   createdAt: number;
   payeeName: string;
   payeeNumber: string;
+  /** The host's own person id — they collect, so they never get a QR. */
+  payeePersonId: string;
   message: string;
   tipPercent: number;
   items: RoomItem[];
@@ -49,11 +51,13 @@ export class RoomDO extends DurableObject {
   async init(data: RoomInit): Promise<RoomState> {
     const existing = await this.load();
     if (existing) return existing;
+    const host: RoomPerson = { id: uid(), name: data.payeeName.trim().slice(0, 40) || "Värd" };
     const state: RoomState = {
       id: data.id,
       createdAt: Date.now(),
-      payeeName: data.payeeName.slice(0, 40),
+      payeeName: host.name,
       payeeNumber: data.payeeNumber,
+      payeePersonId: host.id,
       message: data.message.slice(0, 50),
       tipPercent: Math.max(0, Math.min(100, Math.round(data.tipPercent || 0))),
       items: data.items.map((it) => ({
@@ -62,7 +66,7 @@ export class RoomDO extends DurableObject {
         priceOre: Math.max(0, Math.round(it.priceOre)),
         claimedBy: [],
       })),
-      people: [],
+      people: [host],
     };
     await this.save(state);
     return state;

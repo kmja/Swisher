@@ -61,6 +61,12 @@ export interface Strings {
   messagePlaceholder: string;
   messageAria: string;
 
+  // live room
+  liveRoomTitle: string;
+  liveRoomHint: string;
+  createRoom: string;
+  creatingRoom: string;
+
   // formatting + message template
   currency: string;
   mealDefault: string;
@@ -132,6 +138,11 @@ const sv: Strings = {
   messagePlaceholder: "Meddelande",
   messageAria: "Meddelande-etikett",
 
+  liveRoomTitle: "Live-rum",
+  liveRoomHint: "Skapa ett rum – så petar var och en in sina egna rätter på sin egen telefon.",
+  createRoom: "Skapa live-rum",
+  creatingRoom: "Skapar…",
+
   currency: "kr",
   mealDefault: "Middag",
   shareSuffix: " – din del",
@@ -200,6 +211,11 @@ const en: Strings = {
   createQr: "Create QR codes",
   messagePlaceholder: "Message",
   messageAria: "Message label",
+
+  liveRoomTitle: "Live room",
+  liveRoomHint: "Create a room — everyone taps their own items on their own phone.",
+  createRoom: "Create live room",
+  creatingRoom: "Creating…",
 
   currency: "kr",
   mealDefault: "Dinner",
