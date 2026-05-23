@@ -4,6 +4,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Swisher — dela kvittot",
   description: "Photograph a receipt, assign items, and generate a locked Swish QR for each person.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Swisher", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

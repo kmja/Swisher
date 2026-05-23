@@ -60,6 +60,8 @@ Open it on your phone (same network, or deploy it) for the camera capture flow.
 | `npm run dev` | dev server |
 | `npm run build` / `npm run start` | production build / serve |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run cf:preview` | build + run on the Cloudflare runtime (workerd) locally |
+| `npm run cf:deploy` | build + deploy to Cloudflare Workers |
 
 ## Configuration
 
@@ -67,3 +69,35 @@ Open it on your phone (same network, or deploy it) for the camera capture flow.
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | — | enables receipt OCR; without it, use manual entry |
 | `OCR_MODEL` | `claude-sonnet-4-6` | model used for OCR |
+
+For local Cloudflare-runtime testing, put these in a `.dev.vars` file (see
+`.dev.vars.example`). In production they are Worker secrets, not env vars.
+
+## Deploy to Cloudflare
+
+The app runs on **Cloudflare Workers** via the [OpenNext](https://opennext.js.org/cloudflare)
+adapter. `wrangler.jsonc` enables `nodejs_compat`, points at the generated
+`.open-next/worker.js`, and binds static assets — so both API routes (OCR and QR)
+run server-side on the Workers runtime.
+
+### Option A — Git integration (recommended)
+
+1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository**, pick
+   this repo.
+2. Set the **deploy command** to `npm run cf:deploy` (and, if asked for a separate
+   build command, `npm run cf:build`).
+3. After the first deploy, add the secret under the Worker's **Settings → Variables
+   and Secrets**: `ANTHROPIC_API_KEY` (and optionally `OCR_MODEL`).
+4. Every push to the production branch redeploys.
+
+### Option B — From your machine
+
+```bash
+npx wrangler login
+npx wrangler secret put ANTHROPIC_API_KEY   # paste your key
+npm run cf:deploy
+```
+
+The Worker comes up at `https://swisher.<your-subdomain>.workers.dev`. Unlike a
+local sandbox, Cloudflare's network can reach `mpc.getswish.net`, so QR codes use
+the official getSwish generator (with the local `swish://` QR kept as a fallback).
