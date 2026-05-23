@@ -249,7 +249,6 @@ export default function Page() {
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={onFile}
             className="hidden"
           />
