@@ -22,7 +22,7 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("Could not read the image."));
       img.onload = () => {
-        const maxDim = 1600;
+        const maxDim = 1280;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const w = Math.round(img.width * scale);
         const h = Math.round(img.height * scale);

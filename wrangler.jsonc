@@ -8,9 +8,11 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "ai": {
+    "binding": "AI"
+  },
   "observability": {
     "enabled": true
   }
-  // ANTHROPIC_API_KEY is set as an encrypted secret, not here:
-  //   npx wrangler secret put ANTHROPIC_API_KEY
+  // OCR uses the Workers AI binding above — no API key or secret needed.
 }

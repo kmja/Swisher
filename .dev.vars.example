@@ -1,4 +1,0 @@
-# Local secrets for `npm run cf:preview` (workerd). Copy to `.dev.vars`.
-# In production these are set with: npx wrangler secret put ANTHROPIC_API_KEY
-ANTHROPIC_API_KEY=
-# OCR_MODEL=claude-sonnet-4-6

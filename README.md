@@ -14,8 +14,8 @@ person scans their QR (or taps the link) and confirms with BankID. One tap per p
 ## Flow
 
 1. **Foto** — photograph the receipt (or pick from gallery).
-2. **Rader** — Claude vision OCR extracts line items + total; review and correct them,
-   then add the bill-payer (their Swish number) and the other diners.
+2. **Rader** — Workers AI vision OCR extracts line items + total; review and correct
+   them, then add the bill-payer (their Swish number) and the other diners.
 3. **Fördela** — tap each diner onto the items they shared. Shared items split equally.
 4. **Betala** — optional dricks (tip) %, then a locked Swish QR + link per person.
 
@@ -34,7 +34,10 @@ amount or recipient before confirming.
 
 - **Next.js (App Router) + TypeScript + Tailwind v4** — one deploy serves the
   mobile UI and the server routes.
-- `app/api/ocr` — Claude vision (server-side, key never reaches the client).
+- `app/api/ocr` — **Cloudflare Workers AI** vision (Llama 3.2 Vision) via the `AI`
+  binding. Keyless: no API key, billed against the account's free daily Neuron
+  allocation. Without the binding (e.g. plain `next start`) it returns 503 and the UI
+  falls back to manual entry.
 - `app/api/qr` — proxies the public getSwish prefilled-QR generator
   (`mpc.getswish.net/qrg-swish/api/v1/prefilled`); if that endpoint is unreachable it
   falls back to generating a QR of the locked `swish://` deep link locally (still
@@ -46,12 +49,15 @@ agreement, no money routed through a business account.
 ## Run
 
 ```bash
-cp .env.example .env.local      # add ANTHROPIC_API_KEY (optional — OCR falls back to manual entry)
 npm install
 npm run dev                     # http://localhost:3000
 ```
 
-Open it on your phone (same network, or deploy it) for the camera capture flow.
+No API keys are needed. OCR runs on Cloudflare Workers AI, which is only available
+once deployed (or under `npm run cf:preview` with `wrangler login`); during plain
+`next dev`/`next start` the OCR call returns 503 and the UI falls back to manual
+entry. Everything else works locally. Open it on your phone (same network, or deploy
+it) for the camera capture flow.
 
 ### Scripts
 
@@ -63,22 +69,12 @@ Open it on your phone (same network, or deploy it) for the camera capture flow.
 | `npm run cf:preview` | build + run on the Cloudflare runtime (workerd) locally |
 | `npm run cf:deploy` | build + deploy to Cloudflare Workers |
 
-## Configuration
-
-| env var | default | purpose |
-| --- | --- | --- |
-| `ANTHROPIC_API_KEY` | — | enables receipt OCR; without it, use manual entry |
-| `OCR_MODEL` | `claude-sonnet-4-6` | model used for OCR |
-
-For local Cloudflare-runtime testing, put these in a `.dev.vars` file (see
-`.dev.vars.example`). In production they are Worker secrets, not env vars.
-
 ## Deploy to Cloudflare
 
 The app runs on **Cloudflare Workers** via the [OpenNext](https://opennext.js.org/cloudflare)
-adapter. `wrangler.jsonc` enables `nodejs_compat`, points at the generated
-`.open-next/worker.js`, and binds static assets — so both API routes (OCR and QR)
-run server-side on the Workers runtime.
+adapter. `wrangler.jsonc` enables `nodejs_compat`, binds static assets and the **`AI`**
+binding (for OCR), and points at the generated `.open-next/worker.js` — so both API
+routes (OCR and QR) run server-side on the Workers runtime. **No secrets required.**
 
 ### Option A — Git integration (recommended)
 
@@ -86,18 +82,17 @@ run server-side on the Workers runtime.
    this repo.
 2. Set the **deploy command** to `npm run cf:deploy` (and, if asked for a separate
    build command, `npm run cf:build`).
-3. After the first deploy, add the secret under the Worker's **Settings → Variables
-   and Secrets**: `ANTHROPIC_API_KEY` (and optionally `OCR_MODEL`).
-4. Every push to the production branch redeploys.
+3. Every push to the production branch redeploys. The Workers AI binding is created
+   automatically from `wrangler.jsonc` — nothing to configure.
 
 ### Option B — From your machine
 
 ```bash
 npx wrangler login
-npx wrangler secret put ANTHROPIC_API_KEY   # paste your key
 npm run cf:deploy
 ```
 
 The Worker comes up at `https://swisher.<your-subdomain>.workers.dev`. Unlike a
 local sandbox, Cloudflare's network can reach `mpc.getswish.net`, so QR codes use
-the official getSwish generator (with the local `swish://` QR kept as a fallback).
+the official getSwish generator (with the local `swish://` QR kept as a fallback),
+and Workers AI powers the OCR.
