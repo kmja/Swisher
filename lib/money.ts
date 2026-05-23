@@ -67,17 +67,36 @@ function splitItemOre(priceOre: number, count: number): number[] {
  * Compute each diner's share.
  * @param tipPercent applied per-person to that person's subtotal (moms is
  *   already price-inclusive on Swedish receipts, so no proportional tax math).
+ * @param groupSize divisor for shared items. When > 0, shared items split that
+ *   many ways (shares beyond the present diners count as unassigned); when 0,
+ *   shared items split across the diners present.
  */
 export function computeShares(
   items: LineItem[],
   diners: Diner[],
   tipPercent: number,
+  groupSize = 0,
 ): { shares: Share[]; unassignedOre: number } {
   const subtotals = new Map<string, number>();
   for (const d of diners) subtotals.set(d.id, 0);
 
   let unassignedOre = 0;
   for (const item of items) {
+    if (item.shared) {
+      const divisor = groupSize > 0 ? groupSize : diners.length;
+      if (divisor <= 0) {
+        unassignedOre += item.priceOre;
+        continue;
+      }
+      const parts = splitItemOre(item.priceOre, divisor);
+      const covered = Math.min(diners.length, divisor);
+      for (let i = 0; i < covered; i++) {
+        subtotals.set(diners[i].id, (subtotals.get(diners[i].id) ?? 0) + parts[i]);
+      }
+      // Shares for people not present (group larger than the diner list).
+      for (let i = covered; i < divisor; i++) unassignedOre += parts[i];
+      continue;
+    }
     const sharers = item.sharers.filter((id) => subtotals.has(id));
     if (sharers.length === 0) {
       unassignedOre += item.priceOre;

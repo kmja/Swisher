@@ -9,7 +9,7 @@ import { translations, type Lang, type Strings } from "@/lib/i18n";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
-type UiItem = { id: string; description: string; priceInput: string; sharers: string[] };
+type UiItem = { id: string; description: string; priceInput: string; sharers: string[]; shared: boolean };
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
@@ -62,6 +62,7 @@ export default function Page() {
 
   const [tipPercent, setTipPercent] = useState(0);
 
+  const [groupSize, setGroupSize] = useState(0);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -129,11 +130,12 @@ export default function Page() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
       setItems(
-        (data.items as { description: string; price: number }[]).map((it) => ({
+        (data.items as { description: string; price: number; shared?: boolean }[]).map((it) => ({
           id: uid(),
           description: it.description,
           priceInput: formatOre(Math.round(it.price * 100)),
           sharers: [],
+          shared: it.shared === true,
         })),
       );
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
@@ -147,7 +149,7 @@ export default function Page() {
 
   function skipToManual() {
     if (items.length === 0) {
-      setItems([{ id: uid(), description: "", priceInput: "", sharers: [] }]);
+      setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false }]);
     }
     setStep("items");
   }
@@ -156,7 +158,7 @@ export default function Page() {
   const updateItem = (id: string, patch: Partial<UiItem>) =>
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   const addItem = () =>
-    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [] }]);
+    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false }]);
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
 
   const updateDiner = (id: string, name: string) =>
@@ -196,7 +198,12 @@ export default function Page() {
   }
   function spreadEverything() {
     const everyone = namedDiners.map((d) => d.id);
-    setItems((prev) => prev.map((it) => ({ ...it, sharers: everyone })));
+    setItems((prev) => prev.map((it) => ({ ...it, shared: false, sharers: everyone })));
+  }
+  function toggleShared(itemId: string) {
+    setItems((prev) =>
+      prev.map((it) => (it.id === itemId ? { ...it, shared: !it.shared, sharers: [] } : it)),
+    );
   }
 
   // --- live room -------------------------------------------------------------
@@ -243,13 +250,14 @@ export default function Page() {
         description: it.description,
         priceOre: parseAmountToOre(it.priceInput) ?? 0,
         sharers: it.sharers,
+        shared: it.shared,
       })),
     [validItems],
   );
 
   const { shares, unassignedOre } = useMemo(
-    () => computeShares(lineItems, namedDiners, tipPercent),
-    [lineItems, namedDiners, tipPercent],
+    () => computeShares(lineItems, namedDiners, tipPercent, groupSize),
+    [lineItems, namedDiners, tipPercent, groupSize],
   );
 
   const payer = namedDiners[0];
@@ -457,46 +465,85 @@ export default function Page() {
           </div>
           <p className="-mt-2 text-sm text-gray-600">{t.assignHint}</p>
 
+          <label className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
+            <span className="text-gray-600">{t.groupSizeLabel}</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={groupSize || ""}
+              onChange={(e) => setGroupSize(Math.max(0, Math.min(50, Number(e.target.value) || 0)))}
+              placeholder={String(namedDiners.length)}
+              className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
+            />
+          </label>
+
           {validItems.map((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
-            const per = it.sharers.length > 0 ? Math.floor(priceOre / it.sharers.length) : 0;
+            const sharedDivisor = groupSize > 0 ? groupSize : namedDiners.length;
+            const per = it.shared
+              ? sharedDivisor > 0
+                ? Math.floor(priceOre / sharedDivisor)
+                : 0
+              : it.sharers.length > 0
+                ? Math.floor(priceOre / it.sharers.length)
+                : 0;
             const allSet = namedDiners.length > 0 && namedDiners.every((d) => it.sharers.includes(d.id));
             return (
-              <div key={it.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5">
+              <div
+                key={it.id}
+                className={`rounded-2xl p-3 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
+              >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">{it.description || t.rowFallback}</span>
                   <span className="shrink-0 text-sm text-gray-600">
                     {formatOre(priceOre)} {t.currency}
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {namedDiners.map((d) => {
-                    const on = it.sharers.includes(d.id);
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => toggleSharer(it.id, d.id)}
-                        className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition ${
-                          on ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
-                        }`}
-                      >
-                        {d.name}
-                      </button>
-                    );
-                  })}
+
+                <div className="mt-2 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => assignAllTo(it.id)}
-                    className="rounded-full px-3 py-1.5 text-sm font-medium text-swish-dark ring-1 ring-gray-200"
+                    onClick={() => toggleShared(it.id)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 ${
+                      it.shared ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
+                    }`}
                   >
-                    {allSet ? t.clear : t.all}
+                    {t.sharedToggle}
                   </button>
+                  {it.shared && <span className="text-xs text-gray-500">{t.sharedSplit(sharedDivisor, formatOre(per))}</span>}
                 </div>
-                {it.sharers.length > 1 && (
-                  <p className="mt-2 text-xs text-gray-500">{t.perPerson(formatOre(per))}</p>
+
+                {!it.shared && (
+                  <>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {namedDiners.map((d) => {
+                        const on = it.sharers.includes(d.id);
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => toggleSharer(it.id, d.id)}
+                            className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition ${
+                              on ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
+                            }`}
+                          >
+                            {d.name}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => assignAllTo(it.id)}
+                        className="rounded-full px-3 py-1.5 text-sm font-medium text-swish-dark ring-1 ring-gray-200"
+                      >
+                        {allSet ? t.clear : t.all}
+                      </button>
+                    </div>
+                    {it.sharers.length > 1 && <p className="mt-2 text-xs text-gray-500">{t.perPerson(formatOre(per))}</p>}
+                    {it.sharers.length === 0 && <p className="mt-2 text-xs text-amber-600">{t.notAssignedYet}</p>}
+                  </>
                 )}
-                {it.sharers.length === 0 && <p className="mt-2 text-xs text-amber-600">{t.notAssignedYet}</p>}
               </div>
             );
           })}

@@ -3,8 +3,10 @@ export type LineItem = {
   description: string;
   /** Price in öre (1 SEK = 100 öre) to avoid floating-point drift. */
   priceOre: number;
-  /** Diner ids sharing this item. Empty = unassigned. */
+  /** Diner ids sharing this item. Empty = unassigned. Ignored when shared. */
   sharers: string[];
+  /** Split across the whole group rather than specific diners. */
+  shared?: boolean;
 };
 
 export type Diner = {
@@ -14,7 +16,7 @@ export type Diner = {
 
 /** Raw structured result from the OCR step (kronor as numbers, comma already parsed). */
 export type OcrResult = {
-  items: { description: string; price: number }[];
+  items: { description: string; price: number; shared?: boolean }[];
   total: number | null;
   moms: number | null;
   dricks: number | null;

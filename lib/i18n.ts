@@ -67,6 +67,11 @@ export interface Strings {
   createRoom: string;
   creatingRoom: string;
 
+  // shared items
+  groupSizeLabel: string;
+  sharedToggle: string;
+  sharedSplit: (n: number, amt: string) => string;
+
   // formatting + message template
   currency: string;
   mealDefault: string;
@@ -143,6 +148,10 @@ const sv: Strings = {
   createRoom: "Skapa live-rum",
   creatingRoom: "Skapar…",
 
+  groupSizeLabel: "Antal som delar (valfritt)",
+  sharedToggle: "Delas av alla",
+  sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} kr/pers`,
+
   currency: "kr",
   mealDefault: "Middag",
   shareSuffix: " – din del",
@@ -216,6 +225,10 @@ const en: Strings = {
   liveRoomHint: "Create a room — everyone taps their own items on their own phone.",
   createRoom: "Create live room",
   creatingRoom: "Creating…",
+
+  groupSizeLabel: "People sharing (optional)",
+  sharedToggle: "Shared",
+  sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} kr each`,
 
   currency: "kr",
   mealDefault: "Dinner",

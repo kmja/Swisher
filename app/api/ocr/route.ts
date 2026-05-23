@@ -10,10 +10,11 @@ export const maxDuration = 60;
 const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number}],"total":number|null,"moms":number|null,"dricks":number|null}
+{"items":[{"description":string,"price":number,"shared":boolean}],"total":number|null,"moms":number|null,"dricks":number|null}
 
 Rules:
 - "items" are the ordered dishes/drinks: a short description and the line price in SEK as a number (e.g. 185.50). Multiply by quantity when a line shows "2 x 95".
+- "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
 - "total" = the amount to pay ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if printed, else null.
@@ -37,9 +38,10 @@ function extractJson(text: string): OcrResult {
   const parsed = JSON.parse(raw);
   const items = Array.isArray(parsed.items)
     ? parsed.items
-        .map((it: { description?: unknown; price?: unknown }) => ({
+        .map((it: { description?: unknown; price?: unknown; shared?: unknown }) => ({
           description: String(it?.description ?? "").trim(),
           price: Number(it?.price),
+          shared: it?.shared === true,
         }))
         .filter((it: { description: string; price: number }) => it.description && Number.isFinite(it.price))
     : [];
