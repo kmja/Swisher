@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
+import { translations, type Lang, type Strings } from "@/lib/i18n";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -12,21 +13,14 @@ type UiItem = { id: string; description: string; priceInput: string; sharers: st
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
-const STEPS: { key: Step; label: string }[] = [
-  { key: "capture", label: "Foto" },
-  { key: "items", label: "Rader" },
-  { key: "assign", label: "Fördela" },
-  { key: "result", label: "Betala" },
-];
-
 /** Downscale a photo to keep the OCR upload small and fast. */
 function fileToCompressedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Kunde inte läsa filen."));
+    reader.onerror = () => reject(new Error("Could not read the file."));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error("Kunde inte läsa bilden."));
+      img.onerror = () => reject(new Error("Could not read the image."));
       img.onload = () => {
         const maxDim = 1600;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
@@ -47,6 +41,9 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
 }
 
 export default function Page() {
+  const [lang, setLang] = useState<Lang>("sv");
+  const t = translations[lang];
+
   const [step, setStep] = useState<Step>("capture");
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -60,15 +57,45 @@ export default function Page() {
   const [payerPhone, setPayerPhone] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
-  const [mealLabel, setMealLabel] = useState("Middag");
+  const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
 
   const [tipPercent, setTipPercent] = useState(0);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Switch language; carry over the meal label only if it is still the
+  // untouched default, and remember the choice.
+  const applyLang = useCallback((next: Lang, prev: Lang) => {
+    setMealLabel((cur) => (cur === translations[prev].mealDefault ? translations[next].mealDefault : cur));
+    setLang(next);
+    if (typeof document !== "undefined") document.documentElement.lang = next;
+    try {
+      localStorage.setItem("swisher-lang", next);
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("swisher-lang");
+    } catch {
+      /* storage unavailable */
+    }
+    if (stored === "sv" || stored === "en") applyLang(stored, "sv");
+    else if (
+      typeof navigator !== "undefined" &&
+      navigator.language &&
+      !navigator.language.toLowerCase().startsWith("sv")
+    ) {
+      applyLang("en", "sv");
+    }
+  }, [applyLang]);
+
   const message = useMemo(
-    () => `${mealLabel} ${today} – din del`.slice(0, 50),
-    [mealLabel, today],
+    () => `${mealLabel} ${today}${t.shareSuffix}`.slice(0, 50),
+    [mealLabel, today, t.shareSuffix],
   );
 
   // --- capture ---------------------------------------------------------------
@@ -80,7 +107,7 @@ export default function Page() {
       const dataUrl = await fileToCompressedDataUrl(file);
       setImageUrl(dataUrl);
     } catch (err) {
-      setOcrError(err instanceof Error ? err.message : "Kunde inte läsa bilden.");
+      setOcrError(err instanceof Error ? err.message : "Could not read the image.");
     }
   }
 
@@ -95,7 +122,7 @@ export default function Page() {
         body: JSON.stringify({ image: imageUrl }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Avläsningen misslyckades.");
+      if (!res.ok) throw new Error(data.error || "OCR failed.");
       setItems(
         (data.items as { description: string; price: number }[]).map((it) => ({
           id: uid(),
@@ -107,7 +134,7 @@ export default function Page() {
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
       setStep("items");
     } catch (err) {
-      setOcrError(err instanceof Error ? err.message : "Avläsningen misslyckades.");
+      setOcrError(err instanceof Error ? err.message : "OCR failed.");
     } finally {
       setOcrLoading(false);
     }
@@ -191,19 +218,21 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28 pt-5">
-      <Header step={step} />
+      <div className="mb-3 flex justify-end">
+        <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
+      </div>
+
+      <Header step={step} t={t} />
 
       {step === "capture" && (
         <section className="mt-6 flex flex-1 flex-col">
-          <h1 className="text-2xl font-bold">Dela kvittot</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Fota kvittot, peta i vem som åt vad, och få en låst Swish-QR per person.
-          </p>
+          <h1 className="text-2xl font-bold">{t.title}</h1>
+          <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
 
           <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="Kvitto" className="max-h-[46vh] w-full object-contain" />
+              <img src={imageUrl} alt="" className="max-h-[46vh] w-full object-contain" />
             ) : (
               <button
                 type="button"
@@ -211,7 +240,7 @@ export default function Page() {
                 className="flex h-56 w-full flex-col items-center justify-center gap-2 text-gray-500"
               >
                 <span className="text-4xl">📷</span>
-                <span className="font-medium">Tryck för att fota kvittot</span>
+                <span className="font-medium">{t.tapToPhoto}</span>
               </button>
             )}
           </div>
@@ -236,14 +265,14 @@ export default function Page() {
                   disabled={ocrLoading}
                   className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
                 >
-                  {ocrLoading ? "Läser av…" : "Läs av kvittot"}
+                  {ocrLoading ? t.reading : t.readReceipt}
                 </button>
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
                 >
-                  Välj annan bild
+                  {t.chooseOther}
                 </button>
               </>
             )}
@@ -253,7 +282,7 @@ export default function Page() {
                 onClick={() => fileRef.current?.click()}
                 className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
               >
-                Fota eller välj bild
+                {t.photoOrChoose}
               </button>
             )}
             <button
@@ -261,7 +290,7 @@ export default function Page() {
               onClick={skipToManual}
               className="w-full rounded-xl px-4 py-3 font-medium text-gray-600 active:bg-gray-100"
             >
-              Hoppa över – skriv in själv
+              {t.skipManual}
             </button>
           </div>
         </section>
@@ -270,28 +299,28 @@ export default function Page() {
       {step === "items" && (
         <section className="mt-6 flex flex-1 flex-col gap-6">
           <div>
-            <h2 className="text-xl font-bold">Rader</h2>
-            <p className="text-sm text-gray-600">Kontrollera och rätta avläsningen. Priser inkl. moms.</p>
+            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+            <p className="text-sm text-gray-600">{t.itemsHint}</p>
             <div className="mt-3 space-y-2">
               {items.map((it) => (
                 <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
                   <input
                     value={it.description}
                     onChange={(e) => updateItem(it.id, { description: e.target.value })}
-                    placeholder="Beskrivning"
+                    placeholder={t.descPlaceholder}
                     className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
                   />
                   <input
                     value={it.priceInput}
                     onChange={(e) => updateItem(it.id, { priceInput: e.target.value })}
                     inputMode="decimal"
-                    placeholder="0,00"
+                    placeholder={t.pricePlaceholder}
                     className="w-24 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeItem(it.id)}
-                    aria-label="Ta bort rad"
+                    aria-label={t.removeRow}
                     className="px-2 text-gray-400 active:text-red-500"
                   >
                     ✕
@@ -300,56 +329,56 @@ export default function Page() {
               ))}
             </div>
             <button type="button" onClick={addItem} className="mt-2 text-sm font-medium text-swish-dark">
-              + Lägg till rad
+              {t.addRow}
             </button>
 
             <div className="mt-3 flex justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
-              <span className="text-gray-600">Summa rader</span>
-              <span className="font-semibold">{formatOre(itemsSumOre)} kr</span>
+              <span className="text-gray-600">{t.rowsSum}</span>
+              <span className="font-semibold">
+                {formatOre(itemsSumOre)} {t.currency}
+              </span>
             </div>
             {receiptTotal !== null && Math.abs(receiptTotal - itemsSumOre) > 0 && (
-              <p className="mt-1 text-xs text-amber-600">
-                Kvittots total ({formatOre(receiptTotal)} kr) skiljer sig från summan av raderna.
-              </p>
+              <p className="mt-1 text-xs text-amber-600">{t.totalMismatch(formatOre(receiptTotal))}</p>
             )}
           </div>
 
           <div>
-            <h2 className="text-xl font-bold">Vem la ut för notan?</h2>
-            <p className="text-sm text-gray-600">Den första personen får pengarna via Swish.</p>
+            <h2 className="text-xl font-bold">{t.payerTitle}</h2>
+            <p className="text-sm text-gray-600">{t.payerHint}</p>
             <input
               value={diners[0]?.name ?? ""}
               onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-              placeholder="Ditt namn"
+              placeholder={t.yourName}
               className="mt-2 w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
             />
             <input
               value={payerPhone}
               onChange={(e) => setPayerPhone(e.target.value)}
               inputMode="tel"
-              placeholder="Swish-nummer (07XXXXXXXX)"
+              placeholder={t.swishNumber}
               className="mt-2 w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
             />
             {payerPhone && !isValidPhone(payerPhone) && (
-              <p className="mt-1 text-xs text-red-600">Ange ett giltigt svenskt mobilnummer.</p>
+              <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
             )}
           </div>
 
           <div>
-            <h2 className="text-xl font-bold">Vilka fler var med?</h2>
+            <h2 className="text-xl font-bold">{t.whoElse}</h2>
             <div className="mt-2 space-y-2">
               {diners.slice(1).map((d) => (
                 <div key={d.id} className="flex items-center gap-2">
                   <input
                     value={d.name}
                     onChange={(e) => updateDiner(d.id, e.target.value)}
-                    placeholder="Namn"
+                    placeholder={t.namePlaceholder}
                     className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeDiner(d.id)}
-                    aria-label="Ta bort person"
+                    aria-label={t.removePerson}
                     className="px-3 text-gray-400 active:text-red-500"
                   >
                     ✕
@@ -358,7 +387,7 @@ export default function Page() {
               ))}
             </div>
             <button type="button" onClick={addDiner} className="mt-2 text-sm font-medium text-swish-dark">
-              + Lägg till person
+              {t.addPerson}
             </button>
           </div>
         </section>
@@ -367,12 +396,12 @@ export default function Page() {
       {step === "assign" && (
         <section className="mt-6 flex flex-1 flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Fördela rader</h2>
+            <h2 className="text-xl font-bold">{t.assignTitle}</h2>
             <button type="button" onClick={spreadEverything} className="text-sm font-medium text-swish-dark">
-              Dela allt lika
+              {t.splitAll}
             </button>
           </div>
-          <p className="-mt-2 text-sm text-gray-600">Tryck på namnen som var med på varje rad.</p>
+          <p className="-mt-2 text-sm text-gray-600">{t.assignHint}</p>
 
           {validItems.map((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
@@ -381,8 +410,10 @@ export default function Page() {
             return (
               <div key={it.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-medium">{it.description || "Rad"}</span>
-                  <span className="shrink-0 text-sm text-gray-600">{formatOre(priceOre)} kr</span>
+                  <span className="truncate font-medium">{it.description || t.rowFallback}</span>
+                  <span className="shrink-0 text-sm text-gray-600">
+                    {formatOre(priceOre)} {t.currency}
+                  </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {namedDiners.map((d) => {
@@ -405,34 +436,30 @@ export default function Page() {
                     onClick={() => assignAllTo(it.id)}
                     className="rounded-full px-3 py-1.5 text-sm font-medium text-swish-dark ring-1 ring-gray-200"
                   >
-                    {allSet ? "Rensa" : "Alla"}
+                    {allSet ? t.clear : t.all}
                   </button>
                 </div>
                 {it.sharers.length > 1 && (
-                  <p className="mt-2 text-xs text-gray-500">≈ {formatOre(per)} kr per person</p>
+                  <p className="mt-2 text-xs text-gray-500">{t.perPerson(formatOre(per))}</p>
                 )}
-                {it.sharers.length === 0 && (
-                  <p className="mt-2 text-xs text-amber-600">Inte fördelad än</p>
-                )}
+                {it.sharers.length === 0 && <p className="mt-2 text-xs text-amber-600">{t.notAssignedYet}</p>}
               </div>
             );
           })}
 
           {unassignedOre > 0 && (
-            <p className="text-sm text-amber-600">
-              {formatOre(unassignedOre)} kr är inte fördelat och räknas inte med.
-            </p>
+            <p className="text-sm text-amber-600">{t.unassignedNote(formatOre(unassignedOre))}</p>
           )}
         </section>
       )}
 
       {step === "result" && (
         <section className="mt-6 flex flex-1 flex-col gap-4">
-          <h2 className="text-xl font-bold">Betala</h2>
+          <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <div className="flex items-center justify-between">
-              <span className="font-medium">Dricks</span>
+              <span className="font-medium">{t.tip}</span>
               <span className="text-sm text-gray-600">{tipPercent}%</span>
             </div>
             <div className="mt-2 flex gap-2">
@@ -445,12 +472,12 @@ export default function Page() {
                     tipPercent === p ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
                   }`}
                 >
-                  {p === 0 ? "Ingen" : `${p}%`}
+                  {p === 0 ? t.none : `${p}%`}
                 </button>
               ))}
             </div>
             <label className="mt-2 block text-xs text-gray-500">
-              Eget värde (%)
+              {t.customPercent}
               <input
                 type="number"
                 min={0}
@@ -463,13 +490,13 @@ export default function Page() {
           </div>
 
           <div className="flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-white">
-            <span className="text-sm text-white/70">Att fördela</span>
-            <span className="font-semibold">{formatOre(assignedTotalOre)} kr</span>
+            <span className="text-sm text-white/70">{t.toDistribute}</span>
+            <span className="font-semibold">
+              {formatOre(assignedTotalOre)} {t.currency}
+            </span>
           </div>
           {unassignedOre > 0 && (
-            <p className="-mt-2 text-sm text-amber-600">
-              Obs: {formatOre(unassignedOre)} kr är inte fördelat.
-            </p>
+            <p className="-mt-2 text-sm text-amber-600">{t.unassignedWarn(formatOre(unassignedOre))}</p>
           )}
 
           <div className="space-y-3">
@@ -480,10 +507,12 @@ export default function Page() {
                   className="rounded-2xl border border-dashed border-gray-300 bg-white/60 p-4"
                 >
                   <div className="flex items-baseline justify-between">
-                    <span className="font-semibold">{s.name} (du – får pengarna)</span>
-                    <span className="text-gray-600">{formatOre(s.totalOre)} kr</span>
+                    <span className="font-semibold">{t.payerCard(s.name)}</span>
+                    <span className="text-gray-600">
+                      {formatOre(s.totalOre)} {t.currency}
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">Din egen del. Du swishar inte dig själv.</p>
+                  <p className="mt-1 text-xs text-gray-500">{t.payerCardHint}</p>
                 </div>
               ) : s.totalOre > 0 ? (
                 <QrCard
@@ -492,6 +521,7 @@ export default function Page() {
                   payee={normalizedPayer}
                   amountOre={s.totalOre}
                   message={message}
+                  t={t}
                 />
               ) : null,
             )}
@@ -501,6 +531,7 @@ export default function Page() {
 
       <Footer
         step={step}
+        t={t}
         message={message}
         mealLabel={mealLabel}
         setMealLabel={setMealLabel}
@@ -523,15 +554,37 @@ export default function Page() {
   );
 }
 
-function Header({ step }: { step: Step }) {
-  const activeIndex = STEPS.findIndex((s) => s.key === step);
+function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-full bg-white text-xs font-semibold ring-1 ring-gray-200">
+      {(["sv", "en"] as Lang[]).map((l) => (
+        <button
+          key={l}
+          type="button"
+          aria-pressed={lang === l}
+          onClick={() => onChange(l)}
+          className={`px-3 py-1.5 ${lang === l ? "bg-swish text-white" : "text-gray-500 active:bg-gray-100"}`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Header({ step, t }: { step: Step; t: Strings }) {
+  const order: { key: Step; label: string }[] = [
+    { key: "capture", label: t.steps.capture },
+    { key: "items", label: t.steps.items },
+    { key: "assign", label: t.steps.assign },
+    { key: "result", label: t.steps.pay },
+  ];
+  const activeIndex = order.findIndex((s) => s.key === step);
   return (
     <header className="flex items-center gap-2">
-      {STEPS.map((s, i) => (
+      {order.map((s, i) => (
         <div key={s.key} className="flex flex-1 flex-col items-center gap-1">
-          <div
-            className={`h-1.5 w-full rounded-full ${i <= activeIndex ? "bg-swish" : "bg-gray-200"}`}
-          />
+          <div className={`h-1.5 w-full rounded-full ${i <= activeIndex ? "bg-swish" : "bg-gray-200"}`} />
           <span className={`text-[11px] ${i === activeIndex ? "font-semibold text-swish-dark" : "text-gray-400"}`}>
             {s.label}
           </span>
@@ -543,6 +596,7 @@ function Header({ step }: { step: Step }) {
 
 function Footer({
   step,
+  t,
   message,
   mealLabel,
   setMealLabel,
@@ -551,6 +605,7 @@ function Footer({
   onForward,
 }: {
   step: Step;
+  t: Strings;
   message: string;
   mealLabel: string;
   setMealLabel: (v: string) => void;
@@ -568,14 +623,14 @@ function Footer({
           onClick={onBack}
           className="rounded-xl bg-gray-100 px-5 py-3 font-medium active:bg-gray-200"
         >
-          Tillbaka
+          {t.back}
         </button>
         {step === "items" && (
           <input
             value={mealLabel}
             onChange={(e) => setMealLabel(e.target.value)}
-            placeholder="Meddelande"
-            aria-label="Meddelande-etikett"
+            placeholder={t.messagePlaceholder}
+            aria-label={t.messageAria}
             className="min-w-0 flex-1 rounded-xl bg-gray-50 px-3 py-3 text-sm outline-none"
           />
         )}
@@ -588,7 +643,7 @@ function Footer({
             disabled={!canForward}
             className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
           >
-            {step === "assign" ? "Skapa QR-koder" : "Vidare"}
+            {step === "assign" ? t.createQr : t.forward}
           </button>
         )}
       </div>
