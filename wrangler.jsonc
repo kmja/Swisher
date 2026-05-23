@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "swisher",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -11,8 +11,13 @@
   "ai": {
     "binding": "AI"
   },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM", "class_name": "RoomDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RoomDO"] }],
   "observability": {
     "enabled": true
   }
   // OCR uses the Workers AI binding above — no API key or secret needed.
+  // worker.ts re-exports the OpenNext handler + the RoomDO Durable Object.
 }
