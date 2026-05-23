@@ -26,3 +26,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# cloudflare / opennext
+/.open-next/
+/.wrangler/
+.dev.vars
+.dev.vars.local
+cloudflare-env.d.ts
