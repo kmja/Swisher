@@ -271,8 +271,12 @@ export default function RoomPage() {
               {CATEGORY_ORDER.map((cat) => {
                 const all = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
-                const unclaimed = all.filter((it) => it.claimedBy.length === 0);
-                const claimed = all.filter((it) => it.claimedBy.length > 0);
+                const isMine = (it: RoomState["items"][number]) => it.claimedBy.includes(personId);
+                // Main list: unclaimed (first) + items I claimed (kept visible). Others' claims collapse.
+                const mainItems = all
+                  .filter((it) => it.claimedBy.length === 0 || isMine(it))
+                  .sort((a, b) => (isMine(a) ? 1 : 0) - (isMine(b) ? 1 : 0));
+                const othersItems = all.filter((it) => it.claimedBy.length > 0 && !isMine(it));
                 const claimers = (it: RoomState["items"][number]) =>
                   it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
                 return (
@@ -281,31 +285,40 @@ export default function RoomPage() {
                       <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
-                    {unclaimed.map((it) => (
-                      <button
-                        key={it.id}
-                        type="button"
-                        onClick={() => toggleClaim(it.id)}
-                        disabled={busyItem === it.id}
-                        className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-black/5 transition"
-                      >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 text-xs text-transparent">
-                          ✓
-                        </span>
-                        <span className="block min-w-0 flex-1 truncate font-medium">
-                          <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
-                          {it.description}
-                        </span>
-                        <span className="shrink-0 text-sm font-semibold">
-                          {formatOre(it.priceOre)} {tx.currency}
-                        </span>
-                      </button>
-                    ))}
-                    {claimed.length > 0 && (
+                    {mainItems.map((it) => {
+                      const mine = isMine(it);
+                      return (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => toggleClaim(it.id)}
+                          disabled={busyItem === it.id}
+                          className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+                            mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+                              mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <span className="block min-w-0 flex-1 truncate font-medium">
+                            <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                            {it.description}
+                          </span>
+                          <span className="shrink-0 text-sm font-semibold">
+                            {formatOre(it.priceOre)} {tx.currency}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {othersItems.length > 0 && (
                       <details className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
-                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(claimed.length)}</summary>
+                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(othersItems.length)}</summary>
                         <div className="mt-2 space-y-1">
-                          {claimed.map((it) => (
+                          {othersItems.map((it) => (
                             <button
                               key={it.id}
                               type="button"
@@ -313,7 +326,7 @@ export default function RoomPage() {
                               disabled={busyItem === it.id}
                               className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-gray-100"
                             >
-                              <span className={it.claimedBy.includes(personId) ? "text-swish-dark" : "text-emerald-500"}>✓</span>
+                              <span className="text-emerald-500">✓</span>
                               <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description}</span>
                               <span className="shrink-0 text-xs text-gray-400">{claimers(it)}</span>
                               <span className="shrink-0 text-gray-400 line-through">{formatOre(it.priceOre)}</span>
