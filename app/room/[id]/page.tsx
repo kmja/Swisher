@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
-import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { categoryFor, emojiFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, LineItem } from "@/lib/types";
 
@@ -292,7 +292,10 @@ export default function RoomPage() {
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 text-xs text-transparent">
                           ✓
                         </span>
-                        <span className="block min-w-0 flex-1 truncate font-medium">{it.description}</span>
+                        <span className="block min-w-0 flex-1 truncate font-medium">
+                          <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                          {it.description}
+                        </span>
                         <span className="shrink-0 text-sm font-semibold">
                           {formatOre(it.priceOre)} {tx.currency}
                         </span>

@@ -12,6 +12,7 @@ export interface Strings {
   scanGuide: string;
   reading: string;
   scanning: string;
+  scanPhrases: string[];
   itemsFound: (n: number) => string;
   readReceipt: string;
   chooseOther: string;
@@ -115,6 +116,7 @@ const sv: Strings = {
   scanGuide: "Få plats med hela kvittot i ramen",
   reading: "Läser av…",
   scanning: "Skannar kvittot…",
+  scanPhrases: ["Läser av rader…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
   itemsFound: (n) => `${n} rader tillagda`,
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
@@ -209,6 +211,7 @@ const en: Strings = {
   scanGuide: "Fit the whole receipt in the frame",
   reading: "Reading…",
   scanning: "Scanning receipt…",
+  scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],
   itemsFound: (n) => `${n} items added`,
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",

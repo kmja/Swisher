@@ -6,7 +6,7 @@ import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre, splitOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
-import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { categoryFor, emojiFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -82,6 +82,7 @@ export default function Page() {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
+  const [scanPhase, setScanPhase] = useState(0);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [images, setImages] = useState<string[]>([]);
@@ -144,6 +145,14 @@ export default function Page() {
     () => `${mealLabel} ${eventDate}${t.shareSuffix}`.slice(0, 50),
     [mealLabel, eventDate, t.shareSuffix],
   );
+
+  // Cycle the scanning status text while OCR runs.
+  useEffect(() => {
+    if (!ocrLoading) return;
+    setScanPhase(0);
+    const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
+    return () => clearInterval(iv);
+  }, [ocrLoading]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -469,8 +478,24 @@ export default function Page() {
             ) : null}
             {ocrLoading && (
               <div className="absolute inset-0 overflow-hidden">
-                <div className="scanline absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-transparent via-swish/50 to-transparent" />
-                <div className="scan-pulse absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-swish" />
+                <div className="absolute inset-0 bg-black/40" />
+                <div className="scan-grid absolute inset-0 opacity-40" />
+                {/* sweeping band + bright glowing beam */}
+                <div className="scanline absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-transparent via-swish/45 to-transparent" />
+                <div className="scanline absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
+                {/* glowing corner brackets */}
+                <div className="scan-glow pointer-events-none absolute inset-4">
+                  <span className="absolute left-0 top-0 h-6 w-6 border-l-4 border-t-4 border-swish" />
+                  <span className="absolute right-0 top-0 h-6 w-6 border-r-4 border-t-4 border-swish" />
+                  <span className="absolute bottom-0 left-0 h-6 w-6 border-b-4 border-l-4 border-swish" />
+                  <span className="absolute bottom-0 right-0 h-6 w-6 border-b-4 border-r-4 border-swish" />
+                </div>
+                <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-1 text-white">
+                  <span className="text-2xl">🔎</span>
+                  <span className="text-sm font-semibold drop-shadow">
+                    {t.scanPhrases[scanPhase % t.scanPhrases.length]}
+                  </span>
+                </div>
               </div>
             )}
             {imageUrl ? null : (
@@ -590,7 +615,7 @@ export default function Page() {
               {items.map((it, idx) => (
                 <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
                   <span aria-hidden className="pl-1 text-lg">
-                    {CATEGORY_EMOJI[categoryFor(it.description, it.category)]}
+                    {emojiFor(it.description, it.category)}
                   </span>
                   <input
                     value={it.description}
@@ -818,7 +843,10 @@ export default function Page() {
                 className={`rounded-2xl p-3 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-medium">{it.description || t.rowFallback}</span>
+                  <span className="truncate font-medium">
+                    <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                    {it.description || t.rowFallback}
+                  </span>
                   <span className="shrink-0 text-sm text-gray-600">
                     {formatOre(priceOre)} {t.currency}
                   </span>
