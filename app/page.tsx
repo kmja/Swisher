@@ -62,6 +62,8 @@ export default function Page() {
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
+  const [zoomItem, setZoomItem] = useState<number | null>(null);
+  const zoomScrollRef = useRef<HTMLDivElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
   const [payerPhone, setPayerPhone] = useState("");
@@ -525,7 +527,7 @@ export default function Page() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.itemsHint}</p>
             <div className="mt-3 space-y-2">
-              {items.map((it) => (
+              {items.map((it, idx) => (
                 <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
                   <span aria-hidden className="pl-1 text-lg">
                     {CATEGORY_EMOJI[categoryFor(it.description, it.category)]}
@@ -541,13 +543,23 @@ export default function Page() {
                     onChange={(e) => updateItem(it.id, { priceInput: e.target.value })}
                     inputMode="decimal"
                     placeholder={t.pricePlaceholder}
-                    className="w-24 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                    className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                   />
+                  {imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setZoomItem(idx)}
+                      aria-label={t.viewSource}
+                      className="px-1 text-gray-400 active:text-swish-dark"
+                    >
+                      🔍
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeItem(it.id)}
                     aria-label={t.removeRow}
-                    className="px-2 text-gray-400 active:text-red-500"
+                    className="px-1 text-gray-400 active:text-red-500"
                   >
                     ✕
                   </button>
@@ -843,6 +855,36 @@ export default function Page() {
             )}
           </div>
         </section>
+      )}
+
+      {zoomItem !== null && imageUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
+            <span className="min-w-0 truncate text-sm font-medium">{items[zoomItem]?.description || t.viewSource}</span>
+            <button
+              type="button"
+              onClick={() => setZoomItem(null)}
+              className="shrink-0 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="px-4 pb-2 text-center text-xs text-white/60">{t.viewSourceHint}</p>
+          <div ref={zoomScrollRef} className="flex-1 overflow-auto">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt=""
+              onLoad={(e) => {
+                const c = zoomScrollRef.current;
+                if (!c || zoomItem === null || items.length === 0) return;
+                const frac = (zoomItem + 0.5) / items.length;
+                c.scrollTop = Math.max(0, frac * e.currentTarget.clientHeight - c.clientHeight / 2);
+              }}
+              className="w-[230%] max-w-none"
+            />
+          </div>
+        </div>
       )}
 
       <Footer

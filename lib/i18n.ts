@@ -25,6 +25,8 @@ export interface Strings {
   pricePlaceholder: string;
   removeRow: string;
   addRow: string;
+  viewSource: string;
+  viewSourceHint: string;
   rowsSum: string;
   totalMismatch: (total: string) => string;
   payerTitle: string;
@@ -120,6 +122,8 @@ const sv: Strings = {
   pricePlaceholder: "0,00",
   removeRow: "Ta bort rad",
   addRow: "+ Lägg till rad",
+  viewSource: "Visa på kvittot",
+  viewSourceHint: "Bläddra för att läsa kvittot",
   rowsSum: "Summa rader",
   totalMismatch: (t) => `Kvittots total (${t} kr) skiljer sig från summan av raderna.`,
   payerTitle: "Vem la ut för notan?",
@@ -207,6 +211,8 @@ const en: Strings = {
   pricePlaceholder: "0.00",
   removeRow: "Remove row",
   addRow: "+ Add row",
+  viewSource: "Show on receipt",
+  viewSourceHint: "Scroll to read the receipt",
   rowsSum: "Items total",
   totalMismatch: (t) => `Receipt total (${t} kr) differs from the sum of the items.`,
   payerTitle: "Who paid the bill?",
