@@ -6,10 +6,18 @@ import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
+import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
-type UiItem = { id: string; description: string; priceInput: string; sharers: string[]; shared: boolean };
+type UiItem = {
+  id: string;
+  description: string;
+  priceInput: string;
+  sharers: string[];
+  shared: boolean;
+  category: string;
+};
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
@@ -130,12 +138,13 @@ export default function Page() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
       setItems(
-        (data.items as { description: string; price: number; shared?: boolean }[]).map((it) => ({
+        (data.items as { description: string; price: number; shared?: boolean; category?: string }[]).map((it) => ({
           id: uid(),
           description: it.description,
           priceInput: formatOre(Math.round(it.price * 100)),
           sharers: [],
           shared: it.shared === true,
+          category: it.category ?? "",
         })),
       );
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
@@ -149,7 +158,7 @@ export default function Page() {
 
   function skipToManual() {
     if (items.length === 0) {
-      setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false }]);
+      setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "" }]);
     }
     setStep("items");
   }
@@ -158,7 +167,7 @@ export default function Page() {
   const updateItem = (id: string, patch: Partial<UiItem>) =>
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   const addItem = () =>
-    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false }]);
+    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "" }]);
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
 
   const updateDiner = (id: string, name: string) =>
@@ -225,6 +234,7 @@ export default function Page() {
           items: validItems.map((it) => ({
             description: it.description.trim() || t.rowFallback,
             priceOre: parseAmountToOre(it.priceInput) ?? 0,
+            category: categoryFor(it.description, it.category),
           })),
         }),
       });
@@ -352,6 +362,9 @@ export default function Page() {
             <div className="mt-3 space-y-2">
               {items.map((it) => (
                 <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                  <span aria-hidden className="pl-1 text-lg">
+                    {CATEGORY_EMOJI[categoryFor(it.description, it.category)]}
+                  </span>
                   <input
                     value={it.description}
                     onChange={(e) => updateItem(it.id, { description: e.target.value })}
@@ -478,7 +491,16 @@ export default function Page() {
             />
           </label>
 
-          {validItems.map((it) => {
+          {CATEGORY_ORDER.map((cat) => {
+            const groupItems = validItems.filter((it) => categoryFor(it.description, it.category) === cat);
+            if (groupItems.length === 0) return null;
+            return (
+              <div key={cat} className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 pt-1 text-sm font-semibold text-gray-500">
+                  <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
+                  <span>{CATEGORY_LABEL[lang][cat]}</span>
+                </div>
+                {groupItems.map((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
             const sharedDivisor = groupSize > 0 ? groupSize : namedDiners.length;
             const per = it.shared
@@ -544,6 +566,9 @@ export default function Page() {
                     {it.sharers.length === 0 && <p className="mt-2 text-xs text-amber-600">{t.notAssignedYet}</p>}
                   </>
                 )}
+              </div>
+            );
+          })}
               </div>
             );
           })}

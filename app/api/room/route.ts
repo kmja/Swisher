@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     payeeNumber?: string;
     message?: string;
     tipPercent?: number;
-    items?: { description?: unknown; priceOre?: unknown }[];
+    items?: { description?: unknown; priceOre?: unknown; category?: unknown }[];
   };
   try {
     body = await req.json();
@@ -47,7 +47,11 @@ export async function POST(req: Request) {
   }
 
   const items = (Array.isArray(body.items) ? body.items : [])
-    .map((it) => ({ description: String(it?.description ?? "").trim(), priceOre: Math.round(Number(it?.priceOre)) }))
+    .map((it) => ({
+      description: String(it?.description ?? "").trim(),
+      priceOre: Math.round(Number(it?.priceOre)),
+      category: typeof it?.category === "string" ? it.category : undefined,
+    }))
     .filter((it) => it.description && Number.isFinite(it.priceOre) && it.priceOre > 0)
     .slice(0, 100);
   if (items.length === 0) {

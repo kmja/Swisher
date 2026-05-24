@@ -4,6 +4,7 @@ export type RoomItem = {
   id: string;
   description: string;
   priceOre: number;
+  category?: string;
   /** Person ids who claimed this item. Multiple claimers = split equally. */
   claimedBy: string[];
 };
@@ -29,7 +30,7 @@ export type RoomInit = {
   payeeNumber: string;
   message: string;
   tipPercent: number;
-  items: { description: string; priceOre: number }[];
+  items: { description: string; priceOre: number; category?: string }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -64,6 +65,7 @@ export class RoomDO extends DurableObject {
         id: uid(),
         description: it.description.slice(0, 80),
         priceOre: Math.max(0, Math.round(it.priceOre)),
+        category: it.category,
         claimedBy: [],
       })),
       people: [host],

@@ -16,7 +16,7 @@ export type Diner = {
 
 /** Raw structured result from the OCR step (kronor as numbers, comma already parsed). */
 export type OcrResult = {
-  items: { description: string; price: number; shared?: boolean }[];
+  items: { description: string; price: number; shared?: boolean; category?: string }[];
   total: number | null;
   moms: number | null;
   dricks: number | null;

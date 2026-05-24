@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
+import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, LineItem } from "@/lib/types";
 
@@ -271,8 +272,17 @@ export default function RoomPage() {
           <section>
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
-            <div className="mt-3 space-y-2">
-              {state.items.map((it) => {
+            <div className="mt-3 space-y-3">
+              {CATEGORY_ORDER.map((cat) => {
+                const groupItems = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
+                if (groupItems.length === 0) return null;
+                return (
+                  <div key={cat} className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
+                      <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
+                      <span>{CATEGORY_LABEL[lang][cat]}</span>
+                    </div>
+                    {groupItems.map((it) => {
                 const mine = it.claimedBy.includes(personId);
                 const n = it.claimedBy.length;
                 return (
@@ -298,6 +308,9 @@ export default function RoomPage() {
                     </span>
                     <span className="shrink-0 text-sm font-semibold">{formatOre(it.priceOre)} {tx.currency}</span>
                   </button>
+                );
+              })}
+                  </div>
                 );
               })}
             </div>
