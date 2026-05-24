@@ -274,7 +274,10 @@ export default function RoomPage() {
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
               {CATEGORY_ORDER.map((cat) => {
-                const groupItems = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
+                const groupItems = state.items
+                  .filter((it) => categoryFor(it.description, it.category) === cat)
+                  // Unclaimed first so latecomers see what's still free; claimed sink.
+                  .sort((a, b) => (a.claimedBy.length > 0 ? 1 : 0) - (b.claimedBy.length > 0 ? 1 : 0));
                 if (groupItems.length === 0) return null;
                 return (
                   <div key={cat} className="space-y-2">
@@ -285,6 +288,7 @@ export default function RoomPage() {
                     {groupItems.map((it) => {
                 const mine = it.claimedBy.includes(personId);
                 const n = it.claimedBy.length;
+                const claimedByOthers = !mine && n > 0;
                 return (
                   <button
                     key={it.id}
@@ -292,7 +296,7 @@ export default function RoomPage() {
                     onClick={() => toggleClaim(it.id)}
                     disabled={busyItem === it.id}
                     className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-                      mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+                      mine ? "bg-swish/10 ring-swish" : claimedByOthers ? "bg-white opacity-55 ring-black/5" : "bg-white ring-black/5"
                     }`}
                   >
                     <span

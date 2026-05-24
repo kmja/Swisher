@@ -76,6 +76,9 @@ export default function Page() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
   const router = useRouter();
 
   // Switch language; carry over the meal label only if it is still the
@@ -114,6 +117,62 @@ export default function Page() {
   );
 
   // --- capture ---------------------------------------------------------------
+  // Live camera preview on the capture step. Falls back silently (cameraActive
+  // stays false) when there's no camera or permission is denied.
+  useEffect(() => {
+    if (step !== "capture" || imageUrl) return;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) return;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          try {
+            await videoRef.current.play();
+          } catch {
+            /* autoplay may be deferred; the element still shows the stream */
+          }
+        }
+        setCameraActive(true);
+      } catch {
+        setCameraActive(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setCameraActive(false);
+    };
+  }, [step, imageUrl]);
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const maxDim = 1280;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    setCameraActive(false);
+    setOcrError(null);
+    setImageUrl(canvas.toDataURL("image/jpeg", 0.82));
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -299,19 +358,30 @@ export default function Page() {
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
 
-          <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div className="relative mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="max-h-[46vh] w-full object-contain" />
             ) : (
-              <button
-                type="button"
-                onClick={() => cameraRef.current?.click()}
-                className="flex h-56 w-full flex-col items-center justify-center gap-2 text-gray-500"
-              >
-                <span className="text-4xl">📷</span>
-                <span className="font-medium">{t.tapToPhoto}</span>
-              </button>
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`h-72 w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
+                />
+                {!cameraActive && (
+                  <button
+                    type="button"
+                    onClick={() => cameraRef.current?.click()}
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white text-gray-500"
+                  >
+                    <span className="text-4xl">📷</span>
+                    <span className="font-medium">{t.tapToPhoto}</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -321,32 +391,53 @@ export default function Page() {
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
           <div className="mt-5 space-y-2">
-            {imageUrl && (
-              <button
-                type="button"
-                onClick={runOcr}
-                disabled={ocrLoading}
-                className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
-              >
-                {ocrLoading ? t.reading : t.readReceipt}
-              </button>
+            {imageUrl ? (
+              <>
+                <button
+                  type="button"
+                  onClick={runOcr}
+                  disabled={ocrLoading}
+                  className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
+                >
+                  {ocrLoading ? t.reading : t.readReceipt}
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl(null)}
+                    className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                  >
+                    {t.takePhoto}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                  >
+                    {t.chooseLibrary}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {cameraActive && (
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                  >
+                    {t.takePhoto}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                >
+                  {t.chooseLibrary}
+                </button>
+              </>
             )}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => cameraRef.current?.click()}
-                className={`rounded-xl px-4 py-3 font-medium ${imageUrl ? "bg-gray-100 active:bg-gray-200" : "bg-swish text-white active:bg-swish-dark"}`}
-              >
-                {t.takePhoto}
-              </button>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className={`rounded-xl px-4 py-3 font-medium ${imageUrl ? "bg-gray-100 active:bg-gray-200" : "bg-swish text-white active:bg-swish-dark"}`}
-              >
-                {t.chooseLibrary}
-              </button>
-            </div>
             <button
               type="button"
               onClick={skipToManual}
