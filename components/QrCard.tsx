@@ -18,10 +18,33 @@ type Props = {
 export default function QrCard({ name, payee, amountOre, message, t, primaryPay }: Props) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [noApp, setNoApp] = useState(false);
 
   const uri = buildSwishUri({ payee, amountOre, message });
   const qrSrc = `/api/qr?payee=${encodeURIComponent(payee)}&amountOre=${amountOre}&message=${encodeURIComponent(message)}`;
   const amount = formatOre(amountOre);
+
+  // A swish:// link silently fails (or shows the browser's own error) when the
+  // Swish app isn't installed. Tapping should hide the page; if we're still
+  // visible shortly after, the app didn't open — show the QR fallback hint.
+  function trackSwishOpen() {
+    setNoApp(false);
+    let done = false;
+    const finish = () => {
+      done = true;
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", finish);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") finish();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", finish);
+    setTimeout(() => {
+      if (!done && document.visibilityState === "visible") setNoApp(true);
+      finish();
+    }, 2000);
+  }
 
   async function share() {
     try {
@@ -57,6 +80,7 @@ export default function QrCard({ name, payee, amountOre, message, t, primaryPay 
       {primaryPay && (
         <a
           href={uri}
+          onClick={trackSwishOpen}
           className="mt-4 block rounded-xl bg-swish px-4 py-4 text-center text-base font-bold text-white shadow-sm active:bg-swish-dark"
         >
           {t.payWithSwish(amount)}
@@ -86,6 +110,7 @@ export default function QrCard({ name, payee, amountOre, message, t, primaryPay 
         {!primaryPay && (
           <a
             href={uri}
+            onClick={trackSwishOpen}
             className="rounded-xl bg-swish px-4 py-3 text-center text-sm font-semibold text-white active:bg-swish-dark"
           >
             {t.openSwish}
@@ -99,6 +124,12 @@ export default function QrCard({ name, payee, amountOre, message, t, primaryPay 
           {copied ? t.copied : t.shareLink}
         </button>
       </div>
+
+      {noApp && (
+        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-center text-xs text-amber-800 ring-1 ring-amber-200">
+          {t.noSwishApp}
+        </p>
+      )}
     </div>
   );
 }
