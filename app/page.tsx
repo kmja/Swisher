@@ -398,6 +398,10 @@ export default function Page() {
 
   const namedDiners = diners.filter((d) => d.name.trim());
   const itemsSumOre = items.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+  // Items plus any tip read off the receipt should reconcile to the printed total.
+  // Allow up to 1 kr of slack for Swedish öre rounding (öresavrundning).
+  const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - receiptTipOre - itemsSumOre;
+  const totalReconciles = receiptTotal === null || Math.abs(totalDiffOre) < 100;
   const validItems = items.filter((it) => (parseAmountToOre(it.priceInput) ?? 0) > 0);
   const hasSharedItems = validItems.some((it) => it.shared);
 
@@ -714,14 +718,32 @@ export default function Page() {
             </div>
             <input ref={addMoreRef} type="file" accept="image/*" onChange={onAppendFile} className="hidden" />
 
-            <div className="mt-3 flex justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
-              <span className="text-gray-600">{t.rowsSum}</span>
-              <span className="font-semibold">
-                {formatOre(itemsSumOre)} {t.currency}
-              </span>
+            <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t.rowsSum}</span>
+                <span className="font-semibold">
+                  {formatOre(itemsSumOre)} {t.currency}
+                </span>
+              </div>
+              {receiptTipOre > 0 && (
+                <div className="mt-1 flex justify-between">
+                  <span className="text-gray-600">{t.tip}</span>
+                  <span className="font-semibold">
+                    {formatOre(receiptTipOre)} {t.currency}
+                  </span>
+                </div>
+              )}
+              {receiptTotal !== null && (
+                <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
+                  <span className="text-gray-600">{t.receiptTotalLabel}</span>
+                  <span className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`}>
+                    {formatOre(receiptTotal)} {t.currency}
+                  </span>
+                </div>
+              )}
             </div>
-            {receiptTotal !== null && Math.abs(receiptTotal - itemsSumOre) > 0 && (
-              <p className="mt-1 text-xs text-amber-600">{t.totalMismatch(formatOre(receiptTotal))}</p>
+            {!totalReconciles && (
+              <p className="mt-1 text-xs text-amber-600">{t.totalDiff(formatOre(Math.abs(totalDiffOre)))}</p>
             )}
           </div>
 

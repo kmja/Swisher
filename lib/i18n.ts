@@ -34,7 +34,8 @@ export interface Strings {
   viewSourceFull: string;
   viewSourceCrop: string;
   rowsSum: string;
-  totalMismatch: (total: string) => string;
+  receiptTotalLabel: string;
+  totalDiff: (amt: string) => string;
   payerTitle: string;
   payerHint: string;
   yourName: string;
@@ -141,7 +142,9 @@ const sv: Strings = {
   viewSourceFull: "Visa hela kvittot",
   viewSourceCrop: "Visa bara raden",
   rowsSum: "Summa rader",
-  totalMismatch: (t) => `Kvittots total (${t} kr) skiljer sig från summan av raderna.`,
+  receiptTotalLabel: "Kvittots total",
+  totalDiff: (amt) =>
+    `Summan stämmer inte – ${amt} kr ifrån kvittots total. Kontrollera om en rad saknas eller är felläst.`,
   payerTitle: "Vem la ut för notan?",
   payerHint: "Den första personen får pengarna via Swish.",
   yourName: "Ditt namn",
@@ -241,7 +244,9 @@ const en: Strings = {
   viewSourceFull: "Show full receipt",
   viewSourceCrop: "Show just this line",
   rowsSum: "Items total",
-  totalMismatch: (t) => `Receipt total (${t} kr) differs from the sum of the items.`,
+  receiptTotalLabel: "Receipt total",
+  totalDiff: (amt) =>
+    `The sums don't match — ${amt} kr from the receipt total. Check for a missing or misread row.`,
   payerTitle: "Who paid the bill?",
   payerHint: "This person receives the money via Swish.",
   yourName: "Your name",
