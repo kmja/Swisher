@@ -13,10 +13,11 @@ const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other"}],"total":number|null,"moms":number|null,"dricks":number|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other"}],"total":number|null,"moms":number|null,"dricks":number|null}
 
 Rules:
-- "items" are the ordered dishes/drinks: a short description and the line price in SEK as a number (e.g. 185.50). Multiply by quantity when a line shows "2 x 95".
+- "items" are the ordered dishes/drinks: a short description and the price.
+- "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
 - "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
@@ -59,14 +60,16 @@ function extractJson(text: string): OcrResult {
   }
 
   if (parsed && Array.isArray(parsed.items)) {
-    const items = parsed.items
-      .map((it: { description?: unknown; price?: unknown; shared?: unknown; category?: unknown }) => ({
-        description: String(it?.description ?? "").trim(),
-        price: Number(it?.price),
-        shared: it?.shared === true,
-        category: typeof it?.category === "string" ? it.category : undefined,
-      }))
-      .filter((it: { description: string; price: number }) => it.description && Number.isFinite(it.price));
+    const items: OcrResult["items"] = [];
+    for (const it of parsed.items as { description?: unknown; price?: unknown; shared?: unknown; category?: unknown; quantity?: unknown }[]) {
+      const description = String(it?.description ?? "").trim();
+      const price = Number(it?.price);
+      if (!description || !Number.isFinite(price)) continue;
+      const shared = it?.shared === true;
+      const category = typeof it?.category === "string" ? it.category : undefined;
+      const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
+      for (let i = 0; i < qty; i++) items.push({ description, price, shared, category });
+    }
     return { items, total: num(parsed.total), moms: num(parsed.moms), dricks: num(parsed.dricks) };
   }
 
@@ -76,13 +79,17 @@ function extractJson(text: string): OcrResult {
     const d = obj.match(/"description"\s*:\s*"([^"]*)"/);
     const p = obj.match(/"price"\s*:\s*(-?\d+(?:\.\d+)?)/);
     const c = obj.match(/"category"\s*:\s*"([^"]*)"/);
+    const q = obj.match(/"quantity"\s*:\s*(\d+)/);
     if (d && p) {
-      items.push({
-        description: d[1].trim(),
-        price: Number(p[1]),
-        shared: /"shared"\s*:\s*true/.test(obj),
-        category: c?.[1],
-      });
+      const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
+      for (let i = 0; i < qty; i++) {
+        items.push({
+          description: d[1].trim(),
+          price: Number(p[1]),
+          shared: /"shared"\s*:\s*true/.test(obj),
+          category: c?.[1],
+        });
+      }
     }
   }
   const grab = (k: string) => {
