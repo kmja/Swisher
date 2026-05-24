@@ -8,6 +8,8 @@ export interface Strings {
   title: string;
   intro: string;
   tapToPhoto: string;
+  scanCta: string;
+  scanGuide: string;
   reading: string;
   scanning: string;
   itemsFound: (n: number) => string;
@@ -107,8 +109,10 @@ const sv: Strings = {
   steps: { capture: "Foto", items: "Rader", assign: "Fördela", pay: "Betala" },
 
   title: "Dela kvittot",
-  intro: "Fota kvittot, peta i vem som åt vad, och få en låst Swish-QR per person.",
-  tapToPhoto: "Tryck för att fota kvittot",
+  intro: "Skanna kvittot, peta i vem som åt vad, och få en låst Swish-QR per person.",
+  tapToPhoto: "Tryck för att skanna kvittot",
+  scanCta: "Skanna kvitto",
+  scanGuide: "Få plats med hela kvittot i ramen",
   reading: "Läser av…",
   scanning: "Skannar kvittot…",
   itemsFound: (n) => `${n} rader tillagda`,
@@ -199,8 +203,10 @@ const en: Strings = {
   steps: { capture: "Photo", items: "Items", assign: "Assign", pay: "Pay" },
 
   title: "Split the receipt",
-  intro: "Photograph the receipt, tap who ate what, and get a locked Swish QR per person.",
-  tapToPhoto: "Tap to photograph the receipt",
+  intro: "Scan the receipt, tap who ate what, and get a locked Swish QR per person.",
+  tapToPhoto: "Tap to scan the receipt",
+  scanCta: "Scan receipt",
+  scanGuide: "Fit the whole receipt in the frame",
   reading: "Reading…",
   scanning: "Scanning receipt…",
   itemsFound: (n) => `${n} items added`,

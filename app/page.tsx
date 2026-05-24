@@ -24,6 +24,26 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** Grayscale + mild contrast, to give a cleaner "scanned" look and help OCR
+ * on faint thermal receipts. Kept gentle so faint text isn't lost. */
+function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  try {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const contrast = 1.35;
+    const intercept = 128 * (1 - contrast);
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      let v = contrast * g + intercept;
+      v = v < 0 ? 0 : v > 255 ? 255 : v;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+  } catch {
+    /* getImageData can throw on tainted canvas — skip enhancement */
+  }
+}
+
 /** Downscale a photo to keep the OCR upload small and fast. */
 function fileToCompressedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,6 +63,7 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (!ctx) return resolve(reader.result as string);
         ctx.drawImage(img, 0, 0, w, h);
+        enhanceForScan(ctx, w, h);
         resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.src = reader.result as string;
@@ -197,6 +218,7 @@ export default function Page() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    enhanceForScan(ctx, canvas.width, canvas.height);
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
     setOcrError(null);
@@ -460,6 +482,17 @@ export default function Page() {
                   muted
                   className={`h-72 w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
                 />
+                {cameraActive && !ocrLoading && (
+                  <div className="pointer-events-none absolute inset-5">
+                    <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
+                    <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-white/90" />
+                    <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
+                    <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
+                    <span className="absolute inset-x-0 bottom-1 text-center text-xs font-medium text-white/90 drop-shadow">
+                      {t.scanGuide}
+                    </span>
+                  </div>
+                )}
                 {!cameraActive && (
                   <button
                     type="button"
@@ -523,7 +556,7 @@ export default function Page() {
                         onClick={capturePhoto}
                         className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
                       >
-                        {t.takePhoto}
+                        {t.scanCta}
                       </button>
                     )}
                     <button
