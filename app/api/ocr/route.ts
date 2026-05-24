@@ -8,8 +8,7 @@ export const maxDuration = 60;
 // Vision OCR on Cloudflare Workers AI — keyless, via the `AI` binding.
 // Both models are EU-safe (Meta's Llama 3.2 vision is license-restricted
 // from the EU, so it is deliberately not used). Mistral Small 3.1 is the
-// stronger reader; LLaVA is the resilient fallback if Mistral is
-// unavailable or returns nothing usable.
+// stronger reader; LLaVA is the resilient fallback.
 const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
@@ -22,7 +21,7 @@ Rules:
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
 - "total" = the amount to pay ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if printed, else null.
-- Never include subtotal/total/moms/tip lines inside "items".`;
+- Never include subtotal/total/moms/tip lines inside "items". Keep it concise — one object per ordered line.`;
 
 type AiResult = { response?: string; description?: string; choices?: { message?: { content?: string } }[] } | string;
 type WorkersAI = { run: (model: string, inputs: Record<string, unknown>) => Promise<AiResult> };
@@ -34,32 +33,53 @@ function resultText(result: AiResult): string {
 
 const USER_TEXT = "Extract the line items, total, moms and dricks from this receipt.";
 
+const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
+
+/**
+ * Pull line items + totals out of the model's text. Tolerant of imperfect
+ * output: strips code fences and trailing commas, and if the JSON won't parse
+ * (e.g. the model truncated mid-array) it salvages every complete item object
+ * by regex so a cut-off response still yields usable rows.
+ */
 function extractJson(text: string): OcrResult {
   let raw = text.trim();
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) raw = fence[1].trim();
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start !== -1 && end !== -1) raw = raw.slice(start, end + 1);
+  if (start !== -1 && end > start) raw = raw.slice(start, end + 1);
+  const cleaned = raw.replace(/,(\s*[}\]])/g, "$1");
 
-  const parsed = JSON.parse(raw);
-  const items = Array.isArray(parsed.items)
-    ? parsed.items
-        .map((it: { description?: unknown; price?: unknown; shared?: unknown }) => ({
-          description: String(it?.description ?? "").trim(),
-          price: Number(it?.price),
-          shared: it?.shared === true,
-        }))
-        .filter((it: { description: string; price: number }) => it.description && Number.isFinite(it.price))
-    : [];
+  let parsed: { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown } | null = null;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    parsed = null;
+  }
 
-  const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
-  return {
-    items,
-    total: num(parsed.total),
-    moms: num(parsed.moms),
-    dricks: num(parsed.dricks),
+  if (parsed && Array.isArray(parsed.items)) {
+    const items = parsed.items
+      .map((it: { description?: unknown; price?: unknown; shared?: unknown }) => ({
+        description: String(it?.description ?? "").trim(),
+        price: Number(it?.price),
+        shared: it?.shared === true,
+      }))
+      .filter((it: { description: string; price: number }) => it.description && Number.isFinite(it.price));
+    return { items, total: num(parsed.total), moms: num(parsed.moms), dricks: num(parsed.dricks) };
+  }
+
+  // Salvage: extract every complete {...} object that has description + price.
+  const items: OcrResult["items"] = [];
+  for (const obj of text.match(/\{[^{}]*\}/g) ?? []) {
+    const d = obj.match(/"description"\s*:\s*"([^"]*)"/);
+    const p = obj.match(/"price"\s*:\s*(-?\d+(?:\.\d+)?)/);
+    if (d && p) items.push({ description: d[1].trim(), price: Number(p[1]), shared: /"shared"\s*:\s*true/.test(obj) });
+  }
+  const grab = (k: string) => {
+    const m = text.match(new RegExp(`"${k}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`));
+    return m ? Number(m[1]) : null;
   };
+  return { items, total: grab("total"), moms: grab("moms"), dricks: grab("dricks") };
 }
 
 export async function POST(req: Request) {
@@ -70,11 +90,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const dataUrl = body.image;
-  const match = typeof dataUrl === "string" && dataUrl.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
+  const match = typeof body.image === "string" && body.image.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
   if (!match) {
     return NextResponse.json({ error: "Expected a base64 image data URL." }, { status: 400 });
   }
+  const dataUrl = body.image as string;
   const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
 
   let ai: WorkersAI | undefined;
@@ -90,43 +110,48 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
+  const client = ai;
 
-  // Mistral (chat + image) first, then LLaVA (image bytes) as a fallback.
-  const attempts: (() => Promise<AiResult>)[] = [
-    () =>
-      ai.run(MISTRAL_MODEL, {
-        max_tokens: 1024,
-        messages: [
-          { role: "system", content: PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: USER_TEXT },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
-    () => ai.run(LLAVA_MODEL, { prompt: `${PROMPT}\n\n${USER_TEXT}`, image: Array.from(bytes), max_tokens: 1024 }),
+  const attempts: { name: string; run: () => Promise<AiResult> }[] = [
+    {
+      name: "mistral",
+      run: () =>
+        client.run(MISTRAL_MODEL, {
+          max_tokens: 2048,
+          messages: [
+            { role: "system", content: PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: USER_TEXT },
+                { type: "image_url", image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+        }),
+    },
+    {
+      name: "llava",
+      run: () => client.run(LLAVA_MODEL, { prompt: `${PROMPT}\n\n${USER_TEXT}`, image: Array.from(bytes), max_tokens: 2048 }),
+    },
   ];
 
-  let lastError = "OCR failed.";
-  for (const attempt of attempts) {
+  const diag: string[] = [];
+  for (const { name, run } of attempts) {
     try {
-      const text = resultText(await attempt());
+      const text = resultText(await run());
       if (!text.trim()) {
-        lastError = "Empty response from the vision model.";
+        diag.push(`${name}:empty`);
         continue;
       }
       const parsed = extractJson(text);
-      if (parsed.items.length === 0 && parsed.total === null) {
-        lastError = "The model couldn't read this receipt.";
-        continue;
+      if (parsed.items.length > 0 || parsed.total !== null) {
+        return NextResponse.json(parsed, { headers: { "X-Ocr-Model": name } });
       }
-      return NextResponse.json(parsed);
+      diag.push(`${name}:no-items`);
     } catch (err) {
-      lastError = err instanceof Error ? err.message : "OCR failed.";
+      diag.push(`${name}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   }
-  return NextResponse.json({ error: lastError }, { status: 502 });
+  return NextResponse.json({ error: `Couldn't read the receipt. ${diag.join(" | ")}` }, { status: 502 });
 }
