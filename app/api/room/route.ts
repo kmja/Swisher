@@ -32,6 +32,8 @@ export async function POST(req: Request) {
     payeeName?: string;
     payeeNumber?: string;
     message?: string;
+    place?: string;
+    date?: string;
     tipPercent?: number;
     items?: { description?: unknown; priceOre?: unknown; category?: unknown }[];
   };
@@ -65,6 +67,8 @@ export async function POST(req: Request) {
     payeeName: String(body.payeeName ?? "").slice(0, 40),
     payeeNumber,
     message: String(body.message ?? "").slice(0, 50),
+    place: String(body.place ?? "").slice(0, 60),
+    date: String(body.date ?? "").slice(0, 20),
     tipPercent: Number(body.tipPercent) || 0,
     items,
   });

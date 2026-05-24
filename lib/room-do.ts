@@ -19,6 +19,9 @@ export type RoomState = {
   /** The host's own person id — they collect, so they never get a QR. */
   payeePersonId: string;
   message: string;
+  /** Restaurant/place and date read from the receipt, shown so everyone remembers. */
+  place: string;
+  date: string;
   tipPercent: number;
   items: RoomItem[];
   people: RoomPerson[];
@@ -29,6 +32,8 @@ export type RoomInit = {
   payeeName: string;
   payeeNumber: string;
   message: string;
+  place?: string;
+  date?: string;
   tipPercent: number;
   items: { description: string; priceOre: number; category?: string }[];
 };
@@ -60,6 +65,8 @@ export class RoomDO extends DurableObject {
       payeeNumber: data.payeeNumber,
       payeePersonId: host.id,
       message: data.message.slice(0, 50),
+      place: (data.place ?? "").slice(0, 60),
+      date: (data.date ?? "").slice(0, 20),
       tipPercent: Math.max(0, Math.min(100, Math.round(data.tipPercent || 0))),
       items: data.items.map((it) => ({
         id: uid(),

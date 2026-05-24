@@ -20,6 +20,10 @@ export type OcrResult = {
   total: number | null;
   moms: number | null;
   dricks: number | null;
+  /** Restaurant/merchant name read from the receipt. */
+  place: string | null;
+  /** Receipt date as YYYY-MM-DD. */
+  date: string | null;
 };
 
 /** Per-person computed breakdown, all amounts in öre. */

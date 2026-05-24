@@ -227,9 +227,9 @@ export default function RoomPage() {
       {/* Share / invite */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-400">Swisher</p>
-            <p className="text-lg font-bold tracking-widest text-swish-dark">{code}</p>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-bold">{state.place || "Swisher"}</p>
+            <p className="text-sm text-gray-500">{[state.date, code].filter(Boolean).join(" · ")}</p>
           </div>
           <button
             type="button"

@@ -13,9 +13,11 @@ const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other"}],"total":number|null,"moms":number|null,"dricks":number|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other"}],"total":number|null,"moms":number|null,"dricks":number|null,"place":string|null,"date":string|null}
 
 Rules:
+- "place" is the restaurant/café name, usually printed at the top. null if unclear.
+- "date" is the receipt date as "YYYY-MM-DD" (convert formats like "16jan17" → "2017-01-16"). null if unreadable.
 - "items" are the ordered dishes/drinks: a short description and the price.
 - "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
@@ -52,12 +54,15 @@ function extractJson(text: string): OcrResult {
   if (start !== -1 && end > start) raw = raw.slice(start, end + 1);
   const cleaned = raw.replace(/,(\s*[}\]])/g, "$1");
 
-  let parsed: { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown } | null = null;
+  let parsed:
+    | { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown; place?: unknown; date?: unknown }
+    | null = null;
   try {
     parsed = JSON.parse(cleaned);
   } catch {
     parsed = null;
   }
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
   if (parsed && Array.isArray(parsed.items)) {
     const items: OcrResult["items"] = [];
@@ -70,7 +75,14 @@ function extractJson(text: string): OcrResult {
       const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
       for (let i = 0; i < qty; i++) items.push({ description, price, shared, category });
     }
-    return { items, total: num(parsed.total), moms: num(parsed.moms), dricks: num(parsed.dricks) };
+    return {
+      items,
+      total: num(parsed.total),
+      moms: num(parsed.moms),
+      dricks: num(parsed.dricks),
+      place: str(parsed.place),
+      date: str(parsed.date),
+    };
   }
 
   // Salvage: extract every complete {...} object that has description + price.
@@ -96,7 +108,18 @@ function extractJson(text: string): OcrResult {
     const m = text.match(new RegExp(`"${k}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`));
     return m ? Number(m[1]) : null;
   };
-  return { items, total: grab("total"), moms: grab("moms"), dricks: grab("dricks") };
+  const grabStr = (k: string) => {
+    const m = text.match(new RegExp(`"${k}"\\s*:\\s*"([^"]*)"`));
+    return m && m[1].trim() ? m[1].trim() : null;
+  };
+  return {
+    items,
+    total: grab("total"),
+    moms: grab("moms"),
+    dricks: grab("dricks"),
+    place: grabStr("place"),
+    date: grabStr("date"),
+  };
 }
 
 export async function POST(req: Request) {

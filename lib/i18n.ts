@@ -62,6 +62,7 @@ export interface Strings {
   createQr: string;
   messagePlaceholder: string;
   messageAria: string;
+  placePlaceholder: string;
 
   // live room
   liveRoomTitle: string;
@@ -150,11 +151,12 @@ const sv: Strings = {
   createQr: "Skapa QR-koder",
   messagePlaceholder: "Meddelande",
   messageAria: "Meddelande-etikett",
+  placePlaceholder: "Plats",
 
   liveRoomTitle: "Live-rum",
   liveRoomHint: "Skapa ett rum – så petar var och en in sina egna rätter på sin egen telefon.",
-  createRoom: "Skapa live-rum",
-  creatingRoom: "Skapar…",
+  createRoom: "Bjud in att dela",
+  creatingRoom: "Bjuder in…",
 
   groupSizeLabel: "Antal som delar (valfritt)",
   sharedToggle: "Delas av alla",
@@ -233,11 +235,12 @@ const en: Strings = {
   createQr: "Create QR codes",
   messagePlaceholder: "Message",
   messageAria: "Message label",
+  placePlaceholder: "Place",
 
   liveRoomTitle: "Live room",
   liveRoomHint: "Create a room — everyone taps their own items on their own phone.",
-  createRoom: "Create live room",
-  creatingRoom: "Creating…",
+  createRoom: "Invite people to split",
+  creatingRoom: "Inviting…",
 
   groupSizeLabel: "People sharing (optional)",
   sharedToggle: "Shared",

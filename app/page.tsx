@@ -67,6 +67,7 @@ export default function Page() {
 
   const today = new Date().toISOString().slice(0, 10);
   const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
+  const [eventDate, setEventDate] = useState(today);
 
   const [tipPercent, setTipPercent] = useState(0);
 
@@ -112,8 +113,8 @@ export default function Page() {
   }, [applyLang]);
 
   const message = useMemo(
-    () => `${mealLabel} ${today}${t.shareSuffix}`.slice(0, 50),
-    [mealLabel, today, t.shareSuffix],
+    () => `${mealLabel} ${eventDate}${t.shareSuffix}`.slice(0, 50),
+    [mealLabel, eventDate, t.shareSuffix],
   );
 
   // --- capture ---------------------------------------------------------------
@@ -170,7 +171,9 @@ export default function Page() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
     setOcrError(null);
-    setImageUrl(canvas.toDataURL("image/jpeg", 0.82));
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    setImageUrl(dataUrl);
+    runOcr(dataUrl); // scan automatically
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -180,20 +183,21 @@ export default function Page() {
     try {
       const dataUrl = await fileToCompressedDataUrl(file);
       setImageUrl(dataUrl);
+      runOcr(dataUrl); // scan automatically — no extra confirm tap
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "Could not read the image.");
     }
   }
 
-  async function runOcr() {
-    if (!imageUrl) return;
+  async function runOcr(img: string = imageUrl ?? "") {
+    if (!img || ocrLoading) return;
     setOcrLoading(true);
     setOcrError(null);
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageUrl }),
+        body: JSON.stringify({ image: img }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
@@ -208,6 +212,8 @@ export default function Page() {
         })),
       );
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
+      if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
+      if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
       setStep("items");
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "OCR failed.");
@@ -290,6 +296,8 @@ export default function Page() {
           payeeName: diners[0].name,
           payeeNumber: payerPhone,
           message,
+          place: mealLabel.trim(),
+          date: eventDate,
           tipPercent,
           items: validItems.flatMap((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
@@ -395,7 +403,7 @@ export default function Page() {
               <>
                 <button
                   type="button"
-                  onClick={runOcr}
+                  onClick={() => runOcr()}
                   disabled={ocrLoading}
                   className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
                 >
@@ -533,13 +541,22 @@ export default function Page() {
                 className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
               />
             </label>
-            <input
-              value={mealLabel}
-              onChange={(e) => setMealLabel(e.target.value)}
-              placeholder={t.messagePlaceholder}
-              aria-label={t.messageAria}
-              className="mt-2 w-full rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
-            />
+            <div className="mt-2 flex gap-2">
+              <input
+                value={mealLabel}
+                onChange={(e) => setMealLabel(e.target.value)}
+                placeholder={t.placePlaceholder}
+                aria-label={t.placePlaceholder}
+                className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
+              />
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value || today)}
+                aria-label={t.messageAria}
+                className="rounded-xl bg-white px-3 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
+              />
+            </div>
             <p className="mt-1 px-1 text-xs text-gray-400">”{message}”</p>
             {roomError && <p className="mt-2 text-sm text-red-600">{roomError}</p>}
           </div>
