@@ -43,17 +43,22 @@ export function sanitizeMessage(message: string): string {
 }
 
 /**
- * Build the locked `swish://` deep link. All fields are non-editable so the
- * payer cannot change the recipient, amount, or message before confirming.
+ * Build a Swish payment link. Uses the consumer **universal link**
+ * (`https://app.swish.nu/1/p/sw/`), which opens the Swish app prefilled when
+ * tapped on a phone that has Swish, works when encoded in a QR, and degrades to
+ * a web page otherwise. (The `swish://payment?data=` form is QR-payload only and
+ * is rejected as an invalid address when tapped in a browser.) `edit` is empty
+ * so the payee, amount and message are all locked.
  */
 export function buildSwishUri({ payee, amountOre, message }: SwishPayment): string {
-  const data = {
-    version: 1,
-    payee: { value: payee, editable: false },
-    amount: { value: oreToKronor(amountOre), editable: false },
-    message: { value: sanitizeMessage(message), editable: false },
-  };
-  return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
+  const params = new URLSearchParams({
+    sw: payee,
+    amt: oreToKronor(amountOre).toFixed(2),
+    cur: "SEK",
+    msg: sanitizeMessage(message),
+    edit: "",
+  });
+  return `https://app.swish.nu/1/p/sw/?${params.toString()}`;
 }
 
 /** Request body for the public getSwish prefilled QR generator. */
