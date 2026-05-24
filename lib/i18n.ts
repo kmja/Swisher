@@ -31,7 +31,8 @@ export interface Strings {
   addPhoto: string;
   addingPhoto: string;
   viewSource: string;
-  viewSourceHint: string;
+  viewSourceFull: string;
+  viewSourceCrop: string;
   rowsSum: string;
   totalMismatch: (total: string) => string;
   payerTitle: string;
@@ -134,7 +135,8 @@ const sv: Strings = {
   addPhoto: "+ Lägg till foto (långt kvitto)",
   addingPhoto: "Skannar…",
   viewSource: "Visa på kvittot",
-  viewSourceHint: "Bläddra för att läsa kvittot",
+  viewSourceFull: "Visa hela kvittot",
+  viewSourceCrop: "Visa bara raden",
   rowsSum: "Summa rader",
   totalMismatch: (t) => `Kvittots total (${t} kr) skiljer sig från summan av raderna.`,
   payerTitle: "Vem la ut för notan?",
@@ -229,7 +231,8 @@ const en: Strings = {
   addPhoto: "+ Add another photo (long receipt)",
   addingPhoto: "Scanning…",
   viewSource: "Show on receipt",
-  viewSourceHint: "Scroll to read the receipt",
+  viewSourceFull: "Show full receipt",
+  viewSourceCrop: "Show just this line",
   rowsSum: "Items total",
   totalMismatch: (t) => `Receipt total (${t} kr) differs from the sum of the items.`,
   payerTitle: "Who paid the bill?",

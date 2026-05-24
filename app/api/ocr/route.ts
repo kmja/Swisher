@@ -13,11 +13,12 @@ const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other"}],"total":number|null,"moms":number|null,"dricks":number|null,"place":string|null,"date":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"place":string|null,"date":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
 - "date" is the receipt date as "YYYY-MM-DD" (convert formats like "16jan17" → "2017-01-16"). null if unreadable.
+- "y" is the vertical position of this item's line on the receipt image as a percent from the top (0 = very top edge, 100 = very bottom edge). Estimate it as accurately as you can.
 - "items" are the ordered dishes/drinks: a short description and the price.
 - "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
@@ -66,14 +67,22 @@ function extractJson(text: string): OcrResult {
 
   if (parsed && Array.isArray(parsed.items)) {
     const items: OcrResult["items"] = [];
-    for (const it of parsed.items as { description?: unknown; price?: unknown; shared?: unknown; category?: unknown; quantity?: unknown }[]) {
+    for (const it of parsed.items as {
+      description?: unknown;
+      price?: unknown;
+      shared?: unknown;
+      category?: unknown;
+      quantity?: unknown;
+      y?: unknown;
+    }[]) {
       const description = String(it?.description ?? "").trim();
       const price = Number(it?.price);
       if (!description || !Number.isFinite(price)) continue;
       const shared = it?.shared === true;
       const category = typeof it?.category === "string" ? it.category : undefined;
+      const y = Number.isFinite(Number(it?.y)) ? Number(it?.y) : undefined;
       const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
-      for (let i = 0; i < qty; i++) items.push({ description, price, shared, category });
+      for (let i = 0; i < qty; i++) items.push({ description, price, shared, category, y });
     }
     return {
       items,
@@ -92,6 +101,7 @@ function extractJson(text: string): OcrResult {
     const p = obj.match(/"price"\s*:\s*(-?\d+(?:\.\d+)?)/);
     const c = obj.match(/"category"\s*:\s*"([^"]*)"/);
     const q = obj.match(/"quantity"\s*:\s*(\d+)/);
+    const ym = obj.match(/"y"\s*:\s*(\d+(?:\.\d+)?)/);
     if (d && p) {
       const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
       for (let i = 0; i < qty; i++) {
@@ -100,6 +110,7 @@ function extractJson(text: string): OcrResult {
           price: Number(p[1]),
           shared: /"shared"\s*:\s*true/.test(obj),
           category: c?.[1],
+          y: ym ? Number(ym[1]) : undefined,
         });
       }
     }

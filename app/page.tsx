@@ -19,6 +19,8 @@ type UiItem = {
   category: string;
   /** Index into `images` of the photo this row was scanned from; -1 if typed. */
   imgIndex: number;
+  /** Vertical position on the source photo (0–1) where OCR found this line. */
+  y?: number;
 };
 
 const uid = () =>
@@ -42,6 +44,30 @@ function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
   } catch {
     /* getImageData can throw on tainted canvas — skip enhancement */
   }
+}
+
+/** Crop a horizontal band (~30% tall) of the receipt centred on yFrac, so the
+ * magnifier shows just the line where an item was recognised. */
+function cropBand(src: string, yFrac: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const W = img.naturalWidth;
+      const H = img.naturalHeight;
+      const bandH = Math.max(1, Math.round(H * 0.3));
+      let top = Math.round(Math.max(0, Math.min(1, yFrac)) * H - bandH / 2);
+      top = Math.max(0, Math.min(H - bandH, top));
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = bandH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(src);
+      ctx.drawImage(img, 0, top, W, bandH, 0, 0, W, bandH);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
 }
 
 /** Downscale a photo to keep the OCR upload small and fast. */
@@ -88,7 +114,8 @@ export default function Page() {
   const [images, setImages] = useState<string[]>([]);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [zoomItem, setZoomItem] = useState<number | null>(null);
-  const zoomScrollRef = useRef<HTMLDivElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [showFullReceipt, setShowFullReceipt] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -153,6 +180,26 @@ export default function Page() {
     const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
     return () => clearInterval(iv);
   }, [ocrLoading]);
+
+  // When the magnifier opens, crop the band of the source photo where the item
+  // was recognised (model-reported position, else its order within that photo).
+  useEffect(() => {
+    setShowFullReceipt(false);
+    setCropSrc(null);
+    if (zoomItem === null) return;
+    const it = items[zoomItem];
+    if (!it || it.imgIndex < 0 || !images[it.imgIndex]) return;
+    const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
+    const pos = Math.max(0, sameImg.indexOf(it));
+    const yFrac = it.y != null ? it.y : (pos + 0.5) / Math.max(1, sameImg.length);
+    let cancelled = false;
+    cropBand(images[it.imgIndex], yFrac).then((src) => {
+      if (!cancelled) setCropSrc(src);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [zoomItem, items, images]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -265,7 +312,7 @@ export default function Page() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
       const mapped: UiItem[] = (
-        data.items as { description: string; price: number; shared?: boolean; category?: string }[]
+        data.items as { description: string; price: number; shared?: boolean; category?: string; y?: number }[]
       ).map((it) => ({
         id: uid(),
         description: it.description,
@@ -274,6 +321,7 @@ export default function Page() {
         shared: it.shared === true,
         category: it.category ?? "",
         imgIndex,
+        y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y / 100)) : undefined,
       }));
       setImages((prev) => (append ? [...prev, img] : [img]));
       setOcrLoading(false);
@@ -963,12 +1011,13 @@ export default function Page() {
         const it = items[zoomItem];
         const src = it && it.imgIndex >= 0 ? images[it.imgIndex] : null;
         if (!src) return null;
-        const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
-        const pos = Math.max(0, sameImg.indexOf(it));
         return (
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
-              <span className="min-w-0 truncate text-sm font-medium">{it.description || t.viewSource}</span>
+              <span className="min-w-0 truncate text-sm font-medium">
+                <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                {it.description || t.viewSource}
+              </span>
               <button
                 type="button"
                 onClick={() => setZoomItem(null)}
@@ -977,20 +1026,25 @@ export default function Page() {
                 ✕
               </button>
             </div>
-            <p className="px-4 pb-2 text-center text-xs text-white/60">{t.viewSourceHint}</p>
-            <div ref={zoomScrollRef} className="flex-1 overflow-auto">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt=""
-                onLoad={(e) => {
-                  const c = zoomScrollRef.current;
-                  if (!c || sameImg.length === 0) return;
-                  const frac = (pos + 0.5) / sameImg.length;
-                  c.scrollTop = Math.max(0, frac * e.currentTarget.clientHeight - c.clientHeight / 2);
-                }}
-                className="w-[230%] max-w-none"
-              />
+            <div className="flex flex-1 items-start justify-center overflow-auto p-3">
+              {showFullReceipt ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={src} alt="" className="w-[200%] max-w-none rounded-lg" />
+              ) : cropSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={cropSrc} alt="" className="w-full rounded-lg ring-1 ring-white/20" />
+              ) : (
+                <p className="pt-10 text-sm text-white/60">…</p>
+              )}
+            </div>
+            <div className="px-4 py-3 text-center">
+              <button
+                type="button"
+                onClick={() => setShowFullReceipt((v) => !v)}
+                className="text-sm font-medium text-white/80 underline"
+              >
+                {showFullReceipt ? t.viewSourceCrop : t.viewSourceFull}
+              </button>
             </div>
           </div>
         );
