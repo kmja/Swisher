@@ -35,6 +35,7 @@ export interface Strings {
   viewSourceCrop: string;
   rowsSum: string;
   receiptTotalLabel: string;
+  chargedLabel: string;
   totalDiff: (amt: string) => string;
   payerTitle: string;
   payerHint: string;
@@ -142,6 +143,7 @@ const sv: Strings = {
   viewSourceCrop: "Visa bara raden",
   rowsSum: "Summa rader",
   receiptTotalLabel: "Kvittots total",
+  chargedLabel: "Betalat (kort)",
   totalDiff: (amt) =>
     `Summan stämmer inte – ${amt} kr ifrån kvittots total. Kontrollera om en rad saknas eller är felläst.`,
   payerTitle: "Vem la ut för notan?",
@@ -243,6 +245,7 @@ const en: Strings = {
   viewSourceCrop: "Show just this line",
   rowsSum: "Items total",
   receiptTotalLabel: "Receipt total",
+  chargedLabel: "Charged (card)",
   totalDiff: (amt) =>
     `The sums don't match — ${amt} kr from the receipt total. Check for a missing or misread row.`,
   payerTitle: "Who paid the bill?",

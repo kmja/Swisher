@@ -127,6 +127,7 @@ export default function Page() {
   const [eventDate, setEventDate] = useState(today);
 
   const [receiptTipOre, setReceiptTipOre] = useState(0);
+  const [receiptChargedOre, setReceiptChargedOre] = useState(0);
 
   const [groupSize, setGroupSize] = useState(0);
   const [creatingRoom, setCreatingRoom] = useState(false);
@@ -333,8 +334,16 @@ export default function Page() {
       }
 
       setItems(mapped);
-      setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
-      setReceiptTipOre(typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0);
+      const totalOre = typeof data.total === "number" ? Math.round(data.total * 100) : null;
+      const chargedOre = typeof data.charged === "number" && data.charged > 0 ? Math.round(data.charged * 100) : 0;
+      const dricksOre = typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0;
+      // Tip: a printed tip line if there is one, otherwise the excess of the
+      // actual card charge over the bill (host rounded up / tipped at the terminal).
+      const billOre = totalOre ?? mapped.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+      const impliedTipOre = chargedOre - billOre >= 100 ? chargedOre - billOre : 0;
+      setReceiptTotal(totalOre);
+      setReceiptChargedOre(chargedOre);
+      setReceiptTipOre(dricksOre > 0 ? dricksOre : impliedTipOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
       if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
       // Tick a counter through the found rows, then move on.
@@ -399,9 +408,10 @@ export default function Page() {
 
   const namedDiners = diners.filter((d) => d.name.trim());
   const itemsSumOre = items.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
-  // Items plus any tip read off the receipt should reconcile to the printed total.
-  // Allow up to 1 kr of slack for Swedish öre rounding (öresavrundning).
-  const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - receiptTipOre - itemsSumOre;
+  // The scanned items should add up to the printed bill total (the tip is added
+  // on top via the card charge, not part of the bill). Allow up to 1 kr of slack
+  // for Swedish öre rounding (öresavrundning).
+  const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - itemsSumOre;
   const totalReconciles = receiptTotal === null || Math.abs(totalDiffOre) < 100;
   const validItems = items.filter((it) => (parseAmountToOre(it.priceInput) ?? 0) > 0);
   const hasSharedItems = validItems.some((it) => it.shared);
@@ -726,19 +736,25 @@ export default function Page() {
                   {formatOre(itemsSumOre)} {t.currency}
                 </span>
               </div>
-              {receiptTipOre > 0 && (
-                <div className="mt-1 flex justify-between">
-                  <span className="text-gray-600">{t.tip}</span>
-                  <span className="font-semibold">
-                    {formatOre(receiptTipOre)} {t.currency}
-                  </span>
-                </div>
-              )}
               {receiptTotal !== null && (
-                <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
+                <div className="mt-1 flex justify-between">
                   <span className="text-gray-600">{t.receiptTotalLabel}</span>
                   <span className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`}>
                     {formatOre(receiptTotal)} {t.currency}
+                  </span>
+                </div>
+              )}
+              {receiptTipOre > 0 && (
+                <div className="mt-1 flex justify-between">
+                  <span className="text-gray-600">{t.tip}</span>
+                  <span className="font-semibold">+{formatOre(receiptTipOre)} {t.currency}</span>
+                </div>
+              )}
+              {receiptChargedOre > 0 && receiptChargedOre !== receiptTotal && (
+                <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
+                  <span className="text-gray-600">{t.chargedLabel}</span>
+                  <span className="font-semibold">
+                    {formatOre(receiptChargedOre)} {t.currency}
                   </span>
                 </div>
               )}

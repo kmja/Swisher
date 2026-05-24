@@ -20,6 +20,8 @@ export type OcrResult = {
   total: number | null;
   moms: number | null;
   dricks: number | null;
+  /** Amount actually charged/paid (e.g. a card transaction line). May exceed `total` when a tip was added. */
+  charged: number | null;
   /** Restaurant/merchant name read from the receipt. */
   place: string | null;
   /** Receipt date as YYYY-MM-DD. */

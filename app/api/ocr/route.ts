@@ -14,7 +14,7 @@ const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"place":string|null,"date":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -28,7 +28,8 @@ Rules:
 - "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
-- "total" = the amount to pay ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if printed, else null.
+- "total" = the itemised bill, i.e. the sum of the ordered items ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if a tip line is printed, else null.
+- "charged" = the amount actually paid at the bottom — a card/payment line such as "Mastercard", "Kontokort", "Kortköp", "Köp", "Debiterat", "Betalt", or "Slip"/terminal total. It may be HIGHER than "total" when the guest rounded up or tipped. null if no payment line is shown. Do not copy "total" into "charged" unless a real payment line shows that amount.
 - Never include subtotal/total/moms/tip lines inside "items". Keep it concise — one object per ordered line.`;
 
 type AiResult = { response?: string; description?: string; choices?: { message?: { content?: string } }[] } | string;
@@ -59,7 +60,7 @@ function extractJson(text: string): OcrResult {
   const cleaned = raw.replace(/,(\s*[}\]])/g, "$1");
 
   let parsed:
-    | { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown; place?: unknown; date?: unknown }
+    | { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown; charged?: unknown; place?: unknown; date?: unknown }
     | null = null;
   try {
     parsed = JSON.parse(cleaned);
@@ -96,6 +97,7 @@ function extractJson(text: string): OcrResult {
       total: num(parsed.total),
       moms: num(parsed.moms),
       dricks: num(parsed.dricks),
+      charged: num(parsed.charged),
       place: str(parsed.place),
       date: str(parsed.date),
     };
@@ -131,6 +133,7 @@ function extractJson(text: string): OcrResult {
     total: grab("total"),
     moms: grab("moms"),
     dricks: grab("dricks"),
+    charged: grab("charged"),
     place: grabStr("place"),
     date: grabStr("date"),
   };
