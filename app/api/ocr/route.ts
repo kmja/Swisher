@@ -5,11 +5,13 @@ import type { OcrResult } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Vision model on Cloudflare Workers AI. Keyless — billed against the
-// account's free daily Neuron allocation via the `AI` binding.
-// NB: Meta's Llama 3.2 vision license excludes the EU, so we use LLaVA
-// (Vicuna-based, no EU restriction) for this Sweden-based app.
-const MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
+// Vision OCR on Cloudflare Workers AI — keyless, via the `AI` binding.
+// Both models are EU-safe (Meta's Llama 3.2 vision is license-restricted
+// from the EU, so it is deliberately not used). Mistral Small 3.1 is the
+// stronger reader; LLaVA is the resilient fallback if Mistral is
+// unavailable or returns nothing usable.
+const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
+const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
 {"items":[{"description":string,"price":number,"shared":boolean}],"total":number|null,"moms":number|null,"dricks":number|null}
@@ -22,12 +24,15 @@ Rules:
 - "total" = the amount to pay ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if printed, else null.
 - Never include subtotal/total/moms/tip lines inside "items".`;
 
-type WorkersAI = {
-  run: (
-    model: string,
-    inputs: Record<string, unknown>,
-  ) => Promise<{ response?: string; description?: string } | string>;
-};
+type AiResult = { response?: string; description?: string; choices?: { message?: { content?: string } }[] } | string;
+type WorkersAI = { run: (model: string, inputs: Record<string, unknown>) => Promise<AiResult> };
+
+function resultText(result: AiResult): string {
+  if (typeof result === "string") return result;
+  return result.response ?? result.description ?? result.choices?.[0]?.message?.content ?? "";
+}
+
+const USER_TEXT = "Extract the line items, total, moms and dricks from this receipt.";
 
 function extractJson(text: string): OcrResult {
   let raw = text.trim();
@@ -66,11 +71,11 @@ export async function POST(req: Request) {
   }
 
   const dataUrl = body.image;
-  const match = typeof dataUrl === "string" && dataUrl.match(/^data:image\/[a-z+.-]+;base64,(.+)$/i);
+  const match = typeof dataUrl === "string" && dataUrl.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
   if (!match) {
     return NextResponse.json({ error: "Expected a base64 image data URL." }, { status: 400 });
   }
-  const bytes = Uint8Array.from(Buffer.from(match[1], "base64"));
+  const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
 
   let ai: WorkersAI | undefined;
   try {
@@ -86,17 +91,42 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
-    const result = await ai.run(MODEL, {
-      prompt: PROMPT,
-      image: Array.from(bytes),
-      max_tokens: 1024,
-    });
-    const text = typeof result === "string" ? result : (result.response ?? result.description ?? "");
-    if (!text) throw new Error("Empty response from the vision model.");
-    return NextResponse.json(extractJson(text));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "OCR failed.";
-    return NextResponse.json({ error: message }, { status: 502 });
+  // Mistral (chat + image) first, then LLaVA (image bytes) as a fallback.
+  const attempts: (() => Promise<AiResult>)[] = [
+    () =>
+      ai.run(MISTRAL_MODEL, {
+        max_tokens: 1024,
+        messages: [
+          { role: "system", content: PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: USER_TEXT },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    () => ai.run(LLAVA_MODEL, { prompt: `${PROMPT}\n\n${USER_TEXT}`, image: Array.from(bytes), max_tokens: 1024 }),
+  ];
+
+  let lastError = "OCR failed.";
+  for (const attempt of attempts) {
+    try {
+      const text = resultText(await attempt());
+      if (!text.trim()) {
+        lastError = "Empty response from the vision model.";
+        continue;
+      }
+      const parsed = extractJson(text);
+      if (parsed.items.length === 0 && parsed.total === null) {
+        lastError = "The model couldn't read this receipt.";
+        continue;
+      }
+      return NextResponse.json(parsed);
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "OCR failed.";
+    }
   }
+  return NextResponse.json({ error: lastError }, { status: 502 });
 }
