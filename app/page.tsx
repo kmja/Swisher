@@ -294,6 +294,7 @@ export default function Page() {
   const namedDiners = diners.filter((d) => d.name.trim());
   const itemsSumOre = items.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
   const validItems = items.filter((it) => (parseAmountToOre(it.priceInput) ?? 0) > 0);
+  const hasSharedItems = validItems.some((it) => it.shared);
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && isValidPhone(payerPhone);
@@ -603,10 +604,11 @@ export default function Page() {
           </div>
 
           <div>
-            <div className="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{t.groupSizeLabel}</span>
-                <div className="flex items-center gap-3">
+            {hasSharedItems && (
+              <div className="rounded-xl bg-swish/5 px-4 py-3 ring-1 ring-swish/20">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-gray-700">{t.sharedGroupPrompt}</span>
+                  <div className="flex items-center gap-3">
                   <button
                     type="button"
                     aria-label="−"
@@ -634,8 +636,9 @@ export default function Page() {
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             <div className="mt-3 flex gap-2">
               <input
                 value={mealLabel}

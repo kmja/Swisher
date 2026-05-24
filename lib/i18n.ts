@@ -76,6 +76,7 @@ export interface Strings {
 
   // shared items
   groupSizeLabel: string;
+  sharedGroupPrompt: string;
   sharedToggle: string;
   sharedSplit: (n: number, amt: string) => string;
 
@@ -168,6 +169,7 @@ const sv: Strings = {
   creatingRoom: "Bjuder in…",
 
   groupSizeLabel: "Antal som delar (valfritt)",
+  sharedGroupPrompt: "Ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} kr/pers`,
 
@@ -257,6 +259,7 @@ const en: Strings = {
   creatingRoom: "Inviting…",
 
   groupSizeLabel: "People sharing (optional)",
+  sharedGroupPrompt: "You have shared items — how many are you?",
   sharedToggle: "Shared",
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} kr each`,
 

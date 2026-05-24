@@ -34,6 +34,8 @@ const R = {
     peopleTitle: "Vilka är med",
     unclaimed: (n: number) => `${n} rad${n === 1 ? "" : "er"} ofördelade`,
     allClaimed: "Allt är fördelat",
+    claimedTitle: (n: number) => `✓ ${n} klara`,
+    you: "du",
     tip: "Dricks",
     none: "Ingen",
     yourTotal: "Din del",
@@ -61,6 +63,8 @@ const R = {
     peopleTitle: "Who's in",
     unclaimed: (n: number) => `${n} item${n === 1 ? "" : "s"} unassigned`,
     allClaimed: "Everything's assigned",
+    claimedTitle: (n: number) => `✓ ${n} claimed`,
+    you: "you",
     tip: "Tip",
     none: "None",
     yourTotal: "Your share",
@@ -265,46 +269,56 @@ export default function RoomPage() {
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
               {CATEGORY_ORDER.map((cat) => {
-                const groupItems = state.items
-                  .filter((it) => categoryFor(it.description, it.category) === cat)
-                  // Unclaimed first so latecomers see what's still free; claimed sink.
-                  .sort((a, b) => (a.claimedBy.length > 0 ? 1 : 0) - (b.claimedBy.length > 0 ? 1 : 0));
-                if (groupItems.length === 0) return null;
+                const all = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
+                if (all.length === 0) return null;
+                const unclaimed = all.filter((it) => it.claimedBy.length === 0);
+                const claimed = all.filter((it) => it.claimedBy.length > 0);
+                const claimers = (it: RoomState["items"][number]) =>
+                  it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
                 return (
                   <div key={cat} className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
                       <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
-                    {groupItems.map((it) => {
-                const mine = it.claimedBy.includes(personId);
-                const n = it.claimedBy.length;
-                const claimedByOthers = !mine && n > 0;
-                return (
-                  <button
-                    key={it.id}
-                    type="button"
-                    onClick={() => toggleClaim(it.id)}
-                    disabled={busyItem === it.id}
-                    className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-                      mine ? "bg-swish/10 ring-swish" : claimedByOthers ? "bg-white opacity-55 ring-black/5" : "bg-white ring-black/5"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-                        mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
-                      }`}
-                    >
-                      ✓
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{it.description}</span>
-                      {n > 1 && <span className="text-xs text-gray-500">{t.sharedBy(n)} · {t.eachShort(formatOre(Math.floor(it.priceOre / n)))}</span>}
-                    </span>
-                    <span className="shrink-0 text-sm font-semibold">{formatOre(it.priceOre)} {tx.currency}</span>
-                  </button>
-                );
-              })}
+                    {unclaimed.map((it) => (
+                      <button
+                        key={it.id}
+                        type="button"
+                        onClick={() => toggleClaim(it.id)}
+                        disabled={busyItem === it.id}
+                        className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-black/5 transition"
+                      >
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 text-xs text-transparent">
+                          ✓
+                        </span>
+                        <span className="block min-w-0 flex-1 truncate font-medium">{it.description}</span>
+                        <span className="shrink-0 text-sm font-semibold">
+                          {formatOre(it.priceOre)} {tx.currency}
+                        </span>
+                      </button>
+                    ))}
+                    {claimed.length > 0 && (
+                      <details className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
+                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(claimed.length)}</summary>
+                        <div className="mt-2 space-y-1">
+                          {claimed.map((it) => (
+                            <button
+                              key={it.id}
+                              type="button"
+                              onClick={() => toggleClaim(it.id)}
+                              disabled={busyItem === it.id}
+                              className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-gray-100"
+                            >
+                              <span className={it.claimedBy.includes(personId) ? "text-swish-dark" : "text-emerald-500"}>✓</span>
+                              <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description}</span>
+                              <span className="shrink-0 text-xs text-gray-400">{claimers(it)}</span>
+                              <span className="shrink-0 text-gray-400 line-through">{formatOre(it.priceOre)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 );
               })}
