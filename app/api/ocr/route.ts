@@ -7,7 +7,9 @@ export const maxDuration = 60;
 
 // Vision model on Cloudflare Workers AI. Keyless — billed against the
 // account's free daily Neuron allocation via the `AI` binding.
-const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+// NB: Meta's Llama 3.2 vision license excludes the EU, so we use LLaVA
+// (Vicuna-based, no EU restriction) for this Sweden-based app.
+const MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
 {"items":[{"description":string,"price":number,"shared":boolean}],"total":number|null,"moms":number|null,"dricks":number|null}
