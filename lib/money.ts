@@ -52,7 +52,7 @@ export function oreToKronor(ore: number): number {
  * the base share is floored and the leftover öre are handed out one-by-one to
  * the first sharers, so the per-sharer amounts always sum back to priceOre.
  */
-function splitItemOre(priceOre: number, count: number): number[] {
+export function splitOre(priceOre: number, count: number): number[] {
   if (count <= 0) return [];
   const base = Math.floor(priceOre / count);
   let remainder = priceOre - base * count;
@@ -88,7 +88,7 @@ export function computeShares(
         unassignedOre += item.priceOre;
         continue;
       }
-      const parts = splitItemOre(item.priceOre, divisor);
+      const parts = splitOre(item.priceOre, divisor);
       const covered = Math.min(diners.length, divisor);
       for (let i = 0; i < covered; i++) {
         subtotals.set(diners[i].id, (subtotals.get(diners[i].id) ?? 0) + parts[i]);
@@ -102,7 +102,7 @@ export function computeShares(
       unassignedOre += item.priceOre;
       continue;
     }
-    const parts = splitItemOre(item.priceOre, sharers.length);
+    const parts = splitOre(item.priceOre, sharers.length);
     sharers.forEach((id, i) => {
       subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);
     });

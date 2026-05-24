@@ -12,6 +12,8 @@ export interface Strings {
   readReceipt: string;
   chooseOther: string;
   photoOrChoose: string;
+  takePhoto: string;
+  chooseLibrary: string;
   skipManual: string;
 
   // items
@@ -98,6 +100,8 @@ const sv: Strings = {
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
   photoOrChoose: "Fota eller välj bild",
+  takePhoto: "Ta foto",
+  chooseLibrary: "Välj från galleri",
   skipManual: "Hoppa över – skriv in själv",
 
   itemsTitle: "Rader",
@@ -176,6 +180,8 @@ const en: Strings = {
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",
   photoOrChoose: "Take or choose a photo",
+  takePhoto: "Take photo",
+  chooseLibrary: "Choose from library",
   skipManual: "Skip – enter manually",
 
   itemsTitle: "Items",

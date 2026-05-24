@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
+import { computeShares, formatOre, parseAmountToOre, splitOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
@@ -75,6 +75,7 @@ export default function Page() {
   const [roomError, setRoomError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Switch language; carry over the meal label only if it is still the
@@ -231,11 +232,21 @@ export default function Page() {
           payeeNumber: payerPhone,
           message,
           tipPercent,
-          items: validItems.map((it) => ({
-            description: it.description.trim() || t.rowFallback,
-            priceOre: parseAmountToOre(it.priceInput) ?? 0,
-            category: categoryFor(it.description, it.category),
-          })),
+          items: validItems.flatMap((it) => {
+            const priceOre = parseAmountToOre(it.priceInput) ?? 0;
+            const desc = it.description.trim() || t.rowFallback;
+            const category = categoryFor(it.description, it.category);
+            // A shared item with a known group size becomes that many claimable
+            // share-slots, so diners can each take one (or several for a partner).
+            if (it.shared && groupSize >= 2) {
+              return splitOre(priceOre, groupSize).map((slotOre, i) => ({
+                description: `${desc} (${i + 1}/${groupSize})`,
+                priceOre: slotOre,
+                category,
+              }));
+            }
+            return [{ description: desc, priceOre, category }];
+          }),
         }),
       });
       const data = await res.json();
@@ -295,7 +306,7 @@ export default function Page() {
             ) : (
               <button
                 type="button"
-                onClick={() => fileRef.current?.click()}
+                onClick={() => cameraRef.current?.click()}
                 className="flex h-56 w-full flex-col items-center justify-center gap-2 text-gray-500"
               >
                 <span className="text-4xl">📷</span>
@@ -304,45 +315,38 @@ export default function Page() {
             )}
           </div>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={onFile}
-            className="hidden"
-          />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
+          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
 
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
           <div className="mt-5 space-y-2">
             {imageUrl && (
-              <>
-                <button
-                  type="button"
-                  onClick={runOcr}
-                  disabled={ocrLoading}
-                  className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
-                >
-                  {ocrLoading ? t.reading : t.readReceipt}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
-                >
-                  {t.chooseOther}
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={runOcr}
+                disabled={ocrLoading}
+                className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
+              >
+                {ocrLoading ? t.reading : t.readReceipt}
+              </button>
             )}
-            {!imageUrl && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className={`rounded-xl px-4 py-3 font-medium ${imageUrl ? "bg-gray-100 active:bg-gray-200" : "bg-swish text-white active:bg-swish-dark"}`}
+              >
+                {t.takePhoto}
+              </button>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                className={`rounded-xl px-4 py-3 font-medium ${imageUrl ? "bg-gray-100 active:bg-gray-200" : "bg-swish text-white active:bg-swish-dark"}`}
               >
-                {t.photoOrChoose}
+                {t.chooseLibrary}
               </button>
-            )}
+            </div>
             <button
               type="button"
               onClick={skipToManual}
@@ -428,6 +432,18 @@ export default function Page() {
           <div className="rounded-2xl bg-swish/5 p-4 ring-1 ring-swish/20">
             <h2 className="text-lg font-bold">{t.liveRoomTitle}</h2>
             <p className="mt-1 text-sm text-gray-600">{t.liveRoomHint}</p>
+            <label className="mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
+              <span className="text-gray-600">{t.groupSizeLabel}</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={groupSize || ""}
+                onChange={(e) => setGroupSize(Math.max(0, Math.min(50, Number(e.target.value) || 0)))}
+                placeholder="–"
+                className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
+              />
+            </label>
             <button
               type="button"
               onClick={createRoom}
