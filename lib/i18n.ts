@@ -95,7 +95,6 @@ export interface Strings {
   // formatting + message template
   currency: string;
   mealDefault: string;
-  shareSuffix: string;
 
   // QrCard
   shareTitle: (name: string) => string;
@@ -197,7 +196,6 @@ const sv: Strings = {
 
   currency: "kr",
   mealDefault: "Middag",
-  shareSuffix: " - din del",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
@@ -299,7 +297,6 @@ const en: Strings = {
 
   currency: "kr",
   mealDefault: "Dinner",
-  shareSuffix: " - your share",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,

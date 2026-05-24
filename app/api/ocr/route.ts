@@ -20,6 +20,8 @@ Rules:
 - "date" is the receipt date as "YYYY-MM-DD" (convert formats like "16jan17" → "2017-01-16"). null if unreadable.
 - "y" is the vertical position of this item's line on the receipt image as a percent from the top (0 = very top edge, 100 = very bottom edge). Estimate it as accurately as you can.
 - "items" are the ordered dishes/drinks: a short description and the price.
+- Clean up each description into the real menu item. Receipts are often misread or abbreviated, so correct obvious OCR errors and misspellings to the word that was clearly intended — fix dropped, swapped or wrong letters (e.g. "ryggkaffe" → "Bryggkaffe", "entrecöte"/"entrecote" → "Entrecôte", "vamkorv" → "Varmkorv", "ceasarsallad" → "Caesarsallad") and use normal capitalisation, not ALL CAPS.
+- When a line names a brand or product, keep that real brand name as printed instead of forcing a generic word (e.g. "Coca-Cola", "Ramlösa", "Pågen", "Brooklyn Lager", "Heinz"). Never invent a brand that isn't there, and never rewrite a genuine brand into a plain word.
 - "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
 - "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.

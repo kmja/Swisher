@@ -169,8 +169,8 @@ export default function Page() {
   }, [applyLang]);
 
   const message = useMemo(
-    () => `${mealLabel} ${eventDate}${t.shareSuffix}`.slice(0, 50),
-    [mealLabel, eventDate, t.shareSuffix],
+    () => `${mealLabel} ${eventDate}`.trim().slice(0, 50),
+    [mealLabel, eventDate],
   );
 
   // Cycle the scanning status text while OCR runs.
