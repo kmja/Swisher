@@ -18,33 +18,40 @@ export function normalizeCategory(v: unknown): Category {
   return v === "food" || v === "drink" || v === "dessert" || v === "other" ? v : "other";
 }
 
-// Whole-word matcher whose boundaries treat accented letters (å ä ö é ô …) as
-// word characters, so "entrecôte" doesn't match "te" and "glass" doesn't match
-// "glas". Input must be lower-cased.
-const LETTER = "a-zà-ÿ";
-const wholeWord = (words: string[]) => new RegExp(`(?<![${LETTER}])(?:${words.join("|")})(?![${LETTER}])`);
+// Strip diacritics so "läsk"/"lask", "smörgås"/"smorgas", "entrecôte"/"entrecote"
+// all match — receipts often drop å/ä/ö to a/o. Matching is then whole-word over
+// plain a-z, so "lax" won't match "regnbagslax" and "glas" won't match "glass".
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const wholeWord = (words: string[]) => new RegExp(`(?<![a-z])(?:${words.map(norm).join("|")})(?![a-z])`);
 
 const DRINK_RE = wholeWord([
-  "öl", "lager", "ipa", "cider", "vin", "rödvin", "vitt vin", "wine", "beer", "cocktail", "drink",
-  "gin", "whisky", "vodka", "rom", "tequila", "snaps", "shot", "kaffe", "coffee", "espresso",
-  "latte", "cappuccino", "te", "tea", "läsk", "soda", "cola", "juice", "vatten", "water",
-  "smoothie", "milkshake", "flaska", "carafe", "karaff",
+  "öl", "lager", "ipa", "ale", "stout", "pilsner", "cider", "vin", "rödvin", "vitt vin", "rosé",
+  "bubbel", "champagne", "cava", "prosecco", "wine", "beer", "cocktail", "drink", "gin", "tonic",
+  "whisky", "whiskey", "vodka", "rom", "tequila", "snaps", "nubbe", "shot", "kaffe", "coffee",
+  "espresso", "latte", "cappuccino", "americano", "te", "tea", "läsk", "saft", "must", "julmust",
+  "glögg", "cola", "fanta", "sprite", "pepsi", "soda", "juice", "vatten", "water", "ramlösa",
+  "loka", "festis", "smoothie", "milkshake", "flaska", "carafe", "karaff",
 ]);
 const DESSERT_RE = wholeWord([
-  "glass", "dessert", "efterrätt", "kaka", "cake", "cheesecake", "paj", "pie", "tiramisu", "crème",
-  "creme", "brûlée", "brulee", "choklad", "chocolate", "sorbet", "pannacotta", "panna cotta",
-  "kladdkaka", "våffla", "våfflor", "waffle",
+  "glass", "dessert", "efterrätt", "kaka", "kakor", "cake", "cheesecake", "paj", "pie", "tiramisu",
+  "crème", "creme", "brûlée", "brulee", "choklad", "chocolate", "sorbet", "pannacotta", "panna cotta",
+  "kladdkaka", "våffla", "våfflor", "waffle", "semla", "bulle", "kanelbulle", "ostkaka", "mousse",
+  "parfait", "sundae", "äppelpaj", "chokladboll",
 ]);
 const FOOD_RE = wholeWord([
-  "sallad", "salad", "pizza", "pasta", "burgare", "burger", "biff", "entrecôte", "entrecote",
-  "kött", "fläsk", "fisk", "fish", "lax", "kyckling", "chicken", "soppa", "soup", "råbiff", "toast",
-  "smörgås", "sandwich", "pommes", "fries", "förrätt", "varmrätt", "huvudrätt", "tallrik",
-  "plankstek", "tacos", "sushi", "nachos", "bröd", "ost", "skaldjur", "räkor", "räk",
+  "sallad", "salad", "pizza", "pasta", "lasagne", "burgare", "burger", "hamburgare", "biff",
+  "entrecôte", "entrecote", "ryggbiff", "oxfilé", "fläskfilé", "flankstek", "plankstek", "stek",
+  "kött", "fläsk", "fisk", "fish", "lax", "regnbåge", "regnbågslax", "gravlax", "torsk", "sill",
+  "strömming", "räka", "räkor", "skaldjur", "musslor", "kyckling", "chicken", "anka", "kalkon",
+  "korv", "falukorv", "varmkorv", "kebab", "falafel", "fralla", "macka", "mackor", "smörgås",
+  "sandwich", "wrap", "panini", "bagel", "toast", "omelett", "schnitzel", "soppa", "soup", "gryta",
+  "tacos", "taco", "nachos", "sushi", "nigiri", "maki", "poke", "ramen", "nudlar", "ris", "pommes",
+  "fries", "potatis", "bröd", "ost", "förrätt", "varmrätt", "huvudrätt", "tallrik",
 ]);
 
 /** Keyword fallback (Swedish + English) when the model gives no category. */
 function guessCategory(description: string): Category {
-  const s = description.toLowerCase();
+  const s = norm(description);
   if (DRINK_RE.test(s)) return "drink";
   if (DESSERT_RE.test(s)) return "dessert";
   if (FOOD_RE.test(s)) return "food";

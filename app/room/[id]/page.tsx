@@ -170,15 +170,6 @@ export default function RoomPage() {
     }
   }
 
-  async function setTip(percent: number) {
-    const res = await fetch(`/api/room/${code}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "tip", percent }),
-    });
-    if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
-  }
-
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
 
   async function share() {
@@ -208,7 +199,7 @@ export default function RoomPage() {
       sharers: i.claimedBy,
     }));
     const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
-    const r = computeShares(li, diners, state.tipPercent);
+    const r = computeShares(li, diners, state.tipOre);
     return { ...r, lineItems: li };
   }, [state]);
 
@@ -325,28 +316,10 @@ export default function RoomPage() {
             )}
           </section>
 
-          {/* Tip — host only */}
-          {isPayee && (
-            <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{t.tip}</span>
-                <span className="text-sm text-gray-600">{state.tipPercent}%</span>
-              </div>
-              <div className="mt-2 flex gap-2">
-                {[0, 5, 10, 15].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setTip(p)}
-                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium ring-1 ${
-                      state.tipPercent === p ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
-                    }`}
-                  >
-                    {p === 0 ? t.none : `${p}%`}
-                  </button>
-                ))}
-              </div>
-            </section>
+          {state.tipOre > 0 && (
+            <div className="rounded-2xl bg-white p-3 text-sm text-gray-600 shadow-sm ring-1 ring-black/5">
+              {tx.tipSplitNote(formatOre(state.tipOre))}
+            </div>
           )}
 
           {/* My share + pay */}

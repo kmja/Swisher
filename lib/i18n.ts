@@ -78,6 +78,7 @@ export interface Strings {
   // flow
   splitYourself: string;
   assignManually: string;
+  tipSplitNote: (amt: string) => string;
 
   // formatting + message template
   currency: string;
@@ -164,6 +165,7 @@ const sv: Strings = {
 
   splitYourself: "Dela upp själv i stället",
   assignManually: "Fördela på nästa steg →",
+  tipSplitNote: (amt) => `Dricks ${amt} kr från kvittot – delas lika`,
 
   currency: "kr",
   mealDefault: "Middag",
@@ -248,6 +250,7 @@ const en: Strings = {
 
   splitYourself: "Split it yourself instead",
   assignManually: "Assign on the next screen →",
+  tipSplitNote: (amt) => `${amt} kr tip from the receipt — split equally`,
 
   currency: "kr",
   mealDefault: "Dinner",

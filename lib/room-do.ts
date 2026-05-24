@@ -22,7 +22,7 @@ export type RoomState = {
   /** Restaurant/place and date read from the receipt, shown so everyone remembers. */
   place: string;
   date: string;
-  tipPercent: number;
+  tipOre: number;
   items: RoomItem[];
   people: RoomPerson[];
 };
@@ -34,7 +34,7 @@ export type RoomInit = {
   message: string;
   place?: string;
   date?: string;
-  tipPercent: number;
+  tipOre: number;
   items: { description: string; priceOre: number; category?: string }[];
 };
 
@@ -67,7 +67,7 @@ export class RoomDO extends DurableObject {
       message: data.message.slice(0, 50),
       place: (data.place ?? "").slice(0, 60),
       date: (data.date ?? "").slice(0, 20),
-      tipPercent: Math.max(0, Math.min(100, Math.round(data.tipPercent || 0))),
+      tipOre: Math.max(0, Math.round(data.tipOre || 0)),
       items: data.items.map((it) => ({
         id: uid(),
         description: it.description.slice(0, 80),
@@ -105,14 +105,6 @@ export class RoomDO extends DurableObject {
       else item.claimedBy.push(personId);
       await this.save(state);
     }
-    return state;
-  }
-
-  async setTip(percent: number): Promise<RoomState | null> {
-    const state = await this.load();
-    if (!state) return null;
-    state.tipPercent = Math.max(0, Math.min(100, Math.round(percent)));
-    await this.save(state);
     return state;
   }
 }

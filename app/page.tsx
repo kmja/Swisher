@@ -69,7 +69,7 @@ export default function Page() {
   const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
   const [eventDate, setEventDate] = useState(today);
 
-  const [tipPercent, setTipPercent] = useState(0);
+  const [receiptTipOre, setReceiptTipOre] = useState(0);
 
   const [groupSize, setGroupSize] = useState(0);
   const [creatingRoom, setCreatingRoom] = useState(false);
@@ -212,6 +212,7 @@ export default function Page() {
         })),
       );
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
+      setReceiptTipOre(typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
       if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
       setStep("items");
@@ -298,7 +299,7 @@ export default function Page() {
           message,
           place: mealLabel.trim(),
           date: eventDate,
-          tipPercent,
+          tipOre: receiptTipOre,
           items: validItems.flatMap((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
             const desc = it.description.trim() || t.rowFallback;
@@ -344,8 +345,8 @@ export default function Page() {
   );
 
   const { shares, unassignedOre } = useMemo(
-    () => computeShares(lineItems, namedDiners, tipPercent, groupSize),
-    [lineItems, namedDiners, tipPercent, groupSize],
+    () => computeShares(lineItems, namedDiners, receiptTipOre, groupSize),
+    [lineItems, namedDiners, receiptTipOre, groupSize],
   );
 
   const payer = namedDiners[0];
@@ -716,37 +717,11 @@ export default function Page() {
         <section className="mt-6 flex flex-1 flex-col gap-4">
           <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
-          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{t.tip}</span>
-              <span className="text-sm text-gray-600">{tipPercent}%</span>
+          {receiptTipOre > 0 && (
+            <div className="rounded-2xl bg-white p-3 text-sm text-gray-600 shadow-sm ring-1 ring-black/5">
+              {t.tipSplitNote(formatOre(receiptTipOre))}
             </div>
-            <div className="mt-2 flex gap-2">
-              {[0, 5, 10, 15].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setTipPercent(p)}
-                  className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium ring-1 ${
-                    tipPercent === p ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
-                  }`}
-                >
-                  {p === 0 ? t.none : `${p}%`}
-                </button>
-              ))}
-            </div>
-            <label className="mt-2 block text-xs text-gray-500">
-              {t.customPercent}
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={tipPercent}
-                onChange={(e) => setTipPercent(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                className="ml-2 w-16 rounded-lg bg-gray-50 px-2 py-1 text-ink outline-none"
-              />
-            </label>
-          </div>
+          )}
 
           <div className="flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-white">
             <span className="text-sm text-white/70">{t.toDistribute}</span>

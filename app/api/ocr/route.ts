@@ -21,7 +21,7 @@ Rules:
 - "items" are the ordered dishes/drinks: a short description and the price.
 - "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
-- "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear.
+- "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
 - "total" = the amount to pay ("Att betala", "Totalt", "Summa"), else null. "moms" = VAT amount if printed, else null. "dricks" = tip if printed, else null.

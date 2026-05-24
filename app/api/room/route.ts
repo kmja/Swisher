@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     message?: string;
     place?: string;
     date?: string;
-    tipPercent?: number;
+    tipOre?: number;
     items?: { description?: unknown; priceOre?: unknown; category?: unknown }[];
   };
   try {
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     message: String(body.message ?? "").slice(0, 50),
     place: String(body.place ?? "").slice(0, 60),
     date: String(body.date ?? "").slice(0, 20),
-    tipPercent: Number(body.tipPercent) || 0,
+    tipOre: Number(body.tipOre) || 0,
     items,
   });
 
