@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+import { splitOre } from "@/lib/money";
 import type { OcrResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ Rules:
 - "items" are the ordered dishes/drinks: a short description and the price.
 - Clean up each description into the real menu item. Receipts are often misread or abbreviated, so correct obvious OCR errors and misspellings to the word that was clearly intended — fix dropped, swapped or wrong letters (e.g. "ryggkaffe" → "Bryggkaffe", "entrecöte"/"entrecote" → "Entrecôte", "vamkorv" → "Varmkorv", "ceasarsallad" → "Caesarsallad") and use normal capitalisation, not ALL CAPS.
 - When a line names a brand or product, keep that real brand name as printed instead of forcing a generic word (e.g. "Coca-Cola", "Ramlösa", "Pågen", "Brooklyn Lager", "Heinz"). Never invent a brand that isn't there, and never rewrite a genuine brand into a plain word.
-- "price" is the price for ONE item (per unit) in SEK as a number, e.g. 95. "quantity" is how many were ordered on that line; default 1. So a line "2 x 95" or "2 Öl 190,00" is {"price":95,"quantity":2} — NOT price 190.
+- "price" is the total charged for the WHOLE line in SEK — the number in the rightmost (total) column. For "2 Bryggkaffe 35,00 70,00" price is 70; for "3 Stor Lager 195,00" price is 195. "quantity" is the leading count of units on the line (default 1). Always read the line total, never the per-unit price, so the items add up to the receipt total.
 - "shared": true when the line is likely shared by the table — bottles/carafes of wine, pitchers, large platters, sides "att dela"/"to share", a shared starter. Otherwise false.
 - "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
@@ -84,7 +85,11 @@ function extractJson(text: string): OcrResult {
       const category = typeof it?.category === "string" ? it.category : undefined;
       const y = Number.isFinite(Number(it?.y)) ? Number(it?.y) : undefined;
       const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
-      for (let i = 0; i < qty; i++) items.push({ description, price, shared, category, y });
+      // price is the line total; split it into one row per unit so each can be
+      // claimed separately, while the rows still sum back to the line total.
+      for (const partOre of splitOre(Math.round(price * 100), qty)) {
+        items.push({ description, price: partOre / 100, shared, category, y });
+      }
     }
     return {
       items,
@@ -106,14 +111,10 @@ function extractJson(text: string): OcrResult {
     const ym = obj.match(/"y"\s*:\s*(\d+(?:\.\d+)?)/);
     if (d && p) {
       const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
-      for (let i = 0; i < qty; i++) {
-        items.push({
-          description: d[1].trim(),
-          price: Number(p[1]),
-          shared: /"shared"\s*:\s*true/.test(obj),
-          category: c?.[1],
-          y: ym ? Number(ym[1]) : undefined,
-        });
+      const shared = /"shared"\s*:\s*true/.test(obj);
+      const y = ym ? Number(ym[1]) : undefined;
+      for (const partOre of splitOre(Math.round(Number(p[1]) * 100), qty)) {
+        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], y });
       }
     }
   }
