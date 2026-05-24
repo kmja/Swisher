@@ -272,10 +272,9 @@ export default function RoomPage() {
                 const all = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
                 const isMine = (it: RoomState["items"][number]) => it.claimedBy.includes(personId);
-                // Main list: unclaimed (first) + items I claimed (kept visible). Others' claims collapse.
-                const mainItems = all
-                  .filter((it) => it.claimedBy.length === 0 || isMine(it))
-                  .sort((a, b) => (isMine(a) ? 1 : 0) - (isMine(b) ? 1 : 0));
+                // Main list keeps its original order: unclaimed items + the ones
+                // I claimed (kept visible, no reshuffle on select). Others collapse.
+                const mainItems = all.filter((it) => it.claimedBy.length === 0 || isMine(it));
                 const othersItems = all.filter((it) => it.claimedBy.length > 0 && !isMine(it));
                 const claimers = (it: RoomState["items"][number]) =>
                   it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
