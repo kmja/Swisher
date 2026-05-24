@@ -11,9 +11,11 @@ type Props = {
   amountOre: number;
   message: string;
   t: Strings;
+  /** Lead with a big "Pay … with Swish" button (for the diner paying on their own phone). */
+  primaryPay?: boolean;
 };
 
-export default function QrCard({ name, payee, amountOre, message, t }: Props) {
+export default function QrCard({ name, payee, amountOre, message, t, primaryPay }: Props) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -52,6 +54,15 @@ export default function QrCard({ name, payee, amountOre, message, t }: Props) {
         </span>
       </div>
 
+      {primaryPay && (
+        <a
+          href={uri}
+          className="mt-4 block rounded-xl bg-swish px-4 py-4 text-center text-base font-bold text-white shadow-sm active:bg-swish-dark"
+        >
+          {t.payWithSwish(amount)}
+        </a>
+      )}
+
       <div className="mt-4 flex justify-center">
         {imgError ? (
           <div className="flex h-[260px] w-[260px] items-center justify-center rounded-xl bg-gray-100 px-4 text-center text-sm text-gray-500">
@@ -71,13 +82,15 @@ export default function QrCard({ name, payee, amountOre, message, t }: Props) {
 
       <p className="mt-3 text-center text-xs text-gray-500">{t.qrLockedTo(payee)}</p>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <a
-          href={uri}
-          className="rounded-xl bg-swish px-4 py-3 text-center text-sm font-semibold text-white active:bg-swish-dark"
-        >
-          {t.openSwish}
-        </a>
+      <div className={`mt-4 grid gap-2 ${primaryPay ? "grid-cols-1" : "grid-cols-2"}`}>
+        {!primaryPay && (
+          <a
+            href={uri}
+            className="rounded-xl bg-swish px-4 py-3 text-center text-sm font-semibold text-white active:bg-swish-dark"
+          >
+            {t.openSwish}
+          </a>
+        )}
         <button
           type="button"
           onClick={share}

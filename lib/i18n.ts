@@ -99,6 +99,7 @@ export interface Strings {
   // QrCard
   shareTitle: (name: string) => string;
   shareText: (name: string, amt: string) => string;
+  payWithSwish: (amt: string) => string;
   qrError: string;
   qrAlt: (name: string) => string;
   qrLockedTo: (payee: string) => string;
@@ -191,10 +192,11 @@ const sv: Strings = {
 
   currency: "kr",
   mealDefault: "Middag",
-  shareSuffix: " – din del",
+  shareSuffix: " - din del",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
+  payWithSwish: (amt) => `Betala ${amt} kr med Swish`,
   qrError: "Kunde inte skapa QR-kod. Använd länken nedan.",
   qrAlt: (name) => `Swish QR-kod för ${name}`,
   qrLockedTo: (payee) => `Skanna med valfri telefon · betalningen är låst till ${payee}`,
@@ -287,10 +289,11 @@ const en: Strings = {
 
   currency: "kr",
   mealDefault: "Dinner",
-  shareSuffix: " – your share",
+  shareSuffix: " - your share",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
+  payWithSwish: (amt) => `Pay ${amt} kr with Swish`,
   qrError: "Couldn't create a QR code. Use the link below.",
   qrAlt: (name) => `Swish QR code for ${name}`,
   qrLockedTo: (payee) => `Scan with any phone · payment is locked to ${payee}`,

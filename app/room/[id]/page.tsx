@@ -362,7 +362,7 @@ export default function RoomPage() {
                 <p className="mt-1 text-xs text-gray-500">{t.yourShareNote}</p>
               </section>
             ) : myShare.totalOre > 0 ? (
-              <QrCard name={t.yourTotal} payee={state.payeeNumber} amountOre={myShare.totalOre} message={state.message} t={tx} />
+              <QrCard name={t.yourTotal} payee={state.payeeNumber} amountOre={myShare.totalOre} message={state.message} t={tx} primaryPay />
             ) : (
               <p className="text-sm text-gray-500">{t.nothingYet}</p>
             )

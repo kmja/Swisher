@@ -30,6 +30,19 @@ export type SwishPayment = {
 };
 
 /**
+ * Swish payment messages allow only a limited character set (max 50). Normalise
+ * fancy dashes to a hyphen and drop anything outside the safe set, so the QR
+ * generator and the app don't reject or garble the message.
+ */
+export function sanitizeMessage(message: string): string {
+  return message
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/[^0-9A-Za-zÅÄÖåäöÆØæøÉéÜü .,:;!?()/+&-]/g, "")
+    .trim()
+    .slice(0, 50);
+}
+
+/**
  * Build the locked `swish://` deep link. All fields are non-editable so the
  * payer cannot change the recipient, amount, or message before confirming.
  */
@@ -38,7 +51,7 @@ export function buildSwishUri({ payee, amountOre, message }: SwishPayment): stri
     version: 1,
     payee: { value: payee, editable: false },
     amount: { value: oreToKronor(amountOre), editable: false },
-    message: { value: message, editable: false },
+    message: { value: sanitizeMessage(message), editable: false },
   };
   return `swish://payment?data=${encodeURIComponent(JSON.stringify(data))}`;
 }
@@ -52,7 +65,7 @@ export function buildPrefilledQrBody({ payee, amountOre, message }: SwishPayment
     transparent: false,
     payee: { value: payee, editable: false },
     amount: { value: oreToKronor(amountOre), editable: false },
-    message: { value: message, editable: false },
+    message: { value: sanitizeMessage(message), editable: false },
   };
 }
 
