@@ -58,6 +58,7 @@ export default function Page() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [scanCount, setScanCount] = useState<number | null>(null);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
@@ -193,6 +194,7 @@ export default function Page() {
     if (!img || ocrLoading) return;
     setOcrLoading(true);
     setOcrError(null);
+    setScanCount(null);
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
@@ -201,24 +203,44 @@ export default function Page() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
-      setItems(
-        (data.items as { description: string; price: number; shared?: boolean; category?: string }[]).map((it) => ({
+      const mapped = (data.items as { description: string; price: number; shared?: boolean; category?: string }[]).map(
+        (it) => ({
           id: uid(),
           description: it.description,
           priceInput: formatOre(Math.round(it.price * 100)),
           sharers: [],
           shared: it.shared === true,
           category: it.category ?? "",
-        })),
+        }),
       );
+      setItems(mapped);
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
       setReceiptTipOre(typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
       if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
-      setStep("items");
+      setOcrLoading(false);
+      // Tick a counter through the found rows, then move on.
+      const n = mapped.length;
+      if (n === 0) {
+        setStep("items");
+        return;
+      }
+      setScanCount(0);
+      let c = 0;
+      const delay = Math.max(45, Math.min(160, Math.round(750 / n)));
+      const iv = setInterval(() => {
+        c += 1;
+        setScanCount(c);
+        if (c >= n) {
+          clearInterval(iv);
+          setTimeout(() => {
+            setScanCount(null);
+            setStep("items");
+          }, 500);
+        }
+      }, delay);
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "OCR failed.");
-    } finally {
       setOcrLoading(false);
     }
   }
@@ -371,7 +393,14 @@ export default function Page() {
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="max-h-[46vh] w-full object-contain" />
-            ) : (
+            ) : null}
+            {ocrLoading && (
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="scanline absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-transparent via-swish/50 to-transparent" />
+                <div className="scan-pulse absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-swish" />
+              </div>
+            )}
+            {imageUrl ? null : (
               <>
                 <video
                   ref={videoRef}
@@ -400,60 +429,70 @@ export default function Page() {
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
           <div className="mt-5 space-y-2">
-            {imageUrl ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => runOcr()}
-                  disabled={ocrLoading}
-                  className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-60"
-                >
-                  {ocrLoading ? t.reading : t.readReceipt}
-                </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl(null)}
-                    className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
-                  >
-                    {t.takePhoto}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
-                  >
-                    {t.chooseLibrary}
-                  </button>
-                </div>
-              </>
+            {ocrLoading ? (
+              <div className="py-4 text-center text-sm font-semibold text-swish-dark">{t.scanning}</div>
+            ) : scanCount !== null ? (
+              <div className="flex flex-col items-center gap-1 py-3">
+                <span className="text-5xl font-bold tabular-nums text-swish-dark">{scanCount}</span>
+                <span className="text-sm text-gray-600">{t.itemsFound(scanCount)}</span>
+              </div>
             ) : (
               <>
-                {cameraActive && (
-                  <button
-                    type="button"
-                    onClick={capturePhoto}
-                    className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
-                  >
-                    {t.takePhoto}
-                  </button>
+                {imageUrl ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => runOcr()}
+                      className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                    >
+                      {t.readReceipt}
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl(null)}
+                        className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                      >
+                        {t.takePhoto}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                      >
+                        {t.chooseLibrary}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {cameraActive && (
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                      >
+                        {t.takePhoto}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                    >
+                      {t.chooseLibrary}
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                  onClick={skipToManual}
+                  className="w-full rounded-xl px-4 py-3 font-medium text-gray-600 active:bg-gray-100"
                 >
-                  {t.chooseLibrary}
+                  {t.skipManual}
                 </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={skipToManual}
-              className="w-full rounded-xl px-4 py-3 font-medium text-gray-600 active:bg-gray-100"
-            >
-              {t.skipManual}
-            </button>
           </div>
         </section>
       )}

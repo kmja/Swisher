@@ -23,3 +23,19 @@ button,
 textarea {
   font-size: 16px;
 }
+
+/* Receipt "scanning" sweep + glow while OCR runs. */
+@keyframes scan-sweep {
+  0% { transform: translateY(-130%); }
+  100% { transform: translateY(360%); }
+}
+.scanline {
+  animation: scan-sweep 1.15s ease-in-out infinite;
+}
+@keyframes scan-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+.scan-pulse {
+  animation: scan-pulse 1.15s ease-in-out infinite;
+}

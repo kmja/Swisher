@@ -9,6 +9,8 @@ export interface Strings {
   intro: string;
   tapToPhoto: string;
   reading: string;
+  scanning: string;
+  itemsFound: (n: number) => string;
   readReceipt: string;
   chooseOther: string;
   photoOrChoose: string;
@@ -103,6 +105,8 @@ const sv: Strings = {
   intro: "Fota kvittot, peta i vem som åt vad, och få en låst Swish-QR per person.",
   tapToPhoto: "Tryck för att fota kvittot",
   reading: "Läser av…",
+  scanning: "Skannar kvittot…",
+  itemsFound: (n) => `${n} rader tillagda`,
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
   photoOrChoose: "Fota eller välj bild",
@@ -188,6 +192,8 @@ const en: Strings = {
   intro: "Photograph the receipt, tap who ate what, and get a locked Swish QR per person.",
   tapToPhoto: "Tap to photograph the receipt",
   reading: "Reading…",
+  scanning: "Scanning receipt…",
+  itemsFound: (n) => `${n} items added`,
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",
   photoOrChoose: "Take or choose a photo",
