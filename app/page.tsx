@@ -520,10 +520,8 @@ export default function Page() {
             )}
           </div>
 
-          <div className="rounded-2xl bg-swish/5 p-4 ring-1 ring-swish/20">
-            <h2 className="text-lg font-bold">{t.liveRoomTitle}</h2>
-            <p className="mt-1 text-sm text-gray-600">{t.liveRoomHint}</p>
-            <label className="mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
+          <div>
+            <label className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
               <span className="text-gray-600">{t.groupSizeLabel}</span>
               <input
                 type="number"
@@ -535,43 +533,54 @@ export default function Page() {
                 className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
               />
             </label>
-            <button
-              type="button"
-              onClick={createRoom}
-              disabled={!roomReady || creatingRoom}
-              className="mt-3 w-full rounded-xl bg-swish px-4 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
-            >
-              {creatingRoom ? t.creatingRoom : t.createRoom}
-            </button>
+            <input
+              value={mealLabel}
+              onChange={(e) => setMealLabel(e.target.value)}
+              placeholder={t.messagePlaceholder}
+              aria-label={t.messageAria}
+              className="mt-2 w-full rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
+            />
+            <p className="mt-1 px-1 text-xs text-gray-400">”{message}”</p>
             {roomError && <p className="mt-2 text-sm text-red-600">{roomError}</p>}
           </div>
 
-          <div>
-            <h2 className="text-xl font-bold">{t.whoElse}</h2>
-            <div className="mt-2 space-y-2">
-              {diners.slice(1).map((d) => (
-                <div key={d.id} className="flex items-center gap-2">
-                  <input
-                    value={d.name}
-                    onChange={(e) => updateDiner(d.id, e.target.value)}
-                    placeholder={t.namePlaceholder}
-                    className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeDiner(d.id)}
-                    aria-label={t.removePerson}
-                    className="px-3 text-gray-400 active:text-red-500"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+          <details className="rounded-xl bg-white/60 px-4 py-3 ring-1 ring-black/5">
+            <summary className="cursor-pointer text-sm font-medium text-gray-600">{t.splitYourself}</summary>
+            <div className="mt-3">
+              <h3 className="text-sm font-semibold text-gray-500">{t.whoElse}</h3>
+              <div className="mt-2 space-y-2">
+                {diners.slice(1).map((d) => (
+                  <div key={d.id} className="flex items-center gap-2">
+                    <input
+                      value={d.name}
+                      onChange={(e) => updateDiner(d.id, e.target.value)}
+                      placeholder={t.namePlaceholder}
+                      className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeDiner(d.id)}
+                      aria-label={t.removePerson}
+                      className="px-3 text-gray-400 active:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addDiner} className="mt-2 text-sm font-medium text-swish-dark">
+                {t.addPerson}
+              </button>
+              <button
+                type="button"
+                onClick={() => itemsStepValid && setStep("assign")}
+                disabled={!itemsStepValid}
+                className="mt-3 w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200 disabled:opacity-40"
+              >
+                {t.assignManually}
+              </button>
             </div>
-            <button type="button" onClick={addDiner} className="mt-2 text-sm font-medium text-swish-dark">
-              {t.addPerson}
-            </button>
-          </div>
+          </details>
         </section>
       )}
 
@@ -766,21 +775,17 @@ export default function Page() {
         step={step}
         t={t}
         message={message}
-        mealLabel={mealLabel}
-        setMealLabel={setMealLabel}
-        canForward={
-          (step === "capture" && false) ||
-          (step === "items" && itemsStepValid) ||
-          step === "assign"
-        }
+        canForward={step === "assign"}
+        onCreateRoom={createRoom}
+        creatingRoom={creatingRoom}
+        roomReady={roomReady}
         onBack={() => {
           const order: Step[] = ["capture", "items", "assign", "result"];
           const i = order.indexOf(step);
           if (i > 0) setStep(order[i - 1]);
         }}
         onForward={() => {
-          if (step === "items") setStep("assign");
-          else if (step === "assign") setStep("result");
+          if (step === "assign") setStep("result");
         }}
       />
     </main>
@@ -831,20 +836,22 @@ function Footer({
   step,
   t,
   message,
-  mealLabel,
-  setMealLabel,
   canForward,
   onBack,
   onForward,
+  onCreateRoom,
+  creatingRoom,
+  roomReady,
 }: {
   step: Step;
   t: Strings;
   message: string;
-  mealLabel: string;
-  setMealLabel: (v: string) => void;
   canForward: boolean;
   onBack: () => void;
   onForward: () => void;
+  onCreateRoom: () => void;
+  creatingRoom: boolean;
+  roomReady: boolean;
 }) {
   if (step === "capture") return null;
 
@@ -859,25 +866,27 @@ function Footer({
           {t.back}
         </button>
         {step === "items" && (
-          <input
-            value={mealLabel}
-            onChange={(e) => setMealLabel(e.target.value)}
-            placeholder={t.messagePlaceholder}
-            aria-label={t.messageAria}
-            className="min-w-0 flex-1 rounded-xl bg-gray-50 px-3 py-3 text-sm outline-none"
-          />
+          <button
+            type="button"
+            onClick={onCreateRoom}
+            disabled={!roomReady || creatingRoom}
+            className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+          >
+            {creatingRoom ? t.creatingRoom : t.createRoom}
+          </button>
         )}
-        {step === "result" ? (
-          <div className="flex-1 truncate text-right text-xs text-gray-500">”{message}”</div>
-        ) : (
+        {step === "assign" && (
           <button
             type="button"
             onClick={onForward}
             disabled={!canForward}
             className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
           >
-            {step === "assign" ? t.createQr : t.forward}
+            {t.createQr}
           </button>
+        )}
+        {step === "result" && (
+          <div className="flex-1 truncate text-right text-xs text-gray-500">”{message}”</div>
         )}
       </div>
     </div>

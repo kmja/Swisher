@@ -74,6 +74,10 @@ export interface Strings {
   sharedToggle: string;
   sharedSplit: (n: number, amt: string) => string;
 
+  // flow
+  splitYourself: string;
+  assignManually: string;
+
   // formatting + message template
   currency: string;
   mealDefault: string;
@@ -156,6 +160,9 @@ const sv: Strings = {
   sharedToggle: "Delas av alla",
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} kr/pers`,
 
+  splitYourself: "Dela upp själv i stället",
+  assignManually: "Fördela på nästa steg →",
+
   currency: "kr",
   mealDefault: "Middag",
   shareSuffix: " – din del",
@@ -235,6 +242,9 @@ const en: Strings = {
   groupSizeLabel: "People sharing (optional)",
   sharedToggle: "Shared",
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} kr each`,
+
+  splitYourself: "Split it yourself instead",
+  assignManually: "Assign on the next screen →",
 
   currency: "kr",
   mealDefault: "Dinner",
