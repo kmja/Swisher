@@ -106,6 +106,7 @@ export interface Strings {
   openSwish: string;
   copied: string;
   shareLink: string;
+  swishOpensApp: string;
   noSwishApp: string;
 }
 
@@ -204,6 +205,7 @@ const sv: Strings = {
   openSwish: "Öppna Swish",
   copied: "Kopierad!",
   shareLink: "Dela länk",
+  swishOpensApp: "Öppnar Swish-appen – kräver att den finns på den här telefonen",
   noSwishApp:
     "Kunde inte öppna Swish. Knappen öppnar Swish-appen, så den måste vara installerad på den här telefonen. Skanna annars QR-koden ovan med en annan telefon.",
 };
@@ -303,6 +305,7 @@ const en: Strings = {
   openSwish: "Open Swish",
   copied: "Copied!",
   shareLink: "Share link",
+  swishOpensApp: "Opens the Swish app — needs it installed on this phone",
   noSwishApp:
     "Couldn't open Swish. The button launches the Swish app, so it has to be installed on this phone. Otherwise scan the QR code above with another phone.",
 };

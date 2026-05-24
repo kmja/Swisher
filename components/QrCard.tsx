@@ -78,13 +78,16 @@ export default function QrCard({ name, payee, amountOre, message, t, primaryPay 
       </div>
 
       {primaryPay && (
-        <a
-          href={uri}
-          onClick={trackSwishOpen}
-          className="mt-4 block rounded-xl bg-swish px-4 py-4 text-center text-base font-bold text-white shadow-sm active:bg-swish-dark"
-        >
-          {t.payWithSwish(amount)}
-        </a>
+        <>
+          <a
+            href={uri}
+            onClick={trackSwishOpen}
+            className="mt-4 block rounded-xl bg-swish px-4 py-4 text-center text-base font-bold text-white shadow-sm active:bg-swish-dark"
+          >
+            {t.payWithSwish(amount)}
+          </a>
+          <p className="mt-1.5 text-center text-xs text-gray-400">{t.swishOpensApp}</p>
+        </>
       )}
 
       <div className="mt-4 flex justify-center">
