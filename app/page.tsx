@@ -17,6 +17,8 @@ type UiItem = {
   sharers: string[];
   shared: boolean;
   category: string;
+  /** Index into `images` of the photo this row was scanned from; -1 if typed. */
+  imgIndex: number;
 };
 
 const uid = () =>
@@ -61,9 +63,11 @@ export default function Page() {
   const [scanCount, setScanCount] = useState<number | null>(null);
 
   const [items, setItems] = useState<UiItem[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [zoomItem, setZoomItem] = useState<number | null>(null);
   const zoomScrollRef = useRef<HTMLDivElement>(null);
+  const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
   const [payerPhone, setPayerPhone] = useState("");
@@ -214,8 +218,10 @@ export default function Page() {
     }
   }
 
-  async function runOcr(img: string = imageUrl ?? "") {
+  async function runOcr(img: string = imageUrl ?? "", opts: { append?: boolean } = {}) {
     if (!img || ocrLoading) return;
+    const append = opts.append === true;
+    const imgIndex = append ? images.length : 0;
     setOcrLoading(true);
     setOcrError(null);
     setScanCount(null);
@@ -227,22 +233,30 @@ export default function Page() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
-      const mapped = (data.items as { description: string; price: number; shared?: boolean; category?: string }[]).map(
-        (it) => ({
-          id: uid(),
-          description: it.description,
-          priceInput: formatOre(Math.round(it.price * 100)),
-          sharers: [],
-          shared: it.shared === true,
-          category: it.category ?? "",
-        }),
-      );
+      const mapped: UiItem[] = (
+        data.items as { description: string; price: number; shared?: boolean; category?: string }[]
+      ).map((it) => ({
+        id: uid(),
+        description: it.description,
+        priceInput: formatOre(Math.round(it.price * 100)),
+        sharers: [],
+        shared: it.shared === true,
+        category: it.category ?? "",
+        imgIndex,
+      }));
+      setImages((prev) => (append ? [...prev, img] : [img]));
+      setOcrLoading(false);
+
+      if (append) {
+        setItems((prev) => [...prev, ...mapped]);
+        return;
+      }
+
       setItems(mapped);
       setReceiptTotal(typeof data.total === "number" ? Math.round(data.total * 100) : null);
       setReceiptTipOre(typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
       if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
-      setOcrLoading(false);
       // Tick a counter through the found rows, then move on.
       const n = mapped.length;
       if (n === 0) {
@@ -269,9 +283,21 @@ export default function Page() {
     }
   }
 
+  async function onAppendFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      runOcr(dataUrl, { append: true });
+    } catch (err) {
+      setOcrError(err instanceof Error ? err.message : "Could not read the image.");
+    }
+  }
+
   function skipToManual() {
     if (items.length === 0) {
-      setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "" }]);
+      setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
     }
     setStep("items");
   }
@@ -280,7 +306,7 @@ export default function Page() {
   const updateItem = (id: string, patch: Partial<UiItem>) =>
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   const addItem = () =>
-    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "" }]);
+    setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
 
   const updateDiner = (id: string, name: string) =>
@@ -546,7 +572,7 @@ export default function Page() {
                     placeholder={t.pricePlaceholder}
                     className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                   />
-                  {imageUrl && (
+                  {it.imgIndex >= 0 && images[it.imgIndex] && (
                     <button
                       type="button"
                       onClick={() => setZoomItem(idx)}
@@ -567,9 +593,20 @@ export default function Page() {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={addItem} className="mt-2 text-sm font-medium text-swish-dark">
-              {t.addRow}
-            </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
+                {t.addRow}
+              </button>
+              <button
+                type="button"
+                onClick={() => addMoreRef.current?.click()}
+                disabled={ocrLoading}
+                className="text-sm font-medium text-swish-dark disabled:opacity-50"
+              >
+                {ocrLoading ? t.addingPhoto : t.addPhoto}
+              </button>
+            </div>
+            <input ref={addMoreRef} type="file" accept="image/*" onChange={onAppendFile} className="hidden" />
 
             <div className="mt-3 flex justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
               <span className="text-gray-600">{t.rowsSum}</span>
@@ -860,35 +897,43 @@ export default function Page() {
         </section>
       )}
 
-      {zoomItem !== null && imageUrl && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
-          <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
-            <span className="min-w-0 truncate text-sm font-medium">{items[zoomItem]?.description || t.viewSource}</span>
-            <button
-              type="button"
-              onClick={() => setZoomItem(null)}
-              className="shrink-0 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
-            >
-              ✕
-            </button>
+      {(() => {
+        if (zoomItem === null) return null;
+        const it = items[zoomItem];
+        const src = it && it.imgIndex >= 0 ? images[it.imgIndex] : null;
+        if (!src) return null;
+        const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
+        const pos = Math.max(0, sameImg.indexOf(it));
+        return (
+          <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
+            <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
+              <span className="min-w-0 truncate text-sm font-medium">{it.description || t.viewSource}</span>
+              <button
+                type="button"
+                onClick={() => setZoomItem(null)}
+                className="shrink-0 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="px-4 pb-2 text-center text-xs text-white/60">{t.viewSourceHint}</p>
+            <div ref={zoomScrollRef} className="flex-1 overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt=""
+                onLoad={(e) => {
+                  const c = zoomScrollRef.current;
+                  if (!c || sameImg.length === 0) return;
+                  const frac = (pos + 0.5) / sameImg.length;
+                  c.scrollTop = Math.max(0, frac * e.currentTarget.clientHeight - c.clientHeight / 2);
+                }}
+                className="w-[230%] max-w-none"
+              />
+            </div>
           </div>
-          <p className="px-4 pb-2 text-center text-xs text-white/60">{t.viewSourceHint}</p>
-          <div ref={zoomScrollRef} className="flex-1 overflow-auto">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt=""
-              onLoad={(e) => {
-                const c = zoomScrollRef.current;
-                if (!c || zoomItem === null || items.length === 0) return;
-                const frac = (zoomItem + 0.5) / items.length;
-                c.scrollTop = Math.max(0, frac * e.currentTarget.clientHeight - c.clientHeight / 2);
-              }}
-              className="w-[230%] max-w-none"
-            />
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <Footer
         step={step}

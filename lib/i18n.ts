@@ -25,6 +25,8 @@ export interface Strings {
   pricePlaceholder: string;
   removeRow: string;
   addRow: string;
+  addPhoto: string;
+  addingPhoto: string;
   viewSource: string;
   viewSourceHint: string;
   rowsSum: string;
@@ -123,6 +125,8 @@ const sv: Strings = {
   pricePlaceholder: "0,00",
   removeRow: "Ta bort rad",
   addRow: "+ Lägg till rad",
+  addPhoto: "+ Lägg till foto (långt kvitto)",
+  addingPhoto: "Skannar…",
   viewSource: "Visa på kvittot",
   viewSourceHint: "Bläddra för att läsa kvittot",
   rowsSum: "Summa rader",
@@ -213,6 +217,8 @@ const en: Strings = {
   pricePlaceholder: "0.00",
   removeRow: "Remove row",
   addRow: "+ Add row",
+  addPhoto: "+ Add another photo (long receipt)",
+  addingPhoto: "Scanning…",
   viewSource: "Show on receipt",
   viewSourceHint: "Scroll to read the receipt",
   rowsSum: "Items total",
