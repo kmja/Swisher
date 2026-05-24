@@ -6,7 +6,8 @@ import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre, splitOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
-import { categoryFor, emojiFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import ItemEmoji from "@/components/ItemEmoji";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -667,7 +668,7 @@ export default function Page() {
               {items.map((it, idx) => (
                 <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
                   <span aria-hidden className="pl-1 text-lg">
-                    {emojiFor(it.description, it.category)}
+                    <ItemEmoji description={it.description} hint={it.category} />
                   </span>
                   <input
                     value={it.description}
@@ -914,7 +915,7 @@ export default function Page() {
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">
-                    <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                    <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} /></span>
                     {it.description || t.rowFallback}
                   </span>
                   <span className="shrink-0 text-sm text-gray-600">
@@ -1037,7 +1038,7 @@ export default function Page() {
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
               <span className="min-w-0 truncate text-sm font-medium">
-                <span aria-hidden className="mr-1">{emojiFor(it.description, it.category)}</span>
+                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} /></span>
                 {it.description || t.viewSource}
               </span>
               <button

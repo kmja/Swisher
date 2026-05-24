@@ -90,6 +90,10 @@ export function categoryFor(description: string, hint?: string): Category {
   return guessCategory(description);
 }
 
+// Sentinel returned by emojiFor for cinnamon/cardamom buns. Unicode has no
+// cinnamon-bun emoji, so the UI swaps this for a custom SVG (see ItemEmoji).
+export const CINNAMON_BUN = "cinnamon-bun";
+
 // Specific item → emoji, most-specific first (first match wins). Uses the same
 // compound-aware matcher as the categoriser.
 const EMOJI_RULES: [(desc: string) => boolean, string][] = [
@@ -138,7 +142,8 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["pannkaka", "pannkakor", "crepe", "crêpe"]), "🥞"],
   [makeMatcher(["crème", "creme", "brûlée", "brulee", "maräng", "marängsviss", "kräm", "mousse", "fromage", "parfait"]), "🍮"],
   [makeMatcher(["choklad", "chocolate", "chokladboll", "praliner"]), "🍫"],
-  [makeMatcher(["bulle", "kanelbulle", "semla", "wienerbröd", "croissant"]), "🥐"],
+  [makeMatcher(["kanelbulle", "kanelbullar", "kanelsnurra", "kanelsnurror", "kardemummabulle", "kardemummabullar"]), CINNAMON_BUN],
+  [makeMatcher(["bulle", "bullar", "semla", "semlor", "wienerbröd", "croissant", "giffel"]), "🥐"],
   [makeMatcher(["cookie", "kakor", "biscotti", "småkakor"]), "🍪"],
   [makeMatcher(["kaka", "cake", "cheesecake", "tårta", "ostkaka", "kladdkaka", "muffins", "cupcake"]), "🍰"],
 ];
