@@ -118,6 +118,28 @@ export default function Page() {
     [mealLabel, eventDate, t.shareSuffix],
   );
 
+  // Remember the host across sessions so they don't retype their name/number.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("swisher-host") || "null");
+      if (saved?.name) setDiners((prev) => prev.map((d, i) => (i === 0 ? { ...d, name: String(saved.name) } : d)));
+      if (saved?.number) setPayerPhone(String(saved.number));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const name = diners[0]?.name?.trim();
+    if (name && isValidPhone(payerPhone)) {
+      try {
+        localStorage.setItem("swisher-host", JSON.stringify({ name, number: payerPhone }));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [diners, payerPhone]);
+
   // --- capture ---------------------------------------------------------------
   // Live camera preview on the capture step. Falls back silently (cameraActive
   // stays false) when there's no camera or permission is denied.
@@ -569,19 +591,40 @@ export default function Page() {
           </div>
 
           <div>
-            <label className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
-              <span className="text-gray-600">{t.groupSizeLabel}</span>
-              <input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={groupSize || ""}
-                onChange={(e) => setGroupSize(Math.max(0, Math.min(50, Number(e.target.value) || 0)))}
-                placeholder="–"
-                className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
-              />
-            </label>
-            <div className="mt-2 flex gap-2">
+            <div className="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">{t.groupSizeLabel}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    aria-label="−"
+                    onClick={() => setGroupSize(Math.max(0, groupSize - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xl font-bold text-gray-600 active:bg-gray-200"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
+                  <button
+                    type="button"
+                    aria-label="+"
+                    onClick={() => setGroupSize(Math.min(50, groupSize + 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-swish text-xl font-bold text-white active:bg-swish-dark"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {groupSize > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1 text-xl">
+                  {Array.from({ length: Math.min(groupSize, 20) }).map((_, i) => (
+                    <span key={i} className="pop-in" aria-hidden>
+                      🧍
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex gap-2">
               <input
                 value={mealLabel}
                 onChange={(e) => setMealLabel(e.target.value)}
