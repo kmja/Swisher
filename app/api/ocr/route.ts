@@ -16,7 +16,7 @@ const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 // Claude reads faint receipts far better than the open models; used first when
 // an ANTHROPIC_API_KEY is configured, with Workers AI as the fallback.
-const ANTHROPIC_MODEL = "claude-haiku-4-5";
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
 {"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
@@ -212,7 +212,7 @@ export async function POST(req: Request) {
 
   if (anthropicKey) {
     const key = anthropicKey;
-    attempts.push({ name: "claude-haiku", run: () => runClaude(key, match[1], match[2]) });
+    attempts.push({ name: ANTHROPIC_MODEL, run: () => runClaude(key, match[1], match[2]) });
   }
 
   if (ai) {

@@ -31,7 +31,8 @@ const uid = () =>
 
 /** Friendly names for the OCR model that answered (from the X-Ocr-Model header). */
 const OCR_MODEL_LABEL: Record<string, string> = {
-  "claude-haiku": "Claude Haiku 4.5",
+  "claude-sonnet-4-6": "Claude Sonnet 4.6",
+  "claude-haiku-4-5": "Claude Haiku 4.5",
   llama4: "Llama 4 Scout",
   mistral: "Mistral Small",
   llava: "LLaVA",
