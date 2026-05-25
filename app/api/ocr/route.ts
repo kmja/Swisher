@@ -14,6 +14,9 @@ export const maxDuration = 60;
 const LLAMA4_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
+// Claude reads faint receipts far better than the open models; used first when
+// an ANTHROPIC_API_KEY is configured, with Workers AI as the fallback.
+const ANTHROPIC_MODEL = "claude-haiku-4-5";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
 {"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
@@ -45,6 +48,42 @@ function resultText(result: AiResult): string {
 }
 
 const USER_TEXT = "Extract the line items, total, moms and dricks from this receipt.";
+
+/**
+ * Call Claude (Haiku) via the Messages API over plain fetch — no SDK, so it
+ * runs in the Worker. Returns the model's text; throws on non-2xx so the caller
+ * falls back to Workers AI. The system prompt carries a cache breakpoint (it
+ * only takes effect once the prompt exceeds Claude's ~4k-token cache minimum).
+ */
+async function runClaude(apiKey: string, mediaType: string, base64: string): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2048,
+      system: [{ type: "text", text: PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+            { type: "text", text: USER_TEXT },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`anthropic ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  }
+  const json = (await res.json()) as { content?: { type: string; text?: string }[] };
+  return (json.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
+}
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
@@ -159,45 +198,48 @@ export async function POST(req: Request) {
   const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
 
   let ai: WorkersAI | undefined;
+  let anthropicKey: string | undefined;
   try {
     const { env } = getCloudflareContext();
-    ai = (env as unknown as { AI?: WorkersAI }).AI;
+    const e = env as unknown as { AI?: WorkersAI; ANTHROPIC_API_KEY?: string };
+    ai = e.AI;
+    anthropicKey = e.ANTHROPIC_API_KEY;
   } catch {
     // Not running inside the Cloudflare runtime (e.g. plain `next start`).
   }
-  if (!ai) {
+
+  const attempts: { name: string; run: () => Promise<AiResult> }[] = [];
+
+  if (anthropicKey) {
+    const key = anthropicKey;
+    attempts.push({ name: "claude-haiku", run: () => runClaude(key, match[1], match[2]) });
+  }
+
+  if (ai) {
+    const client = ai;
+    const visionMessages = [
+      { role: "system", content: PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: USER_TEXT },
+          { type: "image_url", image_url: { url: dataUrl } },
+        ],
+      },
+    ];
+    attempts.push(
+      { name: "llama4", run: () => client.run(LLAMA4_MODEL, { max_tokens: 2048, messages: visionMessages }) },
+      { name: "mistral", run: () => client.run(MISTRAL_MODEL, { max_tokens: 2048, messages: visionMessages }) },
+      { name: "llava", run: () => client.run(LLAVA_MODEL, { prompt: `${PROMPT}\n\n${USER_TEXT}`, image: Array.from(bytes), max_tokens: 2048 }) },
+    );
+  }
+
+  if (attempts.length === 0) {
     return NextResponse.json(
-      { error: "OCR runs on Cloudflare Workers AI and isn't available here. Enter items manually." },
+      { error: "OCR isn't available here. Enter items manually." },
       { status: 503 },
     );
   }
-  const client = ai;
-
-  const visionMessages = [
-    { role: "system", content: PROMPT },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: USER_TEXT },
-        { type: "image_url", image_url: { url: dataUrl } },
-      ],
-    },
-  ];
-
-  const attempts: { name: string; run: () => Promise<AiResult> }[] = [
-    {
-      name: "llama4",
-      run: () => client.run(LLAMA4_MODEL, { max_tokens: 2048, messages: visionMessages }),
-    },
-    {
-      name: "mistral",
-      run: () => client.run(MISTRAL_MODEL, { max_tokens: 2048, messages: visionMessages }),
-    },
-    {
-      name: "llava",
-      run: () => client.run(LLAVA_MODEL, { prompt: `${PROMPT}\n\n${USER_TEXT}`, image: Array.from(bytes), max_tokens: 2048 }),
-    },
-  ];
 
   const diag: string[] = [];
   for (const { name, run } of attempts) {
