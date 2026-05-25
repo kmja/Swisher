@@ -68,7 +68,8 @@ function cropBand(src: string, yFrac: number): Promise<string> {
     img.onload = () => {
       const W = img.naturalWidth;
       const H = img.naturalHeight;
-      const bandH = Math.max(1, Math.round(H * 0.3));
+      // Tight band around the line itself (~1–2 lines), not a big slice.
+      const bandH = Math.max(48, Math.round(H * 0.085));
       let top = Math.round(Math.max(0, Math.min(1, yFrac)) * H - bandH / 2);
       top = Math.max(0, Math.min(H - bandH, top));
       const canvas = document.createElement("canvas");
@@ -372,6 +373,12 @@ export default function Page() {
         });
       }
       setItems(mapped);
+      // If anything is shared (incl. the tip), default the group size from the
+      // number of ordered items (~one main + drink + side per head); editable.
+      if (mapped.some((it) => it.shared)) {
+        const units = mapped.filter((it) => !it.isTip).length;
+        setGroupSize(Math.min(12, Math.max(2, Math.round(units / 4))));
+      }
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
@@ -451,6 +458,9 @@ export default function Page() {
   const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - itemsSumOre;
   const totalReconciles = receiptTotal === null || Math.abs(totalDiffOre) < 100;
   const hasSharedItems = foodItems.some((it) => it.shared);
+  // The tip is itself a shared item, so the group-size control matters whenever
+  // there's a shared row or a tip.
+  const needsGroupSize = hasSharedItems || tipOre > 0;
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && isValidPhone(payerPhone);
@@ -768,14 +778,15 @@ export default function Page() {
                   </div>
                   {!it.isTip && (
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => toggleShared(it.id)}
-                        aria-pressed={it.shared}
-                        className={`rounded-full px-2 py-0.5 font-medium ring-1 ${it.shared ? "bg-swish text-white ring-swish" : "bg-white text-gray-500 ring-gray-200"}`}
-                      >
-                        {it.shared ? t.sharedToggle : t.shareThis}
-                      </button>
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={it.shared}
+                          onChange={() => toggleShared(it.id)}
+                          className="h-4 w-4 rounded border-gray-300 accent-swish"
+                        />
+                        {t.sharedToggle}
+                      </label>
                       {it.shared && divisor >= 2 && (
                         <span className="text-gray-500">
                           {formatOre(rowOre)} {t.currency} · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
@@ -848,26 +859,35 @@ export default function Page() {
           <div>
             <h2 className="text-xl font-bold">{t.payerTitle}</h2>
             <p className="text-sm text-gray-600">{t.payerHint}</p>
-            <input
-              value={diners[0]?.name ?? ""}
-              onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-              placeholder={t.yourName}
-              className="mt-2 w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-            />
-            <input
-              value={payerPhone}
-              onChange={(e) => setPayerPhone(e.target.value)}
-              inputMode="tel"
-              placeholder={t.swishNumber}
-              className="mt-2 w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-            />
+            <div className="mt-2 flex items-center gap-2">
+              <span
+                aria-hidden
+                title={t.payerHint}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-swish/10 text-lg"
+              >
+                💳
+              </span>
+              <input
+                value={diners[0]?.name ?? ""}
+                onChange={(e) => updateDiner(diners[0].id, e.target.value)}
+                placeholder={t.yourName}
+                className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+              />
+              <input
+                value={payerPhone}
+                onChange={(e) => setPayerPhone(e.target.value)}
+                inputMode="tel"
+                placeholder={t.swishNumber}
+                className="min-w-0 flex-1 rounded-xl bg-white px-3 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+              />
+            </div>
             {payerPhone && !isValidPhone(payerPhone) && (
               <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
             )}
           </div>
 
           <div>
-            {hasSharedItems && (
+            {needsGroupSize && (
               <div className="rounded-xl bg-swish/5 px-4 py-3 ring-1 ring-swish/20">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-gray-700">{t.sharedGroupPrompt}</span>
@@ -1021,15 +1041,15 @@ export default function Page() {
                 </div>
 
                 <div className="mt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleShared(it.id)}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 ${
-                      it.shared ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
-                    }`}
-                  >
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={it.shared}
+                      onChange={() => toggleShared(it.id)}
+                      className="h-4 w-4 rounded border-gray-300 accent-swish"
+                    />
                     {t.sharedToggle}
-                  </button>
+                  </label>
                   {it.shared && <span className="text-xs text-gray-500">{t.sharedSplit(sharedDivisor, formatOre(per))}</span>}
                 </div>
 
