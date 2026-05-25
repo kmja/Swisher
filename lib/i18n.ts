@@ -24,6 +24,7 @@ export interface Strings {
   // items
   itemsTitle: string;
   itemsHint: string;
+  readBy: (model: string) => string;
   descPlaceholder: string;
   pricePlaceholder: string;
   removeRow: string;
@@ -133,6 +134,7 @@ const sv: Strings = {
 
   itemsTitle: "Rader",
   itemsHint: "Kontrollera och rätta avläsningen. Priser inkl. moms.",
+  readBy: (model) => `Avläst av ${model}`,
   descPlaceholder: "Beskrivning",
   pricePlaceholder: "0,00",
   removeRow: "Ta bort rad",
@@ -236,6 +238,7 @@ const en: Strings = {
 
   itemsTitle: "Items",
   itemsHint: "Check and fix the scan. Prices include VAT.",
+  readBy: (model) => `Read by ${model}`,
   descPlaceholder: "Description",
   pricePlaceholder: "0.00",
   removeRow: "Remove row",

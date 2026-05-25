@@ -29,6 +29,14 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** Friendly names for the OCR model that answered (from the X-Ocr-Model header). */
+const OCR_MODEL_LABEL: Record<string, string> = {
+  "claude-haiku": "Claude Haiku 4.5",
+  llama4: "Llama 4 Scout",
+  mistral: "Mistral Small",
+  llava: "LLaVA",
+};
+
 /** Grayscale + mild contrast, to give a cleaner "scanned" look and help OCR
  * on faint thermal receipts. Kept gentle so faint text isn't lost. */
 function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -111,6 +119,7 @@ export default function Page() {
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrModel, setOcrModel] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   const [scanPhase, setScanPhase] = useState(0);
@@ -316,6 +325,7 @@ export default function Page() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
+      setOcrModel(res.headers.get("X-Ocr-Model"));
       const mapped: UiItem[] = (
         data.items as { description: string; price: number; shared?: boolean; category?: string; y?: number }[]
       ).map((it) => ({
@@ -629,6 +639,9 @@ export default function Page() {
               <div className="flex flex-col items-center gap-1 py-3">
                 <span className="text-5xl font-bold tabular-nums text-swish-dark">{scanCount}</span>
                 <span className="text-sm text-gray-600">{t.itemsFound(scanCount)}</span>
+                {ocrModel && (
+                  <span className="text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</span>
+                )}
               </div>
             ) : (
               <>
@@ -696,6 +709,9 @@ export default function Page() {
           <div>
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.itemsHint}</p>
+            {ocrModel && (
+              <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
+            )}
             <div className="mt-3 space-y-2">
               {items.map((it, idx) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
