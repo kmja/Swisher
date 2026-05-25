@@ -305,7 +305,7 @@ export default function RoomPage() {
                             ✓
                           </span>
                           <span className="block min-w-0 flex-1 truncate font-medium">
-                            <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} /></span>
+                            <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                             {it.description}
                           </span>
                           <span className="shrink-0 text-sm font-semibold">

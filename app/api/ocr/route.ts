@@ -19,7 +19,7 @@ const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","emoji":string,"y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -27,7 +27,8 @@ Rules:
 - "y" is the vertical position of this item's line on the receipt image as a percent from the top (0 = very top edge, 100 = very bottom edge). Estimate it as accurately as you can.
 - "items" are the ordered dishes/drinks: a short description and the price.
 - The description is the item NAME only. Strip the leading quantity (it goes in "quantity"): "2 glas Sybille Kuntz" → description "Glas Sybille Kuntz", quantity 2; "3 Kaffe" → "Kaffe", quantity 3.
-- Spell each item the correct Swedish way: restore å/ä/ö and fix OCR letter slips so a recognisable dish/drink reads properly — e.g. "lansorts lage" → "Landsorts Lager", "rakor" → "räkor", "rört majonäs" → "Rökt majonnäs", "fläskkar" → "Fläskkarré", "marängsvisst" → "Marängsviss", "gstron" → "Ostron", "entrecote" → "Entrecôte" — and use normal capitalisation, not ALL CAPS.
+- Spell each item the correct Swedish way: restore å/ä/ö and fix OCR letter slips so a recognisable dish/drink reads properly — e.g. "lansorts lage" → "Landsorts Lager", "rakor" → "räkor", "rört majonäs" → "Rökt majonnäs", "fläskkar" → "Fläskkarré", "marängsvisst" → "Marängsviss", "kalvkinn" → "Kalvkind", "fårslök" → "Färsklök", "gstron" → "Ostron", "entrecote" → "Entrecôte" — and use normal capitalisation, not ALL CAPS.
+- "emoji" is one emoji that best represents the item, using your knowledge of brands and types: a wine — including brands like "Sybille Kuntz" or "O'scuru" — is 🍷; a beer is 🍺; Coca-Cola/soda is 🥤; coffee is ☕; oysters are 🦪; pork/meat is 🥩. Pick the most specific food or drink emoji you can.
 - Crucially, keep it the SAME item — only correct its spelling, never swap an unclear word for a different, more plausible-sounding dish. If you genuinely cannot tell what a word is, transcribe it literally letter by letter rather than guessing. Never invent items, lines, or prices that are not printed on the receipt.
 - When a line names a brand or product, keep that real brand name as printed instead of forcing a generic word (e.g. "Coca-Cola", "Ramlösa", "Pågen", "Brooklyn Lager", "Heinz"). Never invent a brand that isn't there, and never rewrite a genuine brand into a plain word.
 - "price" is the total charged for the WHOLE line in SEK — the number in the rightmost (total) column. For "2 Bryggkaffe 35,00 70,00" price is 70; for "3 Stor Lager 195,00" price is 195. "quantity" is the leading count of units on the line (default 1). Always read the line total, never the per-unit price, so the items add up to the receipt total.
@@ -121,6 +122,7 @@ function extractJson(text: string): OcrResult {
       price?: unknown;
       shared?: unknown;
       category?: unknown;
+      emoji?: unknown;
       quantity?: unknown;
       y?: unknown;
     }[]) {
@@ -129,12 +131,13 @@ function extractJson(text: string): OcrResult {
       if (!description || !Number.isFinite(price)) continue;
       const shared = it?.shared === true;
       const category = typeof it?.category === "string" ? it.category : undefined;
+      const emoji = typeof it?.emoji === "string" ? it.emoji : undefined;
       const y = Number.isFinite(Number(it?.y)) ? Number(it?.y) : undefined;
       const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
       // price is the line total; split it into one row per unit so each can be
       // claimed separately, while the rows still sum back to the line total.
       for (const partOre of splitOre(Math.round(price * 100), qty)) {
-        items.push({ description, price: partOre / 100, shared, category, y });
+        items.push({ description, price: partOre / 100, shared, category, emoji, y });
       }
     }
     return {
@@ -154,6 +157,7 @@ function extractJson(text: string): OcrResult {
     const d = obj.match(/"description"\s*:\s*"([^"]*)"/);
     const p = obj.match(/"price"\s*:\s*(-?\d+(?:\.\d+)?)/);
     const c = obj.match(/"category"\s*:\s*"([^"]*)"/);
+    const em = obj.match(/"emoji"\s*:\s*"([^"]*)"/);
     const q = obj.match(/"quantity"\s*:\s*(\d+)/);
     const ym = obj.match(/"y"\s*:\s*(\d+(?:\.\d+)?)/);
     if (d && p) {
@@ -161,7 +165,7 @@ function extractJson(text: string): OcrResult {
       const shared = /"shared"\s*:\s*true/.test(obj);
       const y = ym ? Number(ym[1]) : undefined;
       for (const partOre of splitOre(Math.round(Number(p[1]) * 100), qty)) {
-        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], y });
+        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], emoji: em?.[1], y });
       }
     }
   }

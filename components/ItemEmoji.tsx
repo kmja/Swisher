@@ -25,7 +25,15 @@ function CinnamonBun() {
 }
 
 /** Item glyph: the matched emoji, or our custom cinnamon bun when matched. */
-export default function ItemEmoji({ description, hint }: { description: string; hint?: string }) {
-  const glyph = emojiFor(description, hint);
+export default function ItemEmoji({
+  description,
+  hint,
+  modelEmoji,
+}: {
+  description: string;
+  hint?: string;
+  modelEmoji?: string;
+}) {
+  const glyph = emojiFor(description, hint, modelEmoji);
   return glyph === CINNAMON_BUN ? <CinnamonBun /> : <>{glyph}</>;
 }

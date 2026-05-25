@@ -38,7 +38,12 @@ function makeMatcher(words: string[]): (desc: string) => boolean {
     const s = norm(desc);
     if (phrases.some((p) => s.includes(p))) return true;
     const tokens = s.split(/[^a-z0-9]+/).filter(Boolean);
-    return tokens.some((tok) => whole.has(tok) || affix.some((w) => tok === w || tok.startsWith(w) || tok.endsWith(w)));
+    // A suffix match needs a real compound stem in front (≥2 chars), so "läsk"
+    // (soda) matches "sockerläsk" but NOT "fläsk" (pork) — "flask" is not "f"+"lask".
+    return tokens.some((tok) =>
+      whole.has(tok) ||
+      affix.some((w) => tok === w || tok.startsWith(w) || (tok.endsWith(w) && tok.length >= w.length + 2)),
+    );
   };
 }
 
@@ -148,8 +153,18 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["kaka", "cake", "cheesecake", "tårta", "ostkaka", "kladdkaka", "muffins", "cupcake"]), "🍰"],
 ];
 
-/** Pick the most specific food/drink emoji for an item, else the category icon. */
-export function emojiFor(description: string, hint?: string): string {
+/** A model-supplied emoji is usable only if it's an emoji, not stray text. */
+function isEmoji(s: string | undefined): s is string {
+  return !!s && s.length <= 8 && !/[a-z0-9]/i.test(s);
+}
+
+/**
+ * Pick the most specific food/drink emoji: a curated keyword rule first, then
+ * the model's own emoji (it knows brands — e.g. wines like O'scuru → 🍷), and
+ * finally the generic category icon.
+ */
+export function emojiFor(description: string, hint?: string, modelEmoji?: string): string {
   for (const [match, emoji] of EMOJI_RULES) if (match(description)) return emoji;
+  if (isEmoji(modelEmoji)) return modelEmoji;
   return CATEGORY_EMOJI[categoryFor(description, hint)];
 }

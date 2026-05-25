@@ -5,6 +5,8 @@ export type RoomItem = {
   description: string;
   priceOre: number;
   category?: string;
+  /** Emoji the model picked for this item (brand-aware fallback). */
+  emoji?: string;
   /** Person ids who claimed this item. Multiple claimers = split equally. */
   claimedBy: string[];
 };
@@ -35,7 +37,7 @@ export type RoomInit = {
   place?: string;
   date?: string;
   tipOre: number;
-  items: { description: string; priceOre: number; category?: string }[];
+  items: { description: string; priceOre: number; category?: string; emoji?: string }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -73,6 +75,7 @@ export class RoomDO extends DurableObject {
         description: it.description.slice(0, 80),
         priceOre: Math.max(0, Math.round(it.priceOre)),
         category: it.category,
+        emoji: it.emoji,
         claimedBy: [],
       })),
       people: [host],

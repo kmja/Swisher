@@ -22,6 +22,8 @@ type UiItem = {
   imgIndex: number;
   /** Vertical position on the source photo (0–1) where OCR found this line. */
   y?: number;
+  /** Emoji the model picked for this item (knows brands); fallback when no keyword rule matches. */
+  emoji?: string;
   /** Tip row — shared by everyone, kept out of the food/bill total. */
   isTip?: boolean;
 };
@@ -328,7 +330,7 @@ export default function Page() {
       if (!res.ok) throw new Error(data.error || "OCR failed.");
       setOcrModel(res.headers.get("X-Ocr-Model"));
       const mapped: UiItem[] = (
-        data.items as { description: string; price: number; shared?: boolean; category?: string; y?: number }[]
+        data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number }[]
       ).map((it) => ({
         id: uid(),
         description: it.description,
@@ -336,6 +338,7 @@ export default function Page() {
         sharers: [],
         shared: it.shared === true,
         category: it.category ?? "",
+        emoji: it.emoji,
         imgIndex,
         y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y / 100)) : undefined,
       }));
@@ -504,6 +507,7 @@ export default function Page() {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
             const desc = it.description.trim() || t.rowFallback;
             const category = categoryFor(it.description, it.category);
+            const emoji = it.emoji;
             // A shared item with a known group size becomes that many claimable
             // share-slots, so diners can each take one (or several for a partner).
             if (it.shared && groupSize >= 2) {
@@ -511,9 +515,10 @@ export default function Page() {
                 description: `${desc} (${i + 1}/${groupSize})`,
                 priceOre: slotOre,
                 category,
+                emoji,
               }));
             }
-            return [{ description: desc, priceOre, category }];
+            return [{ description: desc, priceOre, category, emoji }];
           }),
         }),
       });
@@ -727,7 +732,7 @@ export default function Page() {
                 >
                   <div className="flex items-center gap-2">
                   <span aria-hidden className="pl-1 text-lg">
-                    {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} />}
+                    {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />}
                   </span>
                   <input
                     value={it.description}
@@ -1007,7 +1012,7 @@ export default function Page() {
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">
-                    <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} /></span>
+                    <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                     {it.description || t.rowFallback}
                   </span>
                   <span className="shrink-0 text-sm text-gray-600">
@@ -1130,7 +1135,7 @@ export default function Page() {
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
               <span className="min-w-0 truncate text-sm font-medium">
-                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} /></span>
+                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                 {it.description || t.viewSource}
               </span>
               <button
