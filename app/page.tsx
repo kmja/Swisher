@@ -82,7 +82,9 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("Could not read the image."));
       img.onload = () => {
-        const maxDim = 1280;
+        // Keep receipts detailed: faint thermal digits (e.g. 1180 vs 118) need
+        // pixels, so cap the long side generously rather than at 1280.
+        const maxDim = 2200;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const w = Math.round(img.width * scale);
         const h = Math.round(img.height * scale);
@@ -93,7 +95,7 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
         if (!ctx) return resolve(reader.result as string);
         ctx.drawImage(img, 0, 0, w, h);
         enhanceForScan(ctx, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
       img.src = reader.result as string;
     };
@@ -269,7 +271,7 @@ export default function Page() {
   function capturePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const maxDim = 1280;
+    const maxDim = 2200;
     const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(video.videoWidth * scale);
@@ -281,7 +283,7 @@ export default function Page() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
     setOcrError(null);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     setImageUrl(dataUrl);
     runOcr(dataUrl); // scan automatically
   }
