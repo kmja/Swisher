@@ -741,13 +741,28 @@ export default function Page() {
                     ✕
                   </button>
                   </div>
-                  {it.shared && (
+                  {!it.isTip && (
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
-                      <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
-                      {divisor >= 2 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleShared(it.id)}
+                        aria-pressed={it.shared}
+                        className={`rounded-full px-2 py-0.5 font-medium ring-1 ${it.shared ? "bg-swish text-white ring-swish" : "bg-white text-gray-500 ring-gray-200"}`}
+                      >
+                        {it.shared ? t.sharedToggle : t.shareThis}
+                      </button>
+                      {it.shared && divisor >= 2 && (
                         <span className="text-gray-500">
                           {formatOre(rowOre)} {t.currency} · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
                         </span>
+                      )}
+                    </div>
+                  )}
+                  {it.isTip && (
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
+                      <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
+                      {divisor >= 2 && (
+                        <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}</span>
                       )}
                     </div>
                   )}

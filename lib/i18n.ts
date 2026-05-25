@@ -86,6 +86,7 @@ export interface Strings {
   groupSizeLabel: string;
   sharedGroupPrompt: string;
   sharedToggle: string;
+  shareThis: string;
   sharedSplit: (n: number, amt: string) => string;
 
   // flow
@@ -190,6 +191,7 @@ const sv: Strings = {
   groupSizeLabel: "Antal som delar (valfritt)",
   sharedGroupPrompt: "Ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
+  shareThis: "Dela",
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} kr/pers`,
 
   splitYourself: "Dela upp själv i stället",
@@ -292,6 +294,7 @@ const en: Strings = {
   groupSizeLabel: "People sharing (optional)",
   sharedGroupPrompt: "You have shared items — how many are you?",
   sharedToggle: "Shared",
+  shareThis: "Share",
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} kr each`,
 
   splitYourself: "Split it yourself instead",
