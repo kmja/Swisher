@@ -38,11 +38,11 @@ function makeMatcher(words: string[]): (desc: string) => boolean {
     const s = norm(desc);
     if (phrases.some((p) => s.includes(p))) return true;
     const tokens = s.split(/[^a-z0-9]+/).filter(Boolean);
-    // A suffix match needs a real compound stem in front (≥2 chars), so "läsk"
-    // (soda) matches "sockerläsk" but NOT "fläsk" (pork) — "flask" is not "f"+"lask".
+    // A suffix match needs a real compound stem in front (≥3 chars), so "läsk"
+    // (soda) matches "sockerläsk" but NOT "fläsk" (pork) or "råraka" vs "räka".
     return tokens.some((tok) =>
       whole.has(tok) ||
-      affix.some((w) => tok === w || tok.startsWith(w) || (tok.endsWith(w) && tok.length >= w.length + 2)),
+      affix.some((w) => tok === w || tok.startsWith(w) || (tok.endsWith(w) && tok.length >= w.length + 3)),
     );
   };
 }
@@ -57,7 +57,8 @@ const isDrink = makeMatcher([
   "konjak", "cognac", "kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato",
   "cortado", "te", "tea", "chai", "läsk", "saft", "must", "julmust", "glögg", "cola", "fanta",
   "sprite", "pepsi", "soda", "juice", "vatten", "water", "ramlösa", "loka", "festis", "smoothie",
-  "milkshake", "mjölk", "milk",
+  "milkshake", "mjölk", "milk", "trocadero", "pommac", "champis", "zingo", "kopparberg", "rekorderlig",
+  "energidryck", "nocco", "red bull", "redbull", "helles", "veteöl", "weissbier", "vienna", "pucko",
 ]);
 const isDessert = makeMatcher([
   "glass", "gelato", "dessert", "efterrätt", "kaka", "kakor", "cake", "cheesecake", "paj", "pie",
@@ -78,6 +79,10 @@ const isFood = makeMatcher([
   "pommes", "fries", "potatis", "bröd", "ost", "mozzarella", "prosciutto", "salami", "skinka",
   "chark", "broccoli", "sparris", "grönsak", "kantarell", "kantareller", "svamp", "rotselleri",
   "selleri", "förrätt", "varmrätt", "huvudrätt", "tallrik", "meny",
+  "hummer", "kräfta", "kräftor", "löjrom", "matjessill", "matjes", "skagen", "räkmacka",
+  "köttbullar", "wallenbergare", "oxbringa", "oxrygg", "oxkind", "lamm", "isterband", "kalops",
+  "raggmunk", "råraka", "janssons", "pyttipanna", "kroppkakor", "rotmos", "kåldolmar", "kålpudding",
+  "duxelle", "rödbeta", "brioche", "pastrami", "halloumi",
 ]);
 
 /** Keyword fallback (Swedish + English) when the model gives no category. */
@@ -110,25 +115,29 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["whisky", "whiskey", "vodka", "rom", "tequila", "sprit", "snaps", "nubbe", "shot", "konjak", "cognac", "gin"]), "🥃"],
   [makeMatcher(["kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato", "cortado"]), "☕"],
   [makeMatcher(["te", "tea", "chai"]), "🍵"],
-  [makeMatcher(["läsk", "soda", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "loka", "ramlösa", "tonic", "cider"]), "🥤"],
-  [makeMatcher(["juice", "apelsinjuice", "äppeljuice", "smoothie"]), "🧃"],
+  [makeMatcher(["läsk", "soda", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "trocadero", "pommac", "champis", "zingo", "loka", "ramlösa", "tonic"]), "🥤"],
+  [makeMatcher(["cider", "kopparberg", "rekorderlig", "somersby", "briska"]), "🍏"],
+  [makeMatcher(["energidryck", "red bull", "redbull", "nocco"]), "⚡"],
+  [makeMatcher(["juice", "apelsinjuice", "äppeljuice", "smoothie", "saft"]), "🧃"],
   [makeMatcher(["vatten", "water", "mineralvatten"]), "💧"],
-  [makeMatcher(["mjölk", "milk", "milkshake"]), "🥛"],
+  [makeMatcher(["mjölk", "milk", "milkshake", "pucko"]), "🥛"],
   // food
   [makeMatcher(["pizza", "calzone"]), "🍕"],
   [makeMatcher(["pasta", "spaghetti", "carbonara", "lasagne", "tagliatelle", "penne", "bolognese"]), "🍝"],
   [makeMatcher(["burgare", "burger", "hamburgare", "cheeseburgare"]), "🍔"],
   [makeMatcher(["pommes", "fries", "strips"]), "🍟"],
-  [makeMatcher(["sushi", "nigiri", "maki", "sashimi", "poke"]), "🍣"],
-  [makeMatcher(["ostron"]), "🦪"],
-  [makeMatcher(["räka", "räkor", "skaldjur", "mussla", "musslor", "krabba", "kräfta", "hummer"]), "🍤"],
-  [makeMatcher(["fisk", "lax", "regnbåge", "regnbågslax", "gravlax", "torsk", "sill", "strömming", "fish"]), "🐟"],
+  [makeMatcher(["sushi", "nigiri", "maki", "sashimi", "poke", "löjrom", "löjromstoast"]), "🍣"],
+  [makeMatcher(["ostron", "mussla", "musslor", "moules"]), "🦪"],
+  [makeMatcher(["hummer", "kräfta", "kräftor", "langust"]), "🦞"],
+  [makeMatcher(["räka", "räkor", "skaldjur", "skagen", "krabba", "räkmacka", "räksmörgås"]), "🍤"],
+  [makeMatcher(["fisk", "lax", "regnbåge", "regnbågslax", "gravlax", "torsk", "sill", "matjessill", "matjes", "strömming", "fish"]), "🐟"],
   [makeMatcher(["kyckling", "chicken", "vingar", "wings"]), "🍗"],
-  [makeMatcher(["korv", "varmkorv", "falukorv", "hotdog", "grillkorv"]), "🌭"],
-  [makeMatcher(["biff", "entrecôte", "ryggbiff", "oxfilé", "flankstek", "plankstek", "stek", "kött", "fläsk", "fläskfilé", "gris", "kalv", "schnitzel", "kotlett", "anka", "kalkon"]), "🥩"],
+  [makeMatcher(["korv", "varmkorv", "falukorv", "isterband", "prinskorv", "hotdog", "grillkorv"]), "🌭"],
+  [makeMatcher(["biff", "entrecôte", "ryggbiff", "oxfilé", "oxrygg", "oxbringa", "oxkind", "flankstek", "plankstek", "stek", "kött", "köttbullar", "wallenbergare", "fläsk", "fläskfilé", "gris", "kalv", "lamm", "schnitzel", "kotlett", "anka", "kalkon"]), "🥩"],
   [makeMatcher(["prosciutto", "salami", "skinka", "chark"]), "🥓"],
   [makeMatcher(["sallad", "salad", "nicoise", "niçoise"]), "🥗"],
-  [makeMatcher(["soppa", "soup", "gryta", "ramen"]), "🍲"],
+  [makeMatcher(["kåldolmar", "kålpudding", "surkål", "grönkål", "vitkål"]), "🥬"],
+  [makeMatcher(["soppa", "soup", "gryta", "kalops", "ramen"]), "🍲"],
   [makeMatcher(["taco", "tacos", "burrito", "quesadilla", "nachos"]), "🌮"],
   [makeMatcher(["kebab", "falafel", "shawarma", "gyros", "wrap"]), "🥙"],
   [makeMatcher(["fralla", "macka", "mackor", "smörgås", "knäcke", "sandwich", "panini", "sub"]), "🥪"],
@@ -137,7 +146,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["ägg", "omelett", "äggröra"]), "🍳"],
   [makeMatcher(["broccoli", "sparris", "grönsak", "böna", "haricot"]), "🥦"],
   [makeMatcher(["svamp", "kantarell", "kantareller", "tryffel"]), "🍄"],
-  [makeMatcher(["potatis", "mos", "klyftpotatis", "rotselleri", "selleri", "rotfrukt"]), "🥔"],
+  [makeMatcher(["potatis", "mos", "klyftpotatis", "raggmunk", "råraka", "janssons", "pyttipanna", "pytt", "kroppkakor", "rotmos", "hasselback", "rotselleri", "selleri", "rotfrukt"]), "🥔"],
   [makeMatcher(["ris", "risotto", "nudlar", "noodles", "wok"]), "🍜"],
   // dessert
   [makeMatcher(["glass", "gelato", "glasstrut", "sundae"]), "🍨"],
