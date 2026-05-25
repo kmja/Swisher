@@ -8,8 +8,10 @@ export const maxDuration = 60;
 
 // Vision OCR on Cloudflare Workers AI — keyless, via the `AI` binding.
 // Both models are EU-safe (Meta's Llama 3.2 vision is license-restricted
-// from the EU, so it is deliberately not used). Mistral Small 3.1 is the
-// stronger reader; LLaVA is the resilient fallback.
+// from the EU, so it is deliberately not used). Llama 4 Scout is the strongest
+// reader; if its multimodal use is geo-blocked in the EU (error 5016) we fall
+// back to Mistral Small 3.1, then LLaVA.
+const LLAMA4_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 const MISTRAL_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 
@@ -171,23 +173,25 @@ export async function POST(req: Request) {
   }
   const client = ai;
 
+  const visionMessages = [
+    { role: "system", content: PROMPT },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: USER_TEXT },
+        { type: "image_url", image_url: { url: dataUrl } },
+      ],
+    },
+  ];
+
   const attempts: { name: string; run: () => Promise<AiResult> }[] = [
     {
+      name: "llama4",
+      run: () => client.run(LLAMA4_MODEL, { max_tokens: 2048, messages: visionMessages }),
+    },
+    {
       name: "mistral",
-      run: () =>
-        client.run(MISTRAL_MODEL, {
-          max_tokens: 2048,
-          messages: [
-            { role: "system", content: PROMPT },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: USER_TEXT },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ],
-            },
-          ],
-        }),
+      run: () => client.run(MISTRAL_MODEL, { max_tokens: 2048, messages: visionMessages }),
     },
     {
       name: "llava",
