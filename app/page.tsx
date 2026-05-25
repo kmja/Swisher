@@ -22,6 +22,8 @@ type UiItem = {
   imgIndex: number;
   /** Vertical position on the source photo (0–1) where OCR found this line. */
   y?: number;
+  /** Tip row — shared by everyone, kept out of the food/bill total. */
+  isTip?: boolean;
 };
 
 const uid = () =>
@@ -126,7 +128,6 @@ export default function Page() {
   const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
   const [eventDate, setEventDate] = useState(today);
 
-  const [receiptTipOre, setReceiptTipOre] = useState(0);
   const [receiptChargedOre, setReceiptChargedOre] = useState(0);
 
   const [groupSize, setGroupSize] = useState(0);
@@ -333,7 +334,6 @@ export default function Page() {
         return;
       }
 
-      setItems(mapped);
       const totalOre = typeof data.total === "number" ? Math.round(data.total * 100) : null;
       const chargedOre = typeof data.charged === "number" && data.charged > 0 ? Math.round(data.charged * 100) : 0;
       const dricksOre = typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0;
@@ -341,9 +341,23 @@ export default function Page() {
       // actual card charge over the bill (host rounded up / tipped at the terminal).
       const billOre = totalOre ?? mapped.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
       const impliedTipOre = chargedOre - billOre >= 100 ? chargedOre - billOre : 0;
+      const tipOre = dricksOre > 0 ? dricksOre : impliedTipOre;
+      // Add the tip as a shared row so it shows in the list and splits evenly.
+      if (tipOre > 0) {
+        mapped.push({
+          id: uid(),
+          description: t.tip,
+          priceInput: formatOre(tipOre),
+          sharers: [],
+          shared: true,
+          category: "other",
+          imgIndex: -1,
+          isTip: true,
+        });
+      }
+      setItems(mapped);
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
-      setReceiptTipOre(dricksOre > 0 ? dricksOre : impliedTipOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
       if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
       // Tick a counter through the found rows, then move on.
@@ -407,14 +421,20 @@ export default function Page() {
   };
 
   const namedDiners = diners.filter((d) => d.name.trim());
-  const itemsSumOre = items.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+  const validItems = items.filter((it) => (parseAmountToOre(it.priceInput) ?? 0) > 0);
+  // The tip is its own shared row; keep it out of the food total and the
+  // bill reconciliation, and split it equally via tipOre instead.
+  const foodItems = validItems.filter((it) => !it.isTip);
+  const tipOre = validItems
+    .filter((it) => it.isTip)
+    .reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+  const itemsSumOre = foodItems.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
   // The scanned items should add up to the printed bill total (the tip is added
   // on top via the card charge, not part of the bill). Allow up to 1 kr of slack
   // for Swedish öre rounding (öresavrundning).
   const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - itemsSumOre;
   const totalReconciles = receiptTotal === null || Math.abs(totalDiffOre) < 100;
-  const validItems = items.filter((it) => (parseAmountToOre(it.priceInput) ?? 0) > 0);
-  const hasSharedItems = validItems.some((it) => it.shared);
+  const hasSharedItems = foodItems.some((it) => it.shared);
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && isValidPhone(payerPhone);
@@ -466,8 +486,8 @@ export default function Page() {
           message,
           place: mealLabel.trim(),
           date: eventDate,
-          tipOre: receiptTipOre,
-          items: validItems.flatMap((it) => {
+          tipOre,
+          items: foodItems.flatMap((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
             const desc = it.description.trim() || t.rowFallback;
             const category = categoryFor(it.description, it.category);
@@ -501,19 +521,19 @@ export default function Page() {
   // --- compute ---------------------------------------------------------------
   const lineItems: LineItem[] = useMemo(
     () =>
-      validItems.map((it) => ({
+      foodItems.map((it) => ({
         id: it.id,
         description: it.description,
         priceOre: parseAmountToOre(it.priceInput) ?? 0,
         sharers: it.sharers,
         shared: it.shared,
       })),
-    [validItems],
+    [foodItems],
   );
 
   const { shares, unassignedOre } = useMemo(
-    () => computeShares(lineItems, namedDiners, receiptTipOre, groupSize),
-    [lineItems, namedDiners, receiptTipOre, groupSize],
+    () => computeShares(lineItems, namedDiners, tipOre, groupSize),
+    [lineItems, namedDiners, tipOre, groupSize],
   );
 
   const payer = namedDiners[0];
@@ -676,9 +696,12 @@ export default function Page() {
             <p className="text-sm text-gray-600">{t.itemsHint}</p>
             <div className="mt-3 space-y-2">
               {items.map((it, idx) => (
-                <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                <div
+                  key={it.id}
+                  className={`flex items-center gap-2 rounded-xl p-2 shadow-sm ring-1 ${it.isTip ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
+                >
                   <span aria-hidden className="pl-1 text-lg">
-                    <ItemEmoji description={it.description} hint={it.category} />
+                    {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} />}
                   </span>
                   <input
                     value={it.description}
@@ -744,10 +767,10 @@ export default function Page() {
                   </span>
                 </div>
               )}
-              {receiptTipOre > 0 && (
+              {tipOre > 0 && (
                 <div className="mt-1 flex justify-between">
                   <span className="text-gray-600">{t.tip}</span>
-                  <span className="font-semibold">+{formatOre(receiptTipOre)} {t.currency}</span>
+                  <span className="font-semibold">+{formatOre(tipOre)} {t.currency}</span>
                 </div>
               )}
               {receiptChargedOre > 0 && receiptChargedOre !== receiptTotal && (
@@ -905,7 +928,7 @@ export default function Page() {
           </label>
 
           {CATEGORY_ORDER.map((cat) => {
-            const groupItems = validItems.filter((it) => categoryFor(it.description, it.category) === cat);
+            const groupItems = foodItems.filter((it) => categoryFor(it.description, it.category) === cat);
             if (groupItems.length === 0) return null;
             return (
               <div key={cat} className="flex flex-col gap-2">
@@ -999,9 +1022,9 @@ export default function Page() {
         <section className="mt-6 flex flex-1 flex-col gap-4">
           <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
-          {receiptTipOre > 0 && (
+          {tipOre > 0 && (
             <div className="rounded-2xl bg-white p-3 text-sm text-gray-600 shadow-sm ring-1 ring-black/5">
-              {t.tipSplitNote(formatOre(receiptTipOre))}
+              {t.tipSplitNote(formatOre(tipOre))}
             </div>
           )}
 
