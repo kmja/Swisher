@@ -697,11 +697,15 @@ export default function Page() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.itemsHint}</p>
             <div className="mt-3 space-y-2">
-              {items.map((it, idx) => (
+              {items.map((it, idx) => {
+                const rowOre = parseAmountToOre(it.priceInput) ?? 0;
+                const divisor = groupSize > 0 ? groupSize : namedDiners.length;
+                return (
                 <div
                   key={it.id}
-                  className={`flex items-center gap-2 rounded-xl p-2 shadow-sm ring-1 ${it.isTip ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
+                  className={`rounded-xl p-2 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
                 >
+                  <div className="flex items-center gap-2">
                   <span aria-hidden className="pl-1 text-lg">
                     {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} />}
                   </span>
@@ -736,8 +740,20 @@ export default function Page() {
                   >
                     ✕
                   </button>
+                  </div>
+                  {it.shared && (
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
+                      <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
+                      {divisor >= 2 && (
+                        <span className="text-gray-500">
+                          {formatOre(rowOre)} {t.currency} · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
