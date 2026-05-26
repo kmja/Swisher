@@ -8,7 +8,8 @@ export default function IconDebugPage() {
   const ids = Object.keys(CUSTOM_ICONS);
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="text-xl font-bold">Custom item icons</h1>
+      <a href="/" className="text-sm text-swish-dark underline">← Back</a>
+      <h1 className="mt-2 text-xl font-bold">Custom item icons</h1>
       <p className="mt-1 text-sm text-gray-500">
         {ids.length} hand-drawn SVGs for items without a good emoji. Shown large and at inline (emoji) size.
       </p>

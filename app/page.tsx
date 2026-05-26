@@ -573,9 +573,10 @@ export default function Page() {
         <section className="mt-6 flex flex-1 flex-col">
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
-          {process.env.NEXT_PUBLIC_BUILD_ID && (
-            <p className="mt-1 text-[11px] text-gray-300">v{process.env.NEXT_PUBLIC_BUILD_ID}</p>
-          )}
+          <p className="mt-1 text-[11px] text-gray-300">
+            {process.env.NEXT_PUBLIC_BUILD_ID && <>v{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
+            <a href="/debug/icons" className="underline">icons</a>
+          </p>
 
           <div className="relative mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
