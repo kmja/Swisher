@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
 
-/** Hand-drawn icons for common items that lack a good Unicode emoji, drawn to
- *  match the platform (Noto/Android) emoji look: bold, rounded, saturated, flat
- *  two-tone shading, no hairline outlines. 24×24, rendered at 1em like an emoji. */
+/** Hand-drawn icons for items that lack a good Unicode emoji. The same flat
+ *  shapes render two ways: bare for the Android/Noto look, and wrapped in a
+ *  soft specular gloss filter for the Apple look. 24×24, rendered at 1em. */
 function Svg({ children, label }: { children: ReactNode; label?: string }) {
   return (
     <svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label={label} className="inline-block align-[-0.125em]">
@@ -11,9 +11,31 @@ function Svg({ children, label }: { children: ReactNode; label?: string }) {
   );
 }
 
+/** Subtle dimensional sheen that follows each icon's silhouette (Apple style). */
+function GlossDefs() {
+  return (
+    <defs>
+      <filter id="apple-gloss" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="0.8" result="b" />
+        <feSpecularLighting in="b" surfaceScale="1.4" specularConstant="0.55" specularExponent="28" lightingColor="#ffffff" result="s">
+          <feDistantLight azimuth="235" elevation="60" />
+        </feSpecularLighting>
+        <feComponentTransfer in="s" result="s2">
+          <feFuncA type="linear" slope="0.35" />
+        </feComponentTransfer>
+        <feComposite in="s2" in2="SourceAlpha" operator="in" result="sc" />
+        <feMerge>
+          <feMergeNode in="SourceGraphic" />
+          <feMergeNode in="sc" />
+        </feMerge>
+      </filter>
+    </defs>
+  );
+}
+
 function CinnamonBun() {
   return (
-    <Svg label="Kanelbulle">
+    <>
       <circle cx="12" cy="12" r="10.5" fill="#E0944A" />
       <path d="M12 22.5a10.5 10.5 0 0 0 10.4-9c-1 5-5.4 7.5-10.4 7.5S2.6 18.5 1.6 13.5a10.5 10.5 0 0 0 10.4 9Z" fill="#C2772E" />
       <ellipse cx="9.5" cy="8.8" rx="6.2" ry="4.6" fill="#EFB069" />
@@ -33,15 +55,14 @@ function CinnamonBun() {
         <circle cx="13.6" cy="16.6" r="0.95" />
         <circle cx="8.2" cy="15.8" r="0.95" />
       </g>
-    </Svg>
+    </>
   );
 }
 
 function Semla() {
   return (
-    <Svg label="Semla">
+    <>
       <ellipse cx="12" cy="16.5" rx="9.5" ry="5.5" fill="#E0944A" />
-      <ellipse cx="12" cy="16.5" rx="9.5" ry="5.5" fill="#C2772E" fillOpacity="0" />
       <path d="M2.5 16.5c0 3 4.3 5 9.5 5s9.5-2 9.5-5c0 .6 0 4.5-9.5 4.5S2.5 17.1 2.5 16.5Z" fill="#C2772E" />
       <ellipse cx="12" cy="13" rx="8" ry="3.2" fill="#FFFDF7" />
       <ellipse cx="12" cy="9.6" rx="7.4" ry="3.7" fill="#EAA85A" />
@@ -51,27 +72,26 @@ function Semla() {
         <circle cx="12" cy="8.4" r="0.8" />
         <circle cx="15.2" cy="9.6" r="0.8" />
       </g>
-    </Svg>
+    </>
   );
 }
 
 function Snaps() {
   return (
-    <Svg label="Snaps">
+    <>
       <path d="M8 4h8l-1.6 7.2c-.3 1.3-4.5 1.3-4.8 0Z" fill="#D7E8F5" />
       <path d="M9 7.8h6l-.6 3.4c-.3 1.3-4.5 1.3-4.8 0Z" fill="#BBDDF2" />
       <ellipse cx="11" cy="5" rx="2.2" ry="0.8" fill="#fff" fillOpacity="0.5" />
       <rect x="11.2" y="11.6" width="1.6" height="6" rx="0.8" fill="#AFC4D6" />
       <rect x="7.5" y="17.4" width="9" height="1.8" rx="0.9" fill="#AFC4D6" />
-    </Svg>
+    </>
   );
 }
 
 function Kottbullar() {
   return (
-    <Svg label="Köttbullar">
+    <>
       <ellipse cx="12" cy="17" rx="10.5" ry="4" fill="#E9E9E9" />
-      <ellipse cx="12" cy="16.2" rx="10.5" ry="4" fill="#D6D6D6" fillOpacity="0.0" />
       <path d="M1.5 17c0 2.2 4.7 4 10.5 4s10.5-1.8 10.5-4c0 .5 0 3.4-10.5 3.4S1.5 17.5 1.5 17Z" fill="#CBCBCB" />
       <ellipse cx="12" cy="15.2" rx="8.3" ry="2.8" fill="#EFE0C0" />
       <circle cx="5" cy="15" r="1.1" fill="#D62F2A" />
@@ -82,13 +102,13 @@ function Kottbullar() {
       <ellipse cx="6.6" cy="12.1" rx="1.2" ry="0.8" fill="#AE7044" />
       <ellipse cx="15.2" cy="12" rx="1.1" ry="0.7" fill="#AE7044" />
       <ellipse cx="11" cy="12.5" rx="1.3" ry="0.8" fill="#B0764A" />
-    </Svg>
+    </>
   );
 }
 
 function Skagen() {
   return (
-    <Svg label="Toast Skagen">
+    <>
       <rect x="3" y="11" width="18" height="8" rx="2.5" fill="#E6A94F" />
       <path d="M3 16.5c0 1.4 1.1 2.5 2.5 2.5h13c1.4 0 2.5-1.1 2.5-2.5v-1c0 1.4-1.1 2-2.5 2h-13c-1.4 0-2.5-.6-2.5-2Z" fill="#C98A35" />
       <path d="M4.5 11.5C8 6 16 6 19.5 11.5 16 14 8 14 4.5 11.5Z" fill="#F5A8A0" />
@@ -97,13 +117,13 @@ function Skagen() {
       <circle cx="12" cy="9" r="0.85" fill="#F07A2E" />
       <circle cx="15" cy="9.8" r="0.85" fill="#F07A2E" />
       <path d="M12 8.6v-2.4M12 8.6l-1.4-1.6M12 8.6l1.4-1.6" stroke="#4E9A4E" strokeWidth="1" strokeLinecap="round" fill="none" />
-    </Svg>
+    </>
   );
 }
 
 function Prinsesstarta() {
   return (
-    <Svg label="Prinsesstårta">
+    <>
       <path d="M2.5 18 A9.5 9 0 0 1 21.5 18 Z" fill="#6FC07C" />
       <path d="M3.6 14C6 9.5 18 9.5 20.4 14 16.5 12 7.5 12 3.6 14Z" fill="#88D293" />
       <ellipse cx="12" cy="18" rx="9.5" ry="1.6" fill="#E6E6E6" />
@@ -111,13 +131,13 @@ function Prinsesstarta() {
       <circle cx="12" cy="8" r="2.6" fill="#E879A8" />
       <circle cx="12" cy="8" r="1.1" fill="#D45C92" />
       <path d="M10 10c1.3 1 2.7 1 4 0" stroke="#4A9050" strokeWidth="1" fill="none" strokeLinecap="round" />
-    </Svg>
+    </>
   );
 }
 
 function Glogg() {
   return (
-    <Svg label="Glögg">
+    <>
       <path d="M6 8.5h9.5v4.5c0 3-2 5-4.75 5S6 16 6 13Z" fill="#fff" />
       <path d="M7.2 9.5h7.1V13c0 2.4-1.5 4-3.55 4S7.2 15.4 7.2 13Z" fill="#A4192C" />
       <path d="M7.2 9.5h7.1v1.4c-1.5.7-5.6.7-7.1 0Z" fill="#C13344" />
@@ -126,13 +146,13 @@ function Glogg() {
       <path d="M12.4 6.8c1-1.4 0-2.4 0-3.6" stroke="#D7DEE6" strokeWidth="1.2" fill="none" strokeLinecap="round" />
       <circle cx="9.5" cy="10.8" r="0.8" fill="#E8C9A0" />
       <circle cx="12.4" cy="11.4" r="0.8" fill="#E8C9A0" />
-    </Svg>
+    </>
   );
 }
 
 function Lojrom() {
   return (
-    <Svg label="Löjrom">
+    <>
       <circle cx="12" cy="15" r="6.5" fill="#E6A94F" />
       <path d="M12 21.5a6.5 6.5 0 0 0 6.4-5.5c-.8 3-3.5 4.2-6.4 4.2s-5.6-1.2-6.4-4.2a6.5 6.5 0 0 0 6.4 5.5Z" fill="#C98A35" />
       <ellipse cx="12" cy="13.4" rx="4.9" ry="2.8" fill="#FFFDF7" />
@@ -149,37 +169,37 @@ function Lojrom() {
         <circle cx="13.3" cy="11.2" r="0.32" />
       </g>
       <path d="M14.8 10.5l1-1.2" stroke="#4E9A4E" strokeWidth="1" strokeLinecap="round" />
-    </Svg>
+    </>
   );
 }
 
 function EnergyCan() {
   return (
-    <Svg label="Energidryck">
+    <>
       <rect x="7" y="3" width="10" height="18" rx="2.6" fill="#2E6BE6" />
       <rect x="7" y="3" width="3.2" height="18" rx="1.6" fill="#5A8CEF" />
       <ellipse cx="12" cy="3.4" rx="4.8" ry="1.3" fill="#AFC7F3" />
       <rect x="7" y="9" width="10" height="6" fill="#13347d" fillOpacity="0.3" />
       <path d="M13 5.6 9 12.8h2.5L10.4 18.4 15.4 10.6h-2.7Z" fill="#FFD23F" />
-    </Svg>
+    </>
   );
 }
 
 function Macaron() {
   return (
-    <Svg label="Macaron">
+    <>
       <path d="M3.5 10.2C3.5 7.6 7.3 6 12 6s8.5 1.6 8.5 4.2-3.8 3-8.5 3-8.5-.4-8.5-3Z" fill="#F2A8C4" />
       <path d="M3.6 9.2C5 7.4 8.3 6.6 12 6.6s7 .8 8.4 2.6C18.7 7.8 15.5 7.2 12 7.2s-6.7.6-8.4 2Z" fill="#F8C3D8" />
       <rect x="3.5" y="10" width="17" height="3.4" rx="1.5" fill="#FBE3C4" />
       <path d="M3.5 13.6c0 2.6 3.8 4.2 8.5 4.2s8.5-1.6 8.5-4.2c0 2.6-3.8 3.4-8.5 3.4s-8.5-.8-8.5-3.4Z" fill="#F2A8C4" />
       <path d="M3.5 13.4c.6 1.3 2.4 1.6 4.2 1.7-1.8.3-3.6-.1-4.2-1.7Zm12.8 1.7c1.8-.1 3.6-.4 4.2-1.7-.6 1.6-2.4 2-4.2 1.7Z" fill="#E58FB1" />
-    </Svg>
+    </>
   );
 }
 
 function Paella() {
   return (
-    <Svg label="Paella">
+    <>
       <rect x="0.5" y="12" width="5" height="2" rx="1" fill="#7a7a7a" />
       <rect x="18.5" y="12" width="5" height="2" rx="1" fill="#7a7a7a" />
       <circle cx="12" cy="13" r="8.3" fill="#E8C24A" />
@@ -191,13 +211,13 @@ function Paella() {
       <circle cx="15" cy="10.3" r="1" fill="#5BA34F" />
       <circle cx="8.8" cy="13.9" r="1" fill="#5BA34F" />
       <path d="M11.5 11.4 14 12.5l-2.5 1.1Z" fill="#3a3340" />
-    </Svg>
+    </>
   );
 }
 
 function Poke() {
   return (
-    <Svg label="Poke bowl">
+    <>
       <path d="M3.5 11.5h17C20.5 17 16.5 21 12 21S3.5 17 3.5 11.5Z" fill="#fff" />
       <path d="M3.5 11.5h17c0 1-.1 2-.4 2.9C18 15 6 15 3.9 14.4 3.6 13.5 3.5 12.5 3.5 11.5Z" fill="#E4E9EE" />
       <ellipse cx="12" cy="11.5" rx="8.3" ry="2.5" fill="#F4ECD8" />
@@ -206,13 +226,13 @@ function Poke() {
       <path d="M9.4 9.2c1.6-1 3.2-1 4.8 0-1.6 1.1-3.2 1.1-4.8 0Z" fill="#8FBF5B" />
       <circle cx="16.7" cy="11" r="0.85" fill="#5BA34F" />
       <circle cx="7.3" cy="11.4" r="0.75" fill="#5BA34F" />
-    </Svg>
+    </>
   );
 }
 
 function Tartare() {
   return (
-    <Svg label="Tartare / råbiff">
+    <>
       <ellipse cx="12" cy="16.5" rx="9.5" ry="3" fill="#E9E9E9" />
       <path d="M2.5 16.5c0 1.7 4.3 3 9.5 3s9.5-1.3 9.5-3c0 .4 0 2.6-9.5 2.6S2.5 16.9 2.5 16.5Z" fill="#CBCBCB" />
       <path d="M4.5 15.4C8 8.4 16 8.4 19.5 15.4 16 17.4 8 17.4 4.5 15.4Z" fill="#CE4A41" />
@@ -221,13 +241,13 @@ function Tartare() {
       <ellipse cx="11.2" cy="11.8" rx="1" ry="0.6" fill="#FAD06A" />
       <circle cx="8" cy="14.6" r="0.7" fill="#4E9A4E" />
       <circle cx="16" cy="14.6" r="0.7" fill="#7a4a8a" />
-    </Svg>
+    </>
   );
 }
 
 function FishAndChips() {
   return (
-    <Svg label="Fish & chips">
+    <>
       <path d="M2 9.5C2 7 6.4 6 11 6c5.5 0 9 1.8 9 3.5S16.5 13 11 13C6.4 13 2 12 2 9.5Z" fill="#E2A84E" />
       <path d="M2.2 8.6C3.6 7 7 6.6 11 6.6c4.5 0 7.4 1 8.6 2.4C18 7.6 14.5 7.2 11 7.2c-4 0-7.4.4-8.8 1.4Z" fill="#EDBE6E" />
       <circle cx="7" cy="10" r="0.7" fill="#C68B3A" />
@@ -241,13 +261,13 @@ function FishAndChips() {
         <rect x="12.7" y="14.8" width="0.7" height="6.4" rx="0.35" transform="rotate(-14 13 18)" />
         <rect x="15.9" y="14.2" width="0.7" height="7" rx="0.35" />
       </g>
-    </Svg>
+    </>
   );
 }
 
 function Charcuterie() {
   return (
-    <Svg label="Charcuterie / ostbricka">
+    <>
       <rect x="2" y="6.5" width="20" height="12" rx="2.5" fill="#B8763D" />
       <rect x="2" y="6.5" width="20" height="3" rx="2.5" fill="#C98E54" />
       <path d="M4 16.5 11 8.5 11 16.5Z" fill="#F3C53B" />
@@ -260,13 +280,13 @@ function Charcuterie() {
         <circle cx="16" cy="15.6" r="0.95" />
         <circle cx="15.1" cy="16.4" r="0.95" />
       </g>
-    </Svg>
+    </>
   );
 }
 
 function Nachos() {
   return (
-    <Svg label="Nachos">
+    <>
       <g fill="#E8B84E">
         <path d="M3 17.5 6.5 10 10 17.5Z" />
         <path d="M6.5 17 11 7.5 15.5 17Z" />
@@ -280,13 +300,13 @@ function Nachos() {
       <path d="M7.5 12c1.6 1 3.2 1 4.8 0" fill="none" stroke="#F3D26A" strokeWidth="1.6" strokeLinecap="round" />
       <circle cx="12" cy="13.4" r="1" fill="#5BA34F" />
       <circle cx="9" cy="14.6" r="0.85" fill="#C0504A" />
-    </Svg>
+    </>
   );
 }
 
 function Tiramisu() {
   return (
-    <Svg label="Tiramisu">
+    <>
       <rect x="3.5" y="8.5" width="17" height="10" rx="1.6" fill="#F3E3C3" />
       <rect x="3.5" y="12.2" width="17" height="2.6" fill="#A9764B" />
       <rect x="3.5" y="8.5" width="17" height="2.6" rx="1.6" fill="#6B4423" />
@@ -298,13 +318,13 @@ function Tiramisu() {
         <circle cx="9.8" cy="10.4" r="0.4" />
         <circle cx="14.5" cy="10.2" r="0.4" />
       </g>
-    </Svg>
+    </>
   );
 }
 
 function Spritz() {
   return (
-    <Svg label="Aperol Spritz">
+    <>
       <path d="M5.5 5h13l-2.3 8.2c-.4 1.4-8 1.4-8.4 0Z" fill="#F2902B" />
       <path d="M6.4 6.2h11.2l-.5 1.8c-1.6.8-8.6.8-10.2 0Z" fill="#F8AE50" />
       <rect x="11.2" y="13.4" width="1.6" height="5.6" rx="0.8" fill="#C9CDD2" />
@@ -313,13 +333,13 @@ function Spritz() {
       <circle cx="16.4" cy="5.6" r="2.5" fill="none" stroke="#E0922B" strokeWidth="0.5" />
       <path d="M16.4 3.1v5M13.9 5.6h5" stroke="#E0922B" strokeWidth="0.5" />
       <rect x="8.6" y="2.4" width="1.3" height="11" rx="0.6" fill="#D6483B" transform="rotate(10 9 8)" />
-    </Svg>
+    </>
   );
 }
 
 function GinTonic() {
   return (
-    <Svg label="Gin & Tonic">
+    <>
       <rect x="6.5" y="4.5" width="11" height="15.5" rx="2" fill="#DCEDF8" />
       <rect x="6.5" y="4.5" width="3.4" height="15.5" rx="1.8" fill="#EAF5FC" />
       <path d="M8.5 5.5a3.5 3 0 0 1 7 0Z" fill="#7DBE3C" />
@@ -329,13 +349,13 @@ function GinTonic() {
       <circle cx="13" cy="14.5" r="0.6" fill="#fff" />
       <circle cx="11" cy="9.5" r="0.6" fill="#fff" />
       <circle cx="12.5" cy="16.8" r="0.6" fill="#fff" />
-    </Svg>
+    </>
   );
 }
 
 function Burrata() {
   return (
-    <Svg label="Burrata / Caprese">
+    <>
       <ellipse cx="12" cy="16.5" rx="9.5" ry="2.8" fill="#E9E9E9" />
       <path d="M2.5 16.5c0 1.5 4.3 2.8 9.5 2.8s9.5-1.3 9.5-2.8c0 .4 0 2.4-9.5 2.4S2.5 16.9 2.5 16.5Z" fill="#CBCBCB" />
       <circle cx="6.8" cy="14" r="2.6" fill="#E0532B" />
@@ -347,13 +367,13 @@ function Burrata() {
       <path d="M12 7.6c1.8.6 0 2.4 0 2.4s-1.8-1.8 0-2.4Z" fill="#4E9A4E" />
       <circle cx="9" cy="11" r="0.5" fill="#9BBF3C" />
       <circle cx="15" cy="11" r="0.5" fill="#9BBF3C" />
-    </Svg>
+    </>
   );
 }
 
 function Churros() {
   return (
-    <Svg label="Churros">
+    <>
       <g stroke="#D9952B" strokeWidth="2.6" strokeLinecap="round" fill="none">
         <line x1="5" y1="4" x2="7.7" y2="18" />
         <line x1="9" y1="4" x2="10.7" y2="18" />
@@ -370,31 +390,63 @@ function Churros() {
       </g>
       <path d="M13.5 12.5H21v2.5c0 2.8-1.7 4.5-3.75 4.5S13.5 17.8 13.5 15Z" fill="#6B4423" />
       <ellipse cx="17.25" cy="12.7" rx="3.75" ry="1" fill="#7a5230" />
-    </Svg>
+    </>
   );
 }
 
-/** Registry: icon id (matches the "ci:<id>" sentinel) → label + component. */
-export const CUSTOM_ICONS: Record<string, { label: string; Icon: () => React.ReactElement }> = {
-  bun: { label: "Kanelbulle", Icon: CinnamonBun },
-  semla: { label: "Semla", Icon: Semla },
-  snaps: { label: "Snaps / nubbe", Icon: Snaps },
-  kottbullar: { label: "Köttbullar", Icon: Kottbullar },
-  skagen: { label: "Toast Skagen", Icon: Skagen },
-  prinsesstarta: { label: "Prinsesstårta", Icon: Prinsesstarta },
-  glogg: { label: "Glögg", Icon: Glogg },
-  lojrom: { label: "Löjrom", Icon: Lojrom },
-  energidryck: { label: "Energidryck", Icon: EnergyCan },
-  macaron: { label: "Macaron", Icon: Macaron },
-  paella: { label: "Paella", Icon: Paella },
-  poke: { label: "Poke bowl", Icon: Poke },
-  tartare: { label: "Tartare / råbiff", Icon: Tartare },
-  fishandchips: { label: "Fish & chips", Icon: FishAndChips },
-  charcuterie: { label: "Charcuterie / ostbricka", Icon: Charcuterie },
-  nachos: { label: "Nachos", Icon: Nachos },
-  tiramisu: { label: "Tiramisu", Icon: Tiramisu },
-  spritz: { label: "Aperol Spritz", Icon: Spritz },
-  gintonic: { label: "Gin & Tonic", Icon: GinTonic },
-  burrata: { label: "Burrata / Caprese", Icon: Burrata },
-  churros: { label: "Churros", Icon: Churros },
+/** id (matches the "ci:<id>" sentinel) → label + shape body. */
+const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
+  bun: { label: "Kanelbulle", Body: CinnamonBun },
+  semla: { label: "Semla", Body: Semla },
+  snaps: { label: "Snaps / nubbe", Body: Snaps },
+  kottbullar: { label: "Köttbullar", Body: Kottbullar },
+  skagen: { label: "Toast Skagen", Body: Skagen },
+  prinsesstarta: { label: "Prinsesstårta", Body: Prinsesstarta },
+  glogg: { label: "Glögg", Body: Glogg },
+  lojrom: { label: "Löjrom", Body: Lojrom },
+  energidryck: { label: "Energidryck", Body: EnergyCan },
+  macaron: { label: "Macaron", Body: Macaron },
+  paella: { label: "Paella", Body: Paella },
+  poke: { label: "Poke bowl", Body: Poke },
+  tartare: { label: "Tartare / råbiff", Body: Tartare },
+  fishandchips: { label: "Fish & chips", Body: FishAndChips },
+  charcuterie: { label: "Charcuterie / ostbricka", Body: Charcuterie },
+  nachos: { label: "Nachos", Body: Nachos },
+  tiramisu: { label: "Tiramisu", Body: Tiramisu },
+  spritz: { label: "Aperol Spritz", Body: Spritz },
+  gintonic: { label: "Gin & Tonic", Body: GinTonic },
+  burrata: { label: "Burrata / Caprese", Body: Burrata },
+  churros: { label: "Churros", Body: Churros },
 };
+
+export type IconEntry = { label: string; Icon: () => ReactElement };
+
+function buildRegistry(apple: boolean): Record<string, IconEntry> {
+  const out: Record<string, IconEntry> = {};
+  for (const id of Object.keys(ICONS)) {
+    const { label, Body } = ICONS[id];
+    out[id] = {
+      label,
+      Icon: apple
+        ? () => (
+            <Svg label={label}>
+              <GlossDefs />
+              <g filter="url(#apple-gloss)">
+                <Body />
+              </g>
+            </Svg>
+          )
+        : () => (
+            <Svg label={label}>
+              <Body />
+            </Svg>
+          ),
+    };
+  }
+  return out;
+}
+
+/** Flat Android/Noto look. */
+export const NOTO_ICONS = buildRegistry(false);
+/** Glossy Apple look (same shapes + specular sheen). */
+export const APPLE_ICONS = buildRegistry(true);
