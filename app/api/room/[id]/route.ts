@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const stub = stubFor(id);
   if (!stub) return NextResponse.json({ error: "Live rooms unavailable here." }, { status: 503 });
 
-  let body: { action?: string; name?: string; personId?: string; itemId?: string };
+  let body: { action?: string; name?: string; personId?: string; itemId?: string; targetId?: string };
   try {
     body = await req.json();
   } catch {
@@ -44,6 +44,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     case "claim": {
       const state = await stub.toggleClaim(String(body.personId ?? ""), String(body.itemId ?? ""));
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
+    case "paid": {
+      const state = await stub.togglePaid(String(body.personId ?? ""), String(body.targetId ?? ""));
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });
     }

@@ -10,6 +10,7 @@ import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/l
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
+import { addHistory } from "@/lib/history";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -626,6 +627,7 @@ export default function Page() {
       } catch {
         /* storage unavailable */
       }
+      addHistory({ id: data.id, place: mealLabel.trim(), date: eventDate, role: "host" });
       router.push(`/room/${data.id}`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
@@ -659,7 +661,14 @@ export default function Page() {
   return (
     <FxProvider value={fx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28 pt-5">
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center justify-between">
+        {step === "capture" ? (
+          <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
+            🕘 {t.history}
+          </a>
+        ) : (
+          <span />
+        )}
         <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
       </div>
 

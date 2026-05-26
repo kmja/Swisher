@@ -35,6 +35,8 @@ export type RoomState = {
   country: string;
   items: RoomItem[];
   people: RoomPerson[];
+  /** Person ids the host (or the person themselves) has marked as settled. */
+  paidBy: string[];
 };
 
 export type RoomInit = {
@@ -95,6 +97,7 @@ export class RoomDO extends DurableObject {
         claimedBy: it.shared === true ? [host.id] : [],
       })),
       people: [host],
+      paidBy: [],
     };
     await this.save(state);
     return state;
@@ -125,6 +128,26 @@ export class RoomDO extends DurableObject {
       const idx = item.claimedBy.indexOf(personId);
       if (idx >= 0) item.claimedBy.splice(idx, 1);
       else item.claimedBy.push(personId);
+      await this.save(state);
+    }
+    return state;
+  }
+
+  /**
+   * Mark a person as having settled their share (or unmark). Only the host
+   * (who collects) or the person themselves may change it — payment status is
+   * bookkeeping; the app never moves money.
+   */
+  async togglePaid(actorId: string, targetId: string): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (!state.paidBy) state.paidBy = [];
+    const allowed = actorId === state.payeePersonId || actorId === targetId;
+    const isPerson = state.people.some((p) => p.id === targetId);
+    if (allowed && isPerson && targetId !== state.payeePersonId) {
+      const idx = state.paidBy.indexOf(targetId);
+      if (idx >= 0) state.paidBy.splice(idx, 1);
+      else state.paidBy.push(targetId);
       await this.save(state);
     }
     return state;

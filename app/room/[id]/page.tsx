@@ -9,6 +9,7 @@ import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/l
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
+import { addHistory } from "@/lib/history";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
 
@@ -43,6 +44,10 @@ const R = {
     none: "Ingen",
     yourTotal: "Din del",
     nothingYet: "Du har inte petat i något än.",
+    paid: "Betald",
+    markPaid: "Markera betald",
+    newReceipt: "Nytt kvitto",
+    history: "Historik",
   },
   en: {
     loading: "Loading the room…",
@@ -72,6 +77,10 @@ const R = {
     none: "None",
     yourTotal: "Your share",
     nothingYet: "You haven't tapped anything yet.",
+    paid: "Paid",
+    markPaid: "Mark paid",
+    newReceipt: "New receipt",
+    history: "History",
   },
 } as const;
 
@@ -126,6 +135,18 @@ export default function RoomPage() {
     return () => clearInterval(timer);
   }, [refresh]);
 
+  // Remember this room locally so it shows up in history.
+  useEffect(() => {
+    if (state && personId) {
+      addHistory({
+        id: code,
+        place: state.place,
+        date: state.date,
+        role: personId === state.payeePersonId ? "host" : "guest",
+      });
+    }
+  }, [state, personId, code]);
+
   // Drop a stale id if the room no longer knows this person.
   useEffect(() => {
     if (state && personId && !state.people.some((p) => p.id === personId)) {
@@ -177,6 +198,16 @@ export default function RoomPage() {
     }
   }
 
+  async function togglePaid(targetId: string) {
+    if (!personId) return;
+    const res = await fetch(`/api/room/${code}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "paid", personId, targetId }),
+    });
+    if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+  }
+
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
 
   async function share() {
@@ -221,6 +252,16 @@ export default function RoomPage() {
   return (
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
+      {/* Navigation */}
+      <nav className="flex items-center justify-between text-xs font-semibold">
+        <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
+          + {t.newReceipt}
+        </a>
+        <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
+          🕘 {t.history}
+        </a>
+      </nav>
+
       {/* Share / invite */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between gap-3">
@@ -387,19 +428,39 @@ export default function RoomPage() {
           <section>
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-400">{t.peopleTitle}</h2>
             <div className="space-y-2">
-              {shares.map((s) => (
-                <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
-                    {initials(nameById.get(s.dinerId) ?? "?")}
-                  </span>
-                  <span className="flex-1 truncate text-sm font-medium">
-                    {nameById.get(s.dinerId)}
-                    {s.dinerId === state.payeePersonId && <span className="ml-1 text-xs text-gray-400">★</span>}
-                    {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
-                  </span>
-                  <Money ore={s.totalOre} className="text-sm font-semibold" />
-                </div>
-              ))}
+              {shares.map((s) => {
+                const isHostRow = s.dinerId === state.payeePersonId;
+                const isPaid = (state.paidBy ?? []).includes(s.dinerId);
+                // The host (collector) or the person themselves can settle a share.
+                const canToggle = !isHostRow && s.totalOre > 0 && (isPayee || s.dinerId === personId);
+                return (
+                  <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
+                      {initials(nameById.get(s.dinerId) ?? "?")}
+                    </span>
+                    <span className="flex-1 truncate text-sm font-medium">
+                      {nameById.get(s.dinerId)}
+                      {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
+                      {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
+                    </span>
+                    {!isHostRow && s.totalOre > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => canToggle && togglePaid(s.dinerId)}
+                        disabled={!canToggle}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 disabled:opacity-100 ${
+                          isPaid
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            : "bg-white text-gray-500 ring-gray-200"
+                        }`}
+                      >
+                        {isPaid ? `✓ ${t.paid}` : t.markPaid}
+                      </button>
+                    ) : null}
+                    <Money ore={s.totalOre} className={`text-sm font-semibold ${isPaid ? "text-gray-400 line-through" : ""}`} />
+                  </div>
+                );
+              })}
             </div>
             {unassignedOre > 0 && (
               <p className="mt-2 text-xs text-amber-600"><Money ore={unassignedOre} /> {lang === "sv" ? "ofördelat" : "unassigned"}</p>

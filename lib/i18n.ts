@@ -105,6 +105,10 @@ export interface Strings {
   fxMissing: (currency: string) => string;
   currencyLabel: string;
 
+  // navigation / history
+  history: string;
+  newReceipt: string;
+
   // QrCard
   shareTitle: (name: string) => string;
   shareText: (name: string, amt: string) => string;
@@ -214,6 +218,8 @@ const sv: Strings = {
   fxMissing: (currency) =>
     `Kunde inte hämta växelkurs för ${currency}. Beloppen visas i ${currency} – justera till kronor manuellt.`,
   currencyLabel: "Valuta",
+  history: "Historik",
+  newReceipt: "Nytt kvitto",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
@@ -324,6 +330,8 @@ const en: Strings = {
   fxMissing: (currency) =>
     `Couldn't fetch an exchange rate for ${currency}. Amounts are shown in ${currency} — adjust to kronor manually.`,
   currencyLabel: "Currency",
+  history: "History",
+  newReceipt: "New receipt",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
