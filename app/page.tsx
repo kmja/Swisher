@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
-import { isValidIban, normalizeIban } from "@/lib/sepa";
+import { isValidIban, normalizeIban, formatIban } from "@/lib/sepa";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -220,6 +220,8 @@ export default function Page() {
   const sepaAvailable = currency === "EUR" && !!fxRate;
   const method: "swish" | "sepa" = sepaAvailable && payMethod === "sepa" ? "sepa" : "swish";
   const ibanValid = isValidIban(payeeIban);
+  const ibanCc = payeeIban.slice(0, 2);
+  const ibanCountryLabel = /^[A-Z]{2}$/.test(ibanCc) ? `${flagEmoji(ibanCc)} ${regionName(ibanCc, lang)}` : "";
   const payDestOk = method === "sepa" ? ibanValid : isValidPhone(payerPhone);
   const eurCentsFor = (ore: number) => (fxRate ? Math.round(ore / fxRate) : 0);
   const currencyOptions = Array.from(new Set([currency, ...COMMON_CURRENCIES]));
@@ -304,21 +306,27 @@ export default function Page() {
       const saved = JSON.parse(localStorage.getItem("swisher-host") || "null");
       if (saved?.name) setDiners((prev) => prev.map((d, i) => (i === 0 ? { ...d, name: String(saved.name) } : d)));
       if (saved?.number) setPayerPhone(String(saved.number));
+      if (saved?.iban) setPayeeIban(normalizeIban(String(saved.iban)));
     } catch {
       /* ignore */
     }
   }, []);
 
+  // Remember the host's details (name, Swish number, IBAN) so they only ever
+  // type them once. Merge so filling one field doesn't wipe a saved other.
   useEffect(() => {
     const name = diners[0]?.name?.trim();
-    if (name && isValidPhone(payerPhone)) {
-      try {
-        localStorage.setItem("swisher-host", JSON.stringify({ name, number: payerPhone }));
-      } catch {
-        /* ignore */
-      }
+    if (!name) return;
+    try {
+      const prev = JSON.parse(localStorage.getItem("swisher-host") || "{}");
+      const next: Record<string, string> = { ...prev, name };
+      if (isValidPhone(payerPhone)) next.number = payerPhone;
+      if (isValidIban(payeeIban)) next.iban = normalizeIban(payeeIban);
+      localStorage.setItem("swisher-host", JSON.stringify(next));
+    } catch {
+      /* ignore */
     }
-  }, [diners, payerPhone]);
+  }, [diners, payerPhone, payeeIban]);
 
   // --- capture ---------------------------------------------------------------
   // Live camera preview on the capture step. Falls back silently (cameraActive
@@ -1035,13 +1043,22 @@ export default function Page() {
             {method === "sepa" ? (
               <div className="mt-2 space-y-2">
                 <input
-                  value={payeeIban}
-                  onChange={(e) => setPayeeIban(e.target.value)}
+                  value={formatIban(payeeIban)}
+                  onChange={(e) => setPayeeIban(normalizeIban(e.target.value))}
                   placeholder={t.ibanPlaceholder}
                   autoCapitalize="characters"
-                  className="w-full rounded-xl bg-white px-4 py-3 font-mono uppercase shadow-sm ring-1 ring-black/5 outline-none"
+                  autoComplete="on"
+                  name="iban"
+                  spellCheck={false}
+                  className="w-full rounded-xl bg-white px-4 py-3 font-mono uppercase tracking-wide shadow-sm ring-1 ring-black/5 outline-none"
                 />
-                {payeeIban && !ibanValid && <p className="text-xs text-red-600">{t.ibanInvalid}</p>}
+                {ibanValid ? (
+                  <p className="text-xs text-emerald-600">✓ {ibanCountryLabel}</p>
+                ) : payeeIban.length >= 15 ? (
+                  <p className="text-xs text-red-600">{t.ibanInvalid}</p>
+                ) : ibanCountryLabel ? (
+                  <p className="text-xs text-gray-400">{ibanCountryLabel}</p>
+                ) : null}
                 <input
                   value={payerPhone}
                   onChange={(e) => setPayerPhone(e.target.value)}
