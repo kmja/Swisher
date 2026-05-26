@@ -394,6 +394,203 @@ function Churros() {
   );
 }
 
+function Bao() {
+  return (
+    <>
+      <path d="M3 13c0-4 4-6 9-6s9 2 9 6-4 5-9 5-9-1-9-5Z" fill="#EFE5D1" />
+      <path d="M4 12c1.6-3 4.4-4.4 8-4.4S18.4 9 20 12c-1.6 1-4 1.4-8 1.4S5.6 13 4 12Z" fill="#FBF5E9" />
+      <path d="M6 12.4c2 .7 4 1 6 1s4-.3 6-1c-.3 1.1-1 1.8-2.2 2H8.2C7 14.2 6.3 13.5 6 12.4Z" fill="#A35E36" />
+      <circle cx="9" cy="13" r="0.5" fill="#5BA34F" />
+      <circle cx="15" cy="13" r="0.5" fill="#E07A50" />
+    </>
+  );
+}
+
+function SpringRoll() {
+  return (
+    <>
+      <g transform="rotate(33 12 12)">
+        <rect x="9" y="2.5" width="6" height="16" rx="3" fill="#DFA24C" />
+        <rect x="9.6" y="3" width="1.7" height="15" rx="0.85" fill="#ECBE72" />
+        <ellipse cx="12" cy="2.7" rx="3" ry="1.1" fill="#F2E8D0" />
+        <circle cx="11" cy="2.7" r="0.5" fill="#5BA34F" />
+        <circle cx="13" cy="2.9" r="0.5" fill="#E0A0A0" />
+      </g>
+      <path d="M15.5 16H21.5V17.5Q21.5 20 18.5 20 15.5 20 15.5 17.5Z" fill="#7A4A2A" />
+    </>
+  );
+}
+
+function Edamame() {
+  return (
+    <>
+      <path d="M3.5 14c0-2.8 2.2-4.5 5-4.5h7c2.8 0 5 1.7 5 4.5S18.3 17 15.5 17h-7C5.7 17 3.5 16.8 3.5 14Z" fill="#83C247" />
+      <path d="M3.5 14c0-1 .3-1.8.8-2.5 1.2.9 3.5 1.3 7.7 1.3s6.5-.4 7.7-1.3c.5.7.8 1.5.8 2.5 0 2.8-2.2 3-5 3h-7C5.7 17 3.5 16.8 3.5 14Z" fill="#6FB13A" />
+      <circle cx="8" cy="13.4" r="1.6" fill="#9AD15E" />
+      <circle cx="12" cy="13.6" r="1.6" fill="#9AD15E" />
+      <circle cx="16" cy="13.4" r="1.6" fill="#9AD15E" />
+      <path d="M19.5 12 21 10.5" stroke="#6FB13A" strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  );
+}
+
+function PadThai() {
+  return (
+    <>
+      <ellipse cx="12" cy="14" rx="9.5" ry="4.3" fill="#F0F0F0" />
+      <path d="M2.5 14c0 2 4.3 3.4 9.5 3.4s9.5-1.4 9.5-3.4c0 .3 0 2.5-9.5 2.5S2.5 14.3 2.5 14Z" fill="#DCDCDC" />
+      <path d="M5 13c3-3.2 11-3.2 14 0-1.2 2-3.2 2.4-5.2 1.3-2 1.9-5 1.4-6-.6-1.2 1-2.4.9-2.8-.7Z" fill="#E0B36A" />
+      <path d="M6 12.6q3-1.4 12 0M6.6 13.7q3-1.1 11 0" stroke="#CF9A4A" strokeWidth="0.5" fill="none" />
+      <path d="M13 11q1.4-1.5 2.8 0" stroke="#E0532B" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <circle cx="8" cy="12.6" r="0.7" fill="#5BA34F" />
+      <path d="M16.5 15.2 18 14" stroke="#7DBE3C" strokeWidth="1.5" strokeLinecap="round" />
+    </>
+  );
+}
+
+function Samosa() {
+  return (
+    <>
+      <path d="M12 4.5 20.5 17c-2.5 1.6-14.5 1.6-17 0Z" fill="#E0A14C" />
+      <path d="M12 4.5C9 8.5 7.4 12.5 6.4 16.2" stroke="#EBC078" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+      <path d="M12 4.5 12 16.6" stroke="#C98233" strokeWidth="0.6" />
+      <path d="M5 16.4c4 1.1 10 1.1 14 0" stroke="#C98233" strokeWidth="0.7" fill="none" />
+      <circle cx="18.5" cy="19" r="1.4" fill="#5BA34F" />
+    </>
+  );
+}
+
+function Curry() {
+  return (
+    <>
+      <path d="M3.5 12h17C20.5 17 16.5 20.5 12 20.5S3.5 17 3.5 12Z" fill="#fff" />
+      <path d="M3.5 12h17c0 1-.1 1.8-.4 2.6C18 15.2 6 15.2 3.9 14.6 3.6 13.8 3.5 13 3.5 12Z" fill="#E4E4E4" />
+      <ellipse cx="12" cy="12" rx="8.3" ry="2.4" fill="#D8732A" />
+      <path d="M9 11.4q3 1.3 6 0" stroke="#F2D9C0" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      <circle cx="14.5" cy="11" r="0.8" fill="#E89A3C" />
+      <circle cx="9.5" cy="11.7" r="0.6" fill="#5BA34F" />
+      <path d="M15.5 8.2c3-1.1 5.2 0 4.6 2.1-2.2.6-4.2.2-4.6-2.1Z" fill="#E8C271" />
+    </>
+  );
+}
+
+function Empanada() {
+  return (
+    <>
+      <path d="M3.8 15.5a8.2 7 0 0 1 16.4 0Z" fill="#E2A24E" />
+      <path d="M4.6 13.4C7 9 17 9 19.4 13.4 17 11.7 7 11.7 4.6 13.4Z" fill="#EFBE74" />
+      <path d="M5 15.4q1-1 2 0t2 0 2 0 2 0 2 0 2 0" stroke="#C98233" strokeWidth="0.6" fill="none" />
+    </>
+  );
+}
+
+function Tagine() {
+  return (
+    <>
+      <ellipse cx="12" cy="18.6" rx="9" ry="2" fill="#E0E0E0" />
+      <path d="M4.5 16.5h15v1c0 1-3 1.7-7.5 1.7s-7.5-.7-7.5-1.7Z" fill="#CE6B45" />
+      <path d="M5 17.4c1.4.8 4 1.1 7 1.1s5.6-.3 7-1.1c0 1-3 1.6-7 1.6s-7-.6-7-1.6Z" fill="#B85A3A" />
+      <path d="M6 16.6 12 4.2l6 12.4Z" fill="#C25E3C" />
+      <path d="M6.7 15.5C8.1 9.2 12 5.4 12 5.4s3.9 3.8 5.3 10.1c-2 .8-9.6.8-10.6 0Z" fill="#D6764F" />
+      <circle cx="12" cy="3.7" r="1" fill="#A84E30" />
+    </>
+  );
+}
+
+function Hummus() {
+  return (
+    <>
+      <ellipse cx="11" cy="14" rx="8.5" ry="3.2" fill="#fff" />
+      <path d="M2.5 14c0 1.8 3.8 3.2 8.5 3.2s8.5-1.4 8.5-3.2c0 .3 0 2.4-8.5 2.4S2.5 14.3 2.5 14Z" fill="#E4E4E4" />
+      <ellipse cx="11" cy="13.4" rx="6.8" ry="2.4" fill="#E8DCB0" />
+      <ellipse cx="11" cy="13.2" rx="2.2" ry="0.9" fill="#C99A3A" />
+      <circle cx="8.5" cy="12.9" r="0.5" fill="#C0504A" />
+      <circle cx="13.5" cy="13" r="0.6" fill="#D7C58A" />
+      <path d="M17.5 9.2c3 0 4 2 2.4 3.6C17.7 13.2 16.4 11 17.5 9.2Z" fill="#E8C271" />
+    </>
+  );
+}
+
+function Shakshuka() {
+  return (
+    <>
+      <rect x="18" y="11.8" width="5.8" height="2.4" rx="1.2" fill="#3A3340" />
+      <circle cx="11" cy="13" r="7.6" fill="#3A3340" />
+      <circle cx="11" cy="13" r="6.3" fill="#D23B2A" />
+      <ellipse cx="9" cy="12" rx="2.3" ry="1.9" fill="#FBF6EC" />
+      <circle cx="9" cy="12" r="0.95" fill="#F6B61E" />
+      <ellipse cx="13.4" cy="14.2" rx="2.3" ry="1.9" fill="#FBF6EC" />
+      <circle cx="13.4" cy="14.2" r="0.95" fill="#F6B61E" />
+      <circle cx="12.5" cy="9.4" r="0.5" fill="#5BA34F" />
+    </>
+  );
+}
+
+function Baklava() {
+  return (
+    <>
+      <path d="M12 5 20 13 12 21 4 13Z" fill="#E0A84E" />
+      <path d="M7 10 17 10M6 13 18 13M7 16 17 16" stroke="#C98233" strokeWidth="0.5" />
+      <path d="M12 5 4 13" stroke="#EFC179" strokeWidth="0.8" />
+      <g fill="#6FAE3A">
+        <circle cx="12" cy="13" r="0.95" />
+        <circle cx="10" cy="11.8" r="0.55" />
+        <circle cx="14" cy="14.2" r="0.55" />
+      </g>
+    </>
+  );
+}
+
+function Risotto() {
+  return (
+    <>
+      <ellipse cx="12" cy="14.5" rx="10" ry="4" fill="#F0F0F0" />
+      <path d="M2 14.5c0 2.2 4.5 3.6 10 3.6s10-1.4 10-3.6c0 .4 0 2.5-10 2.5S2 14.9 2 14.5Z" fill="#DCDCDC" />
+      <ellipse cx="12" cy="13.2" rx="7" ry="2.9" fill="#EFDDA0" />
+      <ellipse cx="12" cy="12.6" rx="5.6" ry="2" fill="#F4E7BA" />
+      <g fill="#D8C277">
+        <circle cx="8.6" cy="13.2" r="0.55" />
+        <circle cx="10.4" cy="13.9" r="0.55" />
+        <circle cx="12" cy="13.4" r="0.55" />
+        <circle cx="13.7" cy="13.8" r="0.55" />
+        <circle cx="15.2" cy="13" r="0.55" />
+        <circle cx="11" cy="12.4" r="0.5" />
+        <circle cx="13.4" cy="12.5" r="0.5" />
+      </g>
+      <path d="M10.4 11.6 13.8 10.6l-1.4 2.4Z" fill="#F2C94C" />
+      <circle cx="9.4" cy="12.2" r="0.5" fill="#5BA34F" />
+    </>
+  );
+}
+
+function Cannoli() {
+  return (
+    <g transform="rotate(35 12 12)">
+      <rect x="9" y="4" width="6" height="14" rx="1.5" fill="#D9974A" />
+      <line x1="10.6" y1="4" x2="10.6" y2="18" stroke="#C98233" strokeWidth="0.4" />
+      <line x1="13.4" y1="4" x2="13.4" y2="18" stroke="#C98233" strokeWidth="0.4" />
+      <ellipse cx="12" cy="4" rx="3" ry="1.3" fill="#FBF4E6" />
+      <ellipse cx="12" cy="18" rx="3" ry="1.3" fill="#FBF4E6" />
+      <circle cx="11" cy="4" r="0.6" fill="#6FAE3A" />
+      <circle cx="13" cy="18" r="0.6" fill="#5A3A22" />
+    </g>
+  );
+}
+
+function Mochi() {
+  return (
+    <>
+      <ellipse cx="12" cy="16.5" rx="9" ry="2.4" fill="#EAEAEA" />
+      <circle cx="8" cy="13.5" r="3.4" fill="#F6C0D2" />
+      <circle cx="16" cy="13.5" r="3.4" fill="#CDE8B8" />
+      <circle cx="12" cy="12.5" r="3.6" fill="#FBFBF6" />
+      <ellipse cx="7" cy="12.4" rx="1.3" ry="0.8" fill="#FBD7E2" />
+      <ellipse cx="11" cy="11.3" rx="1.3" ry="0.8" fill="#fff" />
+      <ellipse cx="15" cy="12.4" rx="1.3" ry="0.8" fill="#E0F0CF" />
+    </>
+  );
+}
+
 /** id (matches the "ci:<id>" sentinel) → label + shape body. */
 const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   bun: { label: "Kanelbulle", Body: CinnamonBun },
@@ -417,6 +614,20 @@ const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   gintonic: { label: "Gin & Tonic", Body: GinTonic },
   burrata: { label: "Burrata / Caprese", Body: Burrata },
   churros: { label: "Churros", Body: Churros },
+  bao: { label: "Bao bun", Body: Bao },
+  springroll: { label: "Vårrulle / spring roll", Body: SpringRoll },
+  edamame: { label: "Edamame", Body: Edamame },
+  padthai: { label: "Pad thai / wok", Body: PadThai },
+  samosa: { label: "Samosa", Body: Samosa },
+  curry: { label: "Curry", Body: Curry },
+  empanada: { label: "Empanada", Body: Empanada },
+  tagine: { label: "Tagine", Body: Tagine },
+  hummus: { label: "Hummus", Body: Hummus },
+  shakshuka: { label: "Shakshuka", Body: Shakshuka },
+  baklava: { label: "Baklava", Body: Baklava },
+  risotto: { label: "Risotto", Body: Risotto },
+  cannoli: { label: "Cannoli", Body: Cannoli },
+  mochi: { label: "Mochi", Body: Mochi },
 };
 
 export type IconEntry = { label: string; Icon: () => ReactElement };

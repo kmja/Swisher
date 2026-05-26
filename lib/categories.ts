@@ -65,7 +65,7 @@ const isDessert = makeMatcher([
   "tiramisu", "crème", "creme", "brûlée", "brulee", "kräm", "maräng", "marängsviss", "fromage",
   "choklad", "chocolate", "sorbet", "pannacotta", "panna cotta", "kladdkaka", "våffla", "våfflor",
   "waffle", "semla", "bulle", "kanelbulle", "ostkaka", "mousse", "parfait", "sundae", "äppelpaj",
-  "chokladboll", "praliner", "munk", "donut", "pannkaka",
+  "chokladboll", "praliner", "munk", "donut", "pannkaka", "baklava", "cannoli", "mochi",
 ]);
 const isFood = makeMatcher([
   "sallad", "salad", "nicoise", "niçoise", "pizza", "calzone", "pasta", "lasagne", "burgare",
@@ -83,6 +83,8 @@ const isFood = makeMatcher([
   "köttbullar", "wallenbergare", "oxbringa", "oxrygg", "oxkind", "lamm", "isterband", "kalops",
   "raggmunk", "råraka", "janssons", "pyttipanna", "kroppkakor", "rotmos", "kåldolmar", "kålpudding",
   "duxelle", "rödbeta", "brioche", "pastrami", "halloumi",
+  "bao", "edamame", "samosa", "empanada", "tagine", "tajine", "hummus", "shakshuka", "risotto",
+  "spring roll", "vårrulle", "pad thai", "curry", "tikka masala", "ceviche", "biryani",
 ]);
 
 /** Keyword fallback (Swedish + English) when the model gives no category. */
@@ -125,6 +127,20 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
   gintonic: ["gin tonic", "gin & tonic", "gin och tonic", "gintonic", "g&t"],
   burrata: ["burrata", "caprese", "mozzarella tomat"],
   churros: ["churros", "churro"],
+  bao: ["bao", "bao bun", "baobun", "gua bao", "steamed bun"],
+  springroll: ["spring roll", "spring rolls", "vårrulle", "vårrullar", "summer roll", "egg roll", "friterad vårrulle"],
+  edamame: ["edamame"],
+  padthai: ["pad thai", "padthai", "pad see ew"],
+  samosa: ["samosa", "samosas"],
+  curry: ["curry", "tikka masala", "butter chicken", "korma", "vindaloo", "masala", "röd curry", "grön curry"],
+  empanada: ["empanada", "empanadas"],
+  tagine: ["tagine", "tajine"],
+  hummus: ["hummus", "houmous", "hommus"],
+  shakshuka: ["shakshuka", "shakshouka"],
+  baklava: ["baklava", "baklawa"],
+  risotto: ["risotto"],
+  cannoli: ["cannoli", "cannolo"],
+  mochi: ["mochi"],
 };
 
 const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
