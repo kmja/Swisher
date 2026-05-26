@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     place?: string;
     date?: string;
     tipOre?: number;
-    items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown }[];
+    items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown }[];
   };
   try {
     body = await req.json();
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       priceOre: Math.round(Number(it?.priceOre)),
       category: typeof it?.category === "string" ? it.category : undefined,
       emoji: typeof it?.emoji === "string" ? it.emoji : undefined,
+      shared: it?.shared === true,
     }))
     .filter((it) => it.description && Number.isFinite(it.priceOre) && it.priceOre > 0)
     .slice(0, 100);

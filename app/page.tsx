@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeShares, formatOre, parseAmountToOre, splitOre } from "@/lib/money";
+import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
@@ -513,23 +513,15 @@ export default function Page() {
           place: mealLabel.trim(),
           date: eventDate,
           tipOre,
-          items: foodItems.flatMap((it) => {
-            const priceOre = parseAmountToOre(it.priceInput) ?? 0;
-            const desc = it.description.trim() || t.rowFallback;
-            const category = categoryFor(it.description, it.category);
-            const emoji = it.emoji;
-            // A shared item with a known group size becomes that many claimable
-            // share-slots, so diners can each take one (or several for a partner).
-            if (it.shared && groupSize >= 2) {
-              return splitOre(priceOre, groupSize).map((slotOre, i) => ({
-                description: `${desc} (${i + 1}/${groupSize})`,
-                priceOre: slotOre,
-                category,
-                emoji,
-              }));
-            }
-            return [{ description: desc, priceOre, category, emoji }];
-          }),
+          items: foodItems.map((it) => ({
+            description: it.description.trim() || t.rowFallback,
+            priceOre: parseAmountToOre(it.priceInput) ?? 0,
+            category: categoryFor(it.description, it.category),
+            emoji: it.emoji,
+            // Shared items split across the whole room (pre-claimed for everyone),
+            // rather than becoming separate claimable slots.
+            shared: it.shared,
+          })),
         }),
       });
       const data = await res.json();

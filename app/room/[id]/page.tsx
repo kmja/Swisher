@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeShares, formatOre } from "@/lib/money";
+import { computeRoomShares, formatOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
 import type { RoomState } from "@/lib/room-do";
-import type { Diner, LineItem } from "@/lib/types";
+import type { Diner, Share } from "@/lib/types";
 
 type Lang = "sv" | "en";
 
@@ -195,20 +195,13 @@ export default function RoomPage() {
     }
   }
 
-  const { shares, unassignedOre, lineItems } = useMemo(() => {
-    if (!state) return { shares: [], unassignedOre: 0, lineItems: [] as LineItem[] };
-    const li: LineItem[] = state.items.map((i) => ({
-      id: i.id,
-      description: i.description,
-      priceOre: i.priceOre,
-      sharers: i.claimedBy,
-    }));
+  const { shares, unassignedOre } = useMemo(() => {
+    if (!state) return { shares: [] as Share[], unassignedOre: 0 };
     const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
-    const r = computeShares(li, diners, state.tipOre);
-    return { ...r, lineItems: li };
+    return computeRoomShares(state.items, diners, state.tipOre);
   }, [state]);
 
-  const unclaimedCount = lineItems.filter((i) => i.sharers.length === 0).length;
+  const unclaimedCount = (state?.items ?? []).filter((i) => !i.shared && i.claimedBy.length === 0).length;
   const myShare = shares.find((s) => s.dinerId === personId);
   const isPayee = !!state && personId === state.payeePersonId;
   const nameById = useMemo(() => new Map((state?.people ?? []).map((p) => [p.id, p.name])), [state]);
@@ -273,10 +266,11 @@ export default function RoomPage() {
                 const all = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
                 const isMine = (it: RoomState["items"][number]) => it.claimedBy.includes(personId);
-                // Main list keeps its original order: unclaimed items + the ones
-                // I claimed (kept visible, no reshuffle on select). Others collapse.
-                const mainItems = all.filter((it) => it.claimedBy.length === 0 || isMine(it));
-                const othersItems = all.filter((it) => it.claimedBy.length > 0 && !isMine(it));
+                // Shared items (split across everyone) always stay in the main list.
+                // Otherwise: unclaimed items + the ones I claimed; others collapse.
+                const mainItems = all.filter((it) => it.shared || it.claimedBy.length === 0 || isMine(it));
+                const othersItems = all.filter((it) => !it.shared && it.claimedBy.length > 0 && !isMine(it));
+                const peopleCount = Math.max(1, state.people.length);
                 const claimers = (it: RoomState["items"][number]) =>
                   it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
                 return (
@@ -304,12 +298,17 @@ export default function RoomPage() {
                           >
                             ✓
                           </span>
-                          <span className="block min-w-0 flex-1 truncate font-medium">
-                            <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-                            {it.description}
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate font-medium">
+                              <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+                              {it.description}
+                            </span>
+                            {it.shared && (
+                              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · {formatOre(it.priceOre)} {tx.currency}</span>
+                            )}
                           </span>
-                          <span className="shrink-0 text-sm font-semibold">
-                            {formatOre(it.priceOre)} {tx.currency}
+                          <span className="shrink-0 text-right text-sm font-semibold">
+                            {formatOre(it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre)} {tx.currency}
                           </span>
                         </button>
                       );

@@ -128,3 +128,46 @@ export function computeShares(
 export function sumItemsOre(items: LineItem[]): number {
   return items.reduce((acc, item) => acc + item.priceOre, 0);
 }
+
+/**
+ * Live-room shares from per-item claims. A normal item splits equally among the
+ * people who claimed it. A `shared` item splits across the WHOLE group (one
+ * per-person share each), pre-claimed for everyone; a person who deselects it
+ * simply drops their share (it becomes unassigned, not redistributed). Tip
+ * splits equally across everyone.
+ */
+export function computeRoomShares(
+  items: { priceOre: number; shared?: boolean; claimedBy: string[] }[],
+  people: Diner[],
+  tipOre = 0,
+): { shares: Share[]; unassignedOre: number } {
+  const subtotals = new Map<string, number>();
+  for (const p of people) subtotals.set(p.id, 0);
+  const n = people.length;
+  let unassignedOre = 0;
+
+  for (const item of items) {
+    const claimers = item.claimedBy.filter((id) => subtotals.has(id));
+    if (item.shared) {
+      const parts = splitOre(item.priceOre, Math.max(1, n));
+      claimers.forEach((id, i) => {
+        if (i < parts.length) subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);
+      });
+      const covered = parts.slice(0, claimers.length).reduce((a, b) => a + b, 0);
+      unassignedOre += item.priceOre - covered;
+    } else if (claimers.length === 0) {
+      unassignedOre += item.priceOre;
+    } else {
+      const parts = splitOre(item.priceOre, claimers.length);
+      claimers.forEach((id, i) => subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]));
+    }
+  }
+
+  const tipParts = n > 0 ? splitOre(Math.max(0, Math.round(tipOre)), n) : [];
+  const shares: Share[] = people.map((p, i) => {
+    const subtotalOre = subtotals.get(p.id) ?? 0;
+    const tip = tipParts[i] ?? 0;
+    return { dinerId: p.id, name: p.name, subtotalOre, tipOre: tip, totalOre: subtotalOre + tip };
+  });
+  return { shares, unassignedOre };
+}

@@ -7,6 +7,8 @@ export type RoomItem = {
   category?: string;
   /** Emoji the model picked for this item (brand-aware fallback). */
   emoji?: string;
+  /** Split across the whole group (pre-claimed for everyone), not claim-one. */
+  shared?: boolean;
   /** Person ids who claimed this item. Multiple claimers = split equally. */
   claimedBy: string[];
 };
@@ -37,7 +39,7 @@ export type RoomInit = {
   place?: string;
   date?: string;
   tipOre: number;
-  items: { description: string; priceOre: number; category?: string; emoji?: string }[];
+  items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -76,7 +78,9 @@ export class RoomDO extends DurableObject {
         priceOre: Math.max(0, Math.round(it.priceOre)),
         category: it.category,
         emoji: it.emoji,
-        claimedBy: [],
+        shared: it.shared === true,
+        // Shared items start claimed by the host (and each diner as they join).
+        claimedBy: it.shared === true ? [host.id] : [],
       })),
       people: [host],
     };
@@ -93,6 +97,9 @@ export class RoomDO extends DurableObject {
     if (!state) return null;
     const person: RoomPerson = { id: uid(), name: name.trim().slice(0, 40) || "Gäst" };
     state.people.push(person);
+    // Shared items are split across the whole group, so pre-claim them for the
+    // newcomer (they can deselect to opt out of their share).
+    for (const it of state.items) if (it.shared && !it.claimedBy.includes(person.id)) it.claimedBy.push(person.id);
     await this.save(state);
     return { personId: person.id, state };
   }
