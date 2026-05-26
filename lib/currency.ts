@@ -23,6 +23,17 @@ export function formatNative(ore: number, fx: Fx): string | null {
   }
 }
 
+/** Format euro cents as a euro string, e.g. 1250 → "12,50 €" (EPC QR is EUR-only). */
+export function formatEur(cents: number): string {
+  try {
+    return new Intl.NumberFormat("sv-SE", { style: "currency", currency: "EUR", currencyDisplay: "narrowSymbol" }).format(
+      cents / 100,
+    );
+  } catch {
+    return `€${(cents / 100).toFixed(2)}`;
+  }
+}
+
 /** Regional-indicator flag for an ISO 3166-1 alpha-2 code, e.g. "IT" → 🇮🇹. */
 export function flagEmoji(code: string): string {
   if (!/^[A-Za-z]{2}$/.test(code)) return "";

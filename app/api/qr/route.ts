@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { NextResponse } from "next/server";
 import { buildPrefilledQrBody, buildSwishUri, normalizePhone, SWISH_QR_ENDPOINT } from "@/lib/swish";
+import { buildEpcPayload, isValidIban } from "@/lib/sepa";
 
 export const runtime = "nodejs";
 
@@ -15,8 +16,31 @@ function pngResponse(buffer: Buffer, source: string) {
   });
 }
 
+async function localQr(text: string, source: string) {
+  const dataUrl = await QRCode.toDataURL(text, { width: 300, margin: 1, errorCorrectionLevel: "M" });
+  return pngResponse(Buffer.from(dataUrl.split(",")[1], "base64"), source);
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+
+  // SEPA / EPC "Girocode" QR — scanned by a European banking app.
+  if (searchParams.get("method") === "sepa") {
+    const iban = searchParams.get("iban") ?? "";
+    const name = searchParams.get("name") ?? "";
+    const eurCents = Number(searchParams.get("eurCents"));
+    const message = (searchParams.get("message") ?? "").slice(0, 140);
+    if (!isValidIban(iban)) return NextResponse.json({ error: "Invalid IBAN." }, { status: 400 });
+    if (!Number.isFinite(eurCents) || eurCents <= 0) {
+      return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
+    }
+    try {
+      return await localQr(buildEpcPayload({ name, iban, eurCents, message }), "epc");
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "QR failed." }, { status: 502 });
+    }
+  }
+
   const payee = normalizePhone(searchParams.get("payee") ?? "");
   const amountOre = Number(searchParams.get("amountOre"));
   const message = (searchParams.get("message") ?? "").slice(0, 50);

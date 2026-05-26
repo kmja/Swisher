@@ -121,6 +121,20 @@ export interface Strings {
   shareLink: string;
   swishOpensApp: string;
   noSwishApp: string;
+
+  // payout method + SEPA
+  payMethodLabel: string;
+  payMethodSwish: string;
+  payMethodSepa: string;
+  ibanPlaceholder: string;
+  ibanInvalid: string;
+  swishOptional: string;
+  sepaScan: string;
+  sepaTo: (name: string) => string;
+  copyIban: string;
+  ibanCopied: string;
+  haveSwish: (amt: string) => string;
+  sepaSettlesEur: string;
 }
 
 const sv: Strings = {
@@ -233,6 +247,19 @@ const sv: Strings = {
   swishOpensApp: "Öppnar Swish-appen – kräver att den finns på den här telefonen",
   noSwishApp:
     "Kunde inte öppna Swish. Knappen öppnar Swish-appen, så den måste vara installerad på den här telefonen. Skanna annars QR-koden ovan med en annan telefon.",
+
+  payMethodLabel: "Hur vill du få betalt?",
+  payMethodSwish: "Swish (kr)",
+  payMethodSepa: "SEPA (€)",
+  ibanPlaceholder: "IBAN (t.ex. DE89 3704 0044 …)",
+  ibanInvalid: "Ange ett giltigt IBAN.",
+  swishOptional: "Swish-nummer (valfritt)",
+  sepaScan: "Skanna med din bankapp",
+  sepaTo: (name) => `Till ${name}`,
+  copyIban: "Kopiera IBAN",
+  ibanCopied: "IBAN kopierat!",
+  haveSwish: (amt) => `Har du Swish? Betala ${amt} kr i stället`,
+  sepaSettlesEur: "Betalningar sker i euro via banköverföring (SEPA).",
 };
 
 const en: Strings = {
@@ -345,6 +372,19 @@ const en: Strings = {
   swishOpensApp: "Opens the Swish app — needs it installed on this phone",
   noSwishApp:
     "Couldn't open Swish. The button launches the Swish app, so it has to be installed on this phone. Otherwise scan the QR code above with another phone.",
+
+  payMethodLabel: "How do you want to be paid?",
+  payMethodSwish: "Swish (kr)",
+  payMethodSepa: "SEPA (€)",
+  ibanPlaceholder: "IBAN (e.g. DE89 3704 0044 …)",
+  ibanInvalid: "Enter a valid IBAN.",
+  swishOptional: "Swish number (optional)",
+  sepaScan: "Scan with your bank app",
+  sepaTo: (name) => `To ${name}`,
+  copyIban: "Copy IBAN",
+  ibanCopied: "IBAN copied!",
+  haveSwish: (amt) => `Have Swish? Pay ${amt} kr instead`,
+  sepaSettlesEur: "Payments are made in euros via bank transfer (SEPA).",
 };
 
 export const translations: Record<Lang, Strings> = { sv, en };

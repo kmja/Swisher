@@ -20,6 +20,10 @@ export type RoomState = {
   createdAt: number;
   payeeName: string;
   payeeNumber: string;
+  /** Payout rail the host collects on. */
+  method: "swish" | "sepa";
+  /** Beneficiary IBAN for SEPA/EPC payouts (empty for Swish). */
+  payeeIban: string;
   /** The host's own person id — they collect, so they never get a QR. */
   payeePersonId: string;
   message: string;
@@ -43,6 +47,8 @@ export type RoomInit = {
   id: string;
   payeeName: string;
   payeeNumber: string;
+  method?: "swish" | "sepa";
+  payeeIban?: string;
   message: string;
   place?: string;
   date?: string;
@@ -78,6 +84,8 @@ export class RoomDO extends DurableObject {
       createdAt: Date.now(),
       payeeName: host.name,
       payeeNumber: data.payeeNumber,
+      method: data.method === "sepa" ? "sepa" : "swish",
+      payeeIban: (data.payeeIban ?? "").slice(0, 40),
       payeePersonId: host.id,
       message: data.message.slice(0, 50),
       place: (data.place ?? "").slice(0, 60),

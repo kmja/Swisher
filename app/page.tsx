@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
+import { isValidIban, normalizeIban } from "@/lib/sepa";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -156,6 +157,9 @@ export default function Page() {
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
   const [payerPhone, setPayerPhone] = useState("");
+  // Payout rail: Swish (SEK) by default; SEPA/EPC (EUR) for euro receipts.
+  const [payMethod, setPayMethod] = useState<"swish" | "sepa">("swish");
+  const [payeeIban, setPayeeIban] = useState("");
 
   const today = new Date().toISOString().slice(0, 10);
   const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
@@ -212,6 +216,12 @@ export default function Page() {
   const isForeign = currency !== "SEK";
   const fx: Fx = isForeign && fxRate ? { currency, rate: fxRate, approx: rateApprox } : null;
   const rateMissing = isForeign && !fxRate;
+  // SEPA/EPC settles in euros, so it's only offered for euro receipts.
+  const sepaAvailable = currency === "EUR" && !!fxRate;
+  const method: "swish" | "sepa" = sepaAvailable && payMethod === "sepa" ? "sepa" : "swish";
+  const ibanValid = isValidIban(payeeIban);
+  const payDestOk = method === "sepa" ? ibanValid : isValidPhone(payerPhone);
+  const eurCentsFor = (ore: number) => (fxRate ? Math.round(ore / fxRate) : 0);
   const currencyOptions = Array.from(new Set([currency, ...COMMON_CURRENCIES]));
 
   // Host corrects a mis-detected currency: re-fetch its rate for the receipt
@@ -257,6 +267,7 @@ export default function Page() {
     setFxRate(newRate);
     setRateApprox(approx);
     setRateDate(date);
+    setPayMethod(next === "EUR" ? "sepa" : "swish");
   }
 
   // Cycle the scanning status text while OCR runs.
@@ -421,6 +432,7 @@ export default function Page() {
 
       const cur = typeof data.currency === "string" && /^[A-Z]{3}$/.test(data.currency) ? data.currency : "SEK";
       setCurrency(cur);
+      setPayMethod(cur === "EUR" ? "sepa" : "swish");
       setFxRate(typeof data.rate === "number" && data.rate > 0 ? data.rate : cur === "SEK" ? 1 : null);
       setRateApprox(data.rateApprox === true);
       setRateDate(typeof data.rateDate === "string" ? data.rateDate : null);
@@ -556,7 +568,7 @@ export default function Page() {
   const needsGroupSize = hasSharedItems || tipOre > 0;
 
   const itemsStepValid =
-    validItems.length > 0 && namedDiners.length >= 2 && isValidPhone(payerPhone);
+    validItems.length > 0 && namedDiners.length >= 2 && payDestOk;
 
   // --- assign ----------------------------------------------------------------
   function toggleSharer(itemId: string, dinerId: string) {
@@ -589,7 +601,7 @@ export default function Page() {
   }
 
   // --- live room -------------------------------------------------------------
-  const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && isValidPhone(payerPhone);
+  const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && payDestOk;
 
   async function createRoom() {
     if (!roomReady || creatingRoom) return;
@@ -602,6 +614,8 @@ export default function Page() {
         body: JSON.stringify({
           payeeName: diners[0].name,
           payeeNumber: payerPhone,
+          method,
+          payeeIban: method === "sepa" ? normalizeIban(payeeIban) : "",
           message,
           place: mealLabel.trim(),
           date: eventDate,
@@ -1000,16 +1014,57 @@ export default function Page() {
                 placeholder={t.yourName}
                 className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
               />
-              <input
-                value={payerPhone}
-                onChange={(e) => setPayerPhone(e.target.value)}
-                inputMode="tel"
-                placeholder={t.swishNumber}
-                className="min-w-0 flex-1 rounded-xl bg-white px-3 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-              />
             </div>
-            {payerPhone && !isValidPhone(payerPhone) && (
-              <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
+
+            {sepaAvailable && (
+              <div className="mt-2 inline-flex overflow-hidden rounded-xl text-sm font-semibold ring-1 ring-gray-200">
+                {(["swish", "sepa"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={method === m}
+                    onClick={() => setPayMethod(m)}
+                    className={`px-4 py-2 ${method === m ? "bg-swish text-white" : "bg-white text-gray-500 active:bg-gray-100"}`}
+                  >
+                    {m === "swish" ? t.payMethodSwish : t.payMethodSepa}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {method === "sepa" ? (
+              <div className="mt-2 space-y-2">
+                <input
+                  value={payeeIban}
+                  onChange={(e) => setPayeeIban(e.target.value)}
+                  placeholder={t.ibanPlaceholder}
+                  autoCapitalize="characters"
+                  className="w-full rounded-xl bg-white px-4 py-3 font-mono uppercase shadow-sm ring-1 ring-black/5 outline-none"
+                />
+                {payeeIban && !ibanValid && <p className="text-xs text-red-600">{t.ibanInvalid}</p>}
+                <input
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder={t.swishOptional}
+                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                />
+                {payerPhone && !isValidPhone(payerPhone) && <p className="text-xs text-red-600">{t.invalidPhone}</p>}
+                <p className="px-1 text-xs text-gray-400">{t.sepaSettlesEur}</p>
+              </div>
+            ) : (
+              <div className="mt-2">
+                <input
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder={t.swishNumber}
+                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                />
+                {payerPhone && !isValidPhone(payerPhone) && (
+                  <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
+                )}
+              </div>
             )}
           </div>
 
@@ -1256,8 +1311,12 @@ export default function Page() {
                 <QrCard
                   key={s.dinerId}
                   name={s.name}
-                  payee={normalizedPayer}
+                  method={method}
                   amountOre={s.totalOre}
+                  swishPayee={normalizedPayer || undefined}
+                  iban={method === "sepa" ? normalizeIban(payeeIban) : undefined}
+                  payeeName={payer?.name}
+                  eurCents={method === "sepa" ? eurCentsFor(s.totalOre) : undefined}
                   message={message}
                   t={t}
                 />

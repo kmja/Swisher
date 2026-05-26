@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
 import { normalizePhone } from "@/lib/swish";
+import { isValidIban, normalizeIban } from "@/lib/sepa";
 import type { RoomDO } from "@/lib/room-do";
 
 export const runtime = "nodejs";
@@ -38,6 +39,8 @@ export async function POST(req: Request) {
     currency?: string;
     rate?: number;
     country?: string;
+    method?: string;
+    payeeIban?: string;
     items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown }[];
   };
   try {
@@ -46,8 +49,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const payeeNumber = normalizePhone(String(body.payeeNumber ?? ""));
-  if (!payeeNumber) {
+  const method = body.method === "sepa" ? "sepa" : "swish";
+  const payeeNumber = normalizePhone(String(body.payeeNumber ?? "")) ?? "";
+  const payeeIban = normalizeIban(String(body.payeeIban ?? ""));
+  if (method === "sepa") {
+    if (!isValidIban(payeeIban)) {
+      return NextResponse.json({ error: "Invalid payee IBAN." }, { status: 400 });
+    }
+  } else if (!payeeNumber) {
     return NextResponse.json({ error: "Invalid payee Swish number." }, { status: 400 });
   }
 
@@ -71,6 +80,8 @@ export async function POST(req: Request) {
     id,
     payeeName: String(body.payeeName ?? "").slice(0, 40),
     payeeNumber,
+    method,
+    payeeIban,
     message: String(body.message ?? "").slice(0, 50),
     place: String(body.place ?? "").slice(0, 60),
     date: String(body.date ?? "").slice(0, 20),
