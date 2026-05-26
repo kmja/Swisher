@@ -100,13 +100,29 @@ export function categoryFor(description: string, hint?: string): Category {
   return guessCategory(description);
 }
 
-// Sentinel returned by emojiFor for cinnamon/cardamom buns. Unicode has no
-// cinnamon-bun emoji, so the UI swaps this for a custom SVG (see ItemEmoji).
-export const CINNAMON_BUN = "cinnamon-bun";
+// Items that lack a good Unicode emoji get a hand-drawn SVG (see ItemIcons).
+// emojiFor returns the sentinel "ci:<id>"; the UI swaps in the matching icon.
+// This map is the single source of truth for which names map to each icon.
+export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
+  bun: ["kanelbulle", "kanelbullar", "kanelsnurra", "kanelsnurror", "kardemummabulle", "kardemummabullar"],
+  semla: ["semla", "semlor", "fastlagsbulle"],
+  snaps: ["snaps", "nubbe", "akvavit", "brännvin", "o.p. anderson", "op anderson", "bäska", "skåne akvavit", "hallands fläder"],
+  kottbullar: ["köttbullar", "köttbulle"],
+  skagen: ["toast skagen", "skagen", "skagenröra", "räkmacka", "räksmörgås"],
+  prinsesstarta: ["prinsesstårta", "prinsessbakelse"],
+  glogg: ["glögg"],
+  lojrom: ["löjrom", "löjromstoast", "stenbitsrom"],
+  energidryck: ["energidryck", "red bull", "redbull", "nocco", "celsius", "monster", "battery"],
+};
 
-// Specific item → emoji, most-specific first (first match wins). Uses the same
-// compound-aware matcher as the categoriser.
+const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
+  ([id, names]) => [makeMatcher(names), `ci:${id}`],
+);
+
+// Specific item → emoji, most-specific first (first match wins). Custom SVG
+// icons are matched before the emoji rules. Uses the compound-aware matcher.
 const EMOJI_RULES: [(desc: string) => boolean, string][] = [
+  ...CUSTOM_ICON_RULES,
   // drinks
   [makeMatcher(["öl", "lager", "ipa", "ale", "stout", "pilsner", "porter", "brewing", "bryggeri"]), "🍺"],
   [makeMatcher(["champagne", "mumm", "bubbel", "cava", "prosecco", "mousserande"]), "🍾"],
@@ -156,8 +172,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["pannkaka", "pannkakor", "crepe", "crêpe"]), "🥞"],
   [makeMatcher(["crème", "creme", "brûlée", "brulee", "maräng", "marängsviss", "kräm", "mousse", "fromage", "parfait"]), "🍮"],
   [makeMatcher(["choklad", "chocolate", "chokladboll", "praliner"]), "🍫"],
-  [makeMatcher(["kanelbulle", "kanelbullar", "kanelsnurra", "kanelsnurror", "kardemummabulle", "kardemummabullar"]), CINNAMON_BUN],
-  [makeMatcher(["bulle", "bullar", "semla", "semlor", "wienerbröd", "croissant", "giffel"]), "🥐"],
+  [makeMatcher(["bulle", "bullar", "wienerbröd", "croissant", "giffel"]), "🥐"],
   [makeMatcher(["cookie", "kakor", "biscotti", "småkakor"]), "🍪"],
   [makeMatcher(["kaka", "cake", "cheesecake", "tårta", "ostkaka", "kladdkaka", "muffins", "cupcake"]), "🍰"],
 ];
