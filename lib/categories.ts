@@ -113,6 +113,18 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
   glogg: ["glögg"],
   lojrom: ["löjrom", "löjromstoast", "stenbitsrom"],
   energidryck: ["energidryck", "red bull", "redbull", "nocco", "celsius", "monster", "battery"],
+  macaron: ["macaron", "macarons"],
+  paella: ["paella"],
+  poke: ["poke", "poke bowl", "pokebowl"],
+  tartare: ["tartare", "råbiff", "steak tartare", "biff tartar"],
+  fishandchips: ["fish and chips", "fish & chips", "fish n chips", "fish chips"],
+  charcuterie: ["charcuterie", "charkbricka", "ostbricka", "osttallrik", "antipasti", "plockmat"],
+  nachos: ["nachos"],
+  tiramisu: ["tiramisu"],
+  spritz: ["aperol spritz", "aperol", "spritz", "limespritz"],
+  gintonic: ["gin tonic", "gin & tonic", "gin och tonic", "gintonic", "g&t"],
+  burrata: ["burrata", "caprese", "mozzarella tomat"],
+  churros: ["churros", "churro"],
 };
 
 const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
