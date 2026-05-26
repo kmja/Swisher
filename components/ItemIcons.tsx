@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
-/** Hand-drawn icons for common Swedish items that lack a good Unicode emoji.
- *  Each is a 24×24 SVG rendered at 1em so it sits inline like an emoji. */
+/** Hand-drawn icons for common items that lack a good Unicode emoji, drawn to
+ *  match the platform (Noto/Android) emoji look: bold, rounded, saturated, flat
+ *  two-tone shading, no hairline outlines. 24×24, rendered at 1em like an emoji. */
 function Svg({ children, label }: { children: ReactNode; label?: string }) {
   return (
     <svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label={label} className="inline-block align-[-0.125em]">
@@ -13,22 +14,24 @@ function Svg({ children, label }: { children: ReactNode; label?: string }) {
 function CinnamonBun() {
   return (
     <Svg label="Kanelbulle">
-      <circle cx="12" cy="12" r="10.5" fill="#E3A65A" stroke="#B26B2E" strokeWidth="1" />
+      <circle cx="12" cy="12" r="10.5" fill="#E0944A" />
+      <path d="M12 22.5a10.5 10.5 0 0 0 10.4-9c-1 5-5.4 7.5-10.4 7.5S2.6 18.5 1.6 13.5a10.5 10.5 0 0 0 10.4 9Z" fill="#C2772E" />
+      <ellipse cx="9.5" cy="8.8" rx="6.2" ry="4.6" fill="#EFB069" />
       <path
-        d="M12 3 A8.25 8.25 0 0 1 12 19.5 A6.75 6.75 0 0 1 12 6 A5.25 5.25 0 0 1 12 16.5 A3.75 3.75 0 0 1 12 9 A2.25 2.25 0 0 1 12 13.5 A0.75 0.75 0 0 1 12 12"
+        d="M12 3.6 A8.4 8.4 0 0 1 12 20.4 A7 7 0 0 1 12 6.4 A5.6 5.6 0 0 1 12 17.6 A4.2 4.2 0 0 1 12 9.2 A2.8 2.8 0 0 1 12 14.8 A1.4 1.4 0 0 1 12 12"
         fill="none"
-        stroke="#7A4A24"
-        strokeWidth="1.7"
+        stroke="#7A4521"
+        strokeWidth="2"
         strokeLinecap="round"
       />
       <g fill="#fff">
-        <circle cx="9" cy="7.6" r="0.85" />
-        <circle cx="14.2" cy="7.2" r="0.85" />
-        <circle cx="16.6" cy="11" r="0.85" />
-        <circle cx="7.2" cy="12.2" r="0.85" />
-        <circle cx="11.2" cy="6.2" r="0.85" />
-        <circle cx="13.4" cy="16.4" r="0.85" />
-        <circle cx="8.4" cy="15.6" r="0.85" />
+        <circle cx="9" cy="7.4" r="0.95" />
+        <circle cx="14.4" cy="7.1" r="0.95" />
+        <circle cx="16.8" cy="11" r="0.95" />
+        <circle cx="7.1" cy="12.4" r="0.95" />
+        <circle cx="11.2" cy="5.9" r="0.95" />
+        <circle cx="13.6" cy="16.6" r="0.95" />
+        <circle cx="8.2" cy="15.8" r="0.95" />
       </g>
     </Svg>
   );
@@ -37,12 +40,17 @@ function CinnamonBun() {
 function Semla() {
   return (
     <Svg label="Semla">
-      <ellipse cx="12" cy="16" rx="9" ry="5" fill="#E3A65A" stroke="#B26B2E" strokeWidth="0.6" />
-      <ellipse cx="12" cy="13" rx="7.6" ry="3" fill="#fffdf7" />
-      <ellipse cx="12" cy="10.2" rx="7" ry="3.4" fill="#E8AE62" stroke="#B26B2E" strokeWidth="0.6" />
-      <circle cx="9" cy="9.9" r="0.7" fill="#fff" />
-      <circle cx="12" cy="9" r="0.7" fill="#fff" />
-      <circle cx="15" cy="9.9" r="0.7" fill="#fff" />
+      <ellipse cx="12" cy="16.5" rx="9.5" ry="5.5" fill="#E0944A" />
+      <ellipse cx="12" cy="16.5" rx="9.5" ry="5.5" fill="#C2772E" fillOpacity="0" />
+      <path d="M2.5 16.5c0 3 4.3 5 9.5 5s9.5-2 9.5-5c0 .6 0 4.5-9.5 4.5S2.5 17.1 2.5 16.5Z" fill="#C2772E" />
+      <ellipse cx="12" cy="13" rx="8" ry="3.2" fill="#FFFDF7" />
+      <ellipse cx="12" cy="9.6" rx="7.4" ry="3.7" fill="#EAA85A" />
+      <ellipse cx="10" cy="8.4" rx="4" ry="1.8" fill="#F4BE76" />
+      <g fill="#fff">
+        <circle cx="8.6" cy="9.4" r="0.8" />
+        <circle cx="12" cy="8.4" r="0.8" />
+        <circle cx="15.2" cy="9.6" r="0.8" />
+      </g>
     </Svg>
   );
 }
@@ -50,10 +58,11 @@ function Semla() {
 function Snaps() {
   return (
     <Svg label="Snaps">
-      <path d="M8.4 4 L15.6 4 L14 11 Q12 12.2 10 11 Z" fill="#E6F0F7" stroke="#8FA4B8" strokeWidth="0.9" />
-      <path d="M9.1 7.6 L14.9 7.6 L14 11 Q12 12.2 10 11 Z" fill="#CFE3F3" />
-      <line x1="12" y1="11.6" x2="12" y2="17.4" stroke="#8FA4B8" strokeWidth="1.3" />
-      <line x1="8" y1="18" x2="16" y2="18" stroke="#8FA4B8" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M8 4h8l-1.6 7.2c-.3 1.3-4.5 1.3-4.8 0Z" fill="#D7E8F5" />
+      <path d="M9 7.8h6l-.6 3.4c-.3 1.3-4.5 1.3-4.8 0Z" fill="#BBDDF2" />
+      <ellipse cx="11" cy="5" rx="2.2" ry="0.8" fill="#fff" fillOpacity="0.5" />
+      <rect x="11.2" y="11.6" width="1.6" height="6" rx="0.8" fill="#AFC4D6" />
+      <rect x="7.5" y="17.4" width="9" height="1.8" rx="0.9" fill="#AFC4D6" />
     </Svg>
   );
 }
@@ -61,16 +70,18 @@ function Snaps() {
 function Kottbullar() {
   return (
     <Svg label="Köttbullar">
-      <ellipse cx="12" cy="17" rx="10" ry="3.5" fill="#ededed" stroke="#cfcfcf" strokeWidth="0.5" />
-      <ellipse cx="12" cy="15.4" rx="8" ry="2.6" fill="#F2E8D0" />
-      <circle cx="5" cy="15.2" r="1" fill="#C62433" />
-      <circle cx="19" cy="15.2" r="1" fill="#C62433" />
-      <circle cx="8" cy="13.6" r="3.1" fill="#8A5A2F" />
-      <circle cx="16" cy="13.4" r="3" fill="#8A5A2F" />
-      <circle cx="12.3" cy="14" r="3.3" fill="#915F32" />
-      <circle cx="7" cy="12.6" r="0.7" fill="#AE7A44" />
-      <circle cx="15" cy="12.5" r="0.7" fill="#AE7A44" />
-      <circle cx="11.4" cy="13" r="0.7" fill="#B07E48" />
+      <ellipse cx="12" cy="17" rx="10.5" ry="4" fill="#E9E9E9" />
+      <ellipse cx="12" cy="16.2" rx="10.5" ry="4" fill="#D6D6D6" fillOpacity="0.0" />
+      <path d="M1.5 17c0 2.2 4.7 4 10.5 4s10.5-1.8 10.5-4c0 .5 0 3.4-10.5 3.4S1.5 17.5 1.5 17Z" fill="#CBCBCB" />
+      <ellipse cx="12" cy="15.2" rx="8.3" ry="2.8" fill="#EFE0C0" />
+      <circle cx="5" cy="15" r="1.1" fill="#D62F2A" />
+      <circle cx="19" cy="15" r="1.1" fill="#D62F2A" />
+      <circle cx="7.6" cy="13.4" r="3.4" fill="#8A5230" />
+      <circle cx="16.2" cy="13.2" r="3.2" fill="#8A5230" />
+      <circle cx="12" cy="13.8" r="3.6" fill="#925836" />
+      <ellipse cx="6.6" cy="12.1" rx="1.2" ry="0.8" fill="#AE7044" />
+      <ellipse cx="15.2" cy="12" rx="1.1" ry="0.7" fill="#AE7044" />
+      <ellipse cx="11" cy="12.5" rx="1.3" ry="0.8" fill="#B0764A" />
     </Svg>
   );
 }
@@ -78,12 +89,14 @@ function Kottbullar() {
 function Skagen() {
   return (
     <Svg label="Toast Skagen">
-      <rect x="3.5" y="11" width="17" height="7" rx="2" fill="#E3B36A" stroke="#C68B3A" strokeWidth="0.7" />
-      <path d="M5 11.5 Q12 6.4 19 11.5 Q12 14 5 11.5 Z" fill="#F2A6A0" stroke="#E08A84" strokeWidth="0.4" />
-      <circle cx="9" cy="10" r="0.7" fill="#E8732B" />
-      <circle cx="12" cy="9.2" r="0.7" fill="#E8732B" />
-      <circle cx="15" cy="10" r="0.7" fill="#E8732B" />
-      <path d="M12 8.6 v-2 M12 8.6 l-1.2 -1.4 M12 8.6 l1.2 -1.4" stroke="#4E9A4E" strokeWidth="0.7" strokeLinecap="round" fill="none" />
+      <rect x="3" y="11" width="18" height="8" rx="2.5" fill="#E6A94F" />
+      <path d="M3 16.5c0 1.4 1.1 2.5 2.5 2.5h13c1.4 0 2.5-1.1 2.5-2.5v-1c0 1.4-1.1 2-2.5 2h-13c-1.4 0-2.5-.6-2.5-2Z" fill="#C98A35" />
+      <path d="M4.5 11.5C8 6 16 6 19.5 11.5 16 14 8 14 4.5 11.5Z" fill="#F5A8A0" />
+      <path d="M5.5 10.2C9 6.5 15 6.5 18.5 10.2 15 8.4 9 8.4 5.5 10.2Z" fill="#F9BEB7" />
+      <circle cx="9" cy="9.8" r="0.85" fill="#F07A2E" />
+      <circle cx="12" cy="9" r="0.85" fill="#F07A2E" />
+      <circle cx="15" cy="9.8" r="0.85" fill="#F07A2E" />
+      <path d="M12 8.6v-2.4M12 8.6l-1.4-1.6M12 8.6l1.4-1.6" stroke="#4E9A4E" strokeWidth="1" strokeLinecap="round" fill="none" />
     </Svg>
   );
 }
@@ -91,12 +104,13 @@ function Skagen() {
 function Prinsesstarta() {
   return (
     <Svg label="Prinsesstårta">
-      <path d="M3.5 17.5 A8.5 8.5 0 0 1 20.5 17.5 Z" fill="#8FCB9B" stroke="#5FA873" strokeWidth="0.7" />
-      <path d="M4.2 16 Q12 18.2 19.8 16" fill="none" stroke="#fffdf7" strokeWidth="1.4" />
-      <line x1="2.5" y1="17.6" x2="21.5" y2="17.6" stroke="#d4d4d4" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="12" cy="8.4" r="2.2" fill="#E68BAE" />
-      <circle cx="12" cy="8.4" r="0.9" fill="#D46B95" />
-      <path d="M10.4 10.1 q1.6 1.1 3.2 0" fill="none" stroke="#5FA873" strokeWidth="0.7" />
+      <path d="M2.5 18 A9.5 9 0 0 1 21.5 18 Z" fill="#6FC07C" />
+      <path d="M3.6 14C6 9.5 18 9.5 20.4 14 16.5 12 7.5 12 3.6 14Z" fill="#88D293" />
+      <ellipse cx="12" cy="18" rx="9.5" ry="1.6" fill="#E6E6E6" />
+      <path d="M4 16.5c1.4 1.2 14.6 1.2 16 0-1 1.6-15 1.6-16 0Z" fill="#FFF6E6" />
+      <circle cx="12" cy="8" r="2.6" fill="#E879A8" />
+      <circle cx="12" cy="8" r="1.1" fill="#D45C92" />
+      <path d="M10 10c1.3 1 2.7 1 4 0" stroke="#4A9050" strokeWidth="1" fill="none" strokeLinecap="round" />
     </Svg>
   );
 }
@@ -104,13 +118,14 @@ function Prinsesstarta() {
 function Glogg() {
   return (
     <Svg label="Glögg">
-      <path d="M6.5 8 H15.5 V13 Q15.5 17.5 11 17.5 Q6.5 17.5 6.5 13 Z" fill="#fff" stroke="#9aa4b2" strokeWidth="0.9" />
-      <path d="M7.4 9 H14.6 V13 Q14.6 16.6 11 16.6 Q7.4 16.6 7.4 13 Z" fill="#9E1B2F" />
-      <path d="M15.5 9.4 q4 0.6 0 5" fill="none" stroke="#9aa4b2" strokeWidth="1.4" />
-      <path d="M9.3 6.6 q1 -1.4 0 -3" fill="none" stroke="#cbd5e1" strokeWidth="1" strokeLinecap="round" />
-      <path d="M12.6 6.6 q1 -1.4 0 -3" fill="none" stroke="#cbd5e1" strokeWidth="1" strokeLinecap="round" />
-      <circle cx="9.6" cy="10.6" r="0.7" fill="#E8C9A0" />
-      <circle cx="12.6" cy="11.2" r="0.7" fill="#E8C9A0" />
+      <path d="M6 8.5h9.5v4.5c0 3-2 5-4.75 5S6 16 6 13Z" fill="#fff" />
+      <path d="M7.2 9.5h7.1V13c0 2.4-1.5 4-3.55 4S7.2 15.4 7.2 13Z" fill="#A4192C" />
+      <path d="M7.2 9.5h7.1v1.4c-1.5.7-5.6.7-7.1 0Z" fill="#C13344" />
+      <path d="M15.5 9.8c2.8.3 2.8 4.7 0 5" fill="none" stroke="#cfd6df" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M9.3 6.8c1-1.4 0-2.4 0-3.6" stroke="#D7DEE6" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M12.4 6.8c1-1.4 0-2.4 0-3.6" stroke="#D7DEE6" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <circle cx="9.5" cy="10.8" r="0.8" fill="#E8C9A0" />
+      <circle cx="12.4" cy="11.4" r="0.8" fill="#E8C9A0" />
     </Svg>
   );
 }
@@ -118,17 +133,22 @@ function Glogg() {
 function Lojrom() {
   return (
     <Svg label="Löjrom">
-      <circle cx="12" cy="15" r="6" fill="#E3B36A" stroke="#C68B3A" strokeWidth="0.7" />
-      <ellipse cx="12" cy="13.6" rx="4.6" ry="2.6" fill="#fffdf7" />
-      <g fill="#E8732B">
-        <circle cx="10.5" cy="11.6" r="0.85" />
-        <circle cx="12" cy="11.1" r="0.85" />
-        <circle cx="13.5" cy="11.6" r="0.85" />
-        <circle cx="11.2" cy="12.5" r="0.85" />
-        <circle cx="12.8" cy="12.5" r="0.85" />
-        <circle cx="12" cy="12.7" r="0.85" />
+      <circle cx="12" cy="15" r="6.5" fill="#E6A94F" />
+      <path d="M12 21.5a6.5 6.5 0 0 0 6.4-5.5c-.8 3-3.5 4.2-6.4 4.2s-5.6-1.2-6.4-4.2a6.5 6.5 0 0 0 6.4 5.5Z" fill="#C98A35" />
+      <ellipse cx="12" cy="13.4" rx="4.9" ry="2.8" fill="#FFFDF7" />
+      <g fill="#F07A2E">
+        <circle cx="10.4" cy="11.4" r="0.95" />
+        <circle cx="12" cy="10.9" r="0.95" />
+        <circle cx="13.6" cy="11.4" r="0.95" />
+        <circle cx="11.1" cy="12.4" r="0.95" />
+        <circle cx="12.9" cy="12.4" r="0.95" />
+        <circle cx="12" cy="12.7" r="0.95" />
       </g>
-      <path d="M14.6 10.6 l0.9 -1.1" stroke="#4E9A4E" strokeWidth="0.7" strokeLinecap="round" />
+      <g fill="#F9A45F">
+        <circle cx="11.7" cy="11.2" r="0.32" />
+        <circle cx="13.3" cy="11.2" r="0.32" />
+      </g>
+      <path d="M14.8 10.5l1-1.2" stroke="#4E9A4E" strokeWidth="1" strokeLinecap="round" />
     </Svg>
   );
 }
@@ -136,10 +156,11 @@ function Lojrom() {
 function EnergyCan() {
   return (
     <Svg label="Energidryck">
-      <rect x="7" y="3" width="10" height="18" rx="2.5" fill="#2E6BE6" stroke="#1E4FB0" strokeWidth="0.7" />
-      <ellipse cx="12" cy="3.6" rx="4.6" ry="1.2" fill="#A7C2F2" />
-      <rect x="7" y="9.5" width="10" height="5" fill="#10337a" opacity="0.25" />
-      <path d="M13 6 L9.2 12.6 L11.6 12.6 L10.6 18 L15 10.4 L12.4 10.4 Z" fill="#FFD23F" stroke="#E0A500" strokeWidth="0.3" />
+      <rect x="7" y="3" width="10" height="18" rx="2.6" fill="#2E6BE6" />
+      <rect x="7" y="3" width="3.2" height="18" rx="1.6" fill="#5A8CEF" />
+      <ellipse cx="12" cy="3.4" rx="4.8" ry="1.3" fill="#AFC7F3" />
+      <rect x="7" y="9" width="10" height="6" fill="#13347d" fillOpacity="0.3" />
+      <path d="M13 5.6 9 12.8h2.5L10.4 18.4 15.4 10.6h-2.7Z" fill="#FFD23F" />
     </Svg>
   );
 }
@@ -147,11 +168,11 @@ function EnergyCan() {
 function Macaron() {
   return (
     <Svg label="Macaron">
-      <path d="M4 10 A8 4.5 0 0 1 20 10 Z" fill="#F2C2D6" stroke="#E197B6" strokeWidth="0.4" />
-      <rect x="4" y="9.8" width="16" height="3.2" rx="0.6" fill="#FBE3C4" />
-      <path d="M4 13 A8 4.5 0 0 0 20 13 Z" fill="#F2C2D6" stroke="#E197B6" strokeWidth="0.4" />
-      <circle cx="7" cy="13" r="0.5" fill="#E197B6" />
-      <circle cx="17" cy="13" r="0.5" fill="#E197B6" />
+      <path d="M3.5 10.2C3.5 7.6 7.3 6 12 6s8.5 1.6 8.5 4.2-3.8 3-8.5 3-8.5-.4-8.5-3Z" fill="#F2A8C4" />
+      <path d="M3.6 9.2C5 7.4 8.3 6.6 12 6.6s7 .8 8.4 2.6C18.7 7.8 15.5 7.2 12 7.2s-6.7.6-8.4 2Z" fill="#F8C3D8" />
+      <rect x="3.5" y="10" width="17" height="3.4" rx="1.5" fill="#FBE3C4" />
+      <path d="M3.5 13.6c0 2.6 3.8 4.2 8.5 4.2s8.5-1.6 8.5-4.2c0 2.6-3.8 3.4-8.5 3.4s-8.5-.8-8.5-3.4Z" fill="#F2A8C4" />
+      <path d="M3.5 13.4c.6 1.3 2.4 1.6 4.2 1.7-1.8.3-3.6-.1-4.2-1.7Zm12.8 1.7c1.8-.1 3.6-.4 4.2-1.7-.6 1.6-2.4 2-4.2 1.7Z" fill="#E58FB1" />
     </Svg>
   );
 }
@@ -159,15 +180,17 @@ function Macaron() {
 function Paella() {
   return (
     <Svg label="Paella">
-      <line x1="1.5" y1="13" x2="5" y2="13" stroke="#7a7a7a" strokeWidth="1.3" strokeLinecap="round" />
-      <line x1="19" y1="13" x2="22.5" y2="13" stroke="#7a7a7a" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="12" cy="13" r="8" fill="#E8C24A" stroke="#A9772A" strokeWidth="0.8" />
-      <path d="M7.5 11 q1.6 -1.7 3.2 0" fill="none" stroke="#E0532B" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M13.5 15 q1.6 -1.7 3.2 0" fill="none" stroke="#E0532B" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="11" cy="15.2" r="0.9" fill="#5BA34F" />
-      <circle cx="15" cy="10.4" r="0.9" fill="#5BA34F" />
-      <circle cx="8.8" cy="13.8" r="0.9" fill="#5BA34F" />
-      <path d="M11.6 11.6 l2 1 -2 1 z" fill="#3a3340" />
+      <rect x="0.5" y="12" width="5" height="2" rx="1" fill="#7a7a7a" />
+      <rect x="18.5" y="12" width="5" height="2" rx="1" fill="#7a7a7a" />
+      <circle cx="12" cy="13" r="8.3" fill="#E8C24A" />
+      <path d="M12 21.3a8.3 8.3 0 0 0 8.2-7c-.9 3.8-4.5 5.5-8.2 5.5S4.7 18.1 3.8 14.3a8.3 8.3 0 0 0 8.2 7Z" fill="#CFA62F" />
+      <ellipse cx="9.5" cy="10" rx="4.5" ry="2.6" fill="#F0D472" />
+      <path d="M7.2 11c1.1-1.2 2.3-1.2 3.4 0" fill="none" stroke="#E0532B" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M13.4 15c1.1-1.2 2.3-1.2 3.4 0" fill="none" stroke="#E0532B" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="11" cy="15.3" r="1" fill="#5BA34F" />
+      <circle cx="15" cy="10.3" r="1" fill="#5BA34F" />
+      <circle cx="8.8" cy="13.9" r="1" fill="#5BA34F" />
+      <path d="M11.5 11.4 14 12.5l-2.5 1.1Z" fill="#3a3340" />
     </Svg>
   );
 }
@@ -175,13 +198,14 @@ function Paella() {
 function Poke() {
   return (
     <Svg label="Poke bowl">
-      <path d="M4 11.5 Q12 22 20 11.5 Z" fill="#fff" stroke="#cbd5e1" strokeWidth="0.9" />
-      <ellipse cx="12" cy="11.6" rx="8" ry="2.3" fill="#F4ECD8" />
-      <rect x="6.5" y="9.3" width="2.8" height="2.8" rx="0.4" fill="#F2918A" transform="rotate(10 8 11)" />
-      <rect x="13" y="9.6" width="2.8" height="2.8" rx="0.4" fill="#F2918A" transform="rotate(-8 14 11)" />
-      <path d="M9.6 9.4 q2.2 -1.4 4.4 0 q-2.2 1.1 -4.4 0 Z" fill="#8FBF5B" />
-      <circle cx="16.5" cy="11" r="0.7" fill="#5BA34F" />
-      <circle cx="7.5" cy="11.3" r="0.6" fill="#5BA34F" />
+      <path d="M3.5 11.5h17C20.5 17 16.5 21 12 21S3.5 17 3.5 11.5Z" fill="#fff" />
+      <path d="M3.5 11.5h17c0 1-.1 2-.4 2.9C18 15 6 15 3.9 14.4 3.6 13.5 3.5 12.5 3.5 11.5Z" fill="#E4E9EE" />
+      <ellipse cx="12" cy="11.5" rx="8.3" ry="2.5" fill="#F4ECD8" />
+      <rect x="6.2" y="9" width="3.2" height="3.2" rx="0.6" fill="#F2918A" transform="rotate(10 8 11)" />
+      <rect x="13" y="9.3" width="3.2" height="3.2" rx="0.6" fill="#F2918A" transform="rotate(-8 14.5 11)" />
+      <path d="M9.4 9.2c1.6-1 3.2-1 4.8 0-1.6 1.1-3.2 1.1-4.8 0Z" fill="#8FBF5B" />
+      <circle cx="16.7" cy="11" r="0.85" fill="#5BA34F" />
+      <circle cx="7.3" cy="11.4" r="0.75" fill="#5BA34F" />
     </Svg>
   );
 }
@@ -189,25 +213,33 @@ function Poke() {
 function Tartare() {
   return (
     <Svg label="Tartare / råbiff">
-      <ellipse cx="12" cy="16.5" rx="9" ry="2.8" fill="#eee" stroke="#cfcfcf" strokeWidth="0.5" />
-      <path d="M5 15.5 Q12 8.5 19 15.5 Q12 17.4 5 15.5 Z" fill="#C6453C" />
-      <circle cx="12" cy="12.8" r="2.4" fill="#F6B73C" stroke="#E09A20" strokeWidth="0.4" />
-      <circle cx="8" cy="14.4" r="0.6" fill="#4E9A4E" />
-      <circle cx="16" cy="14.4" r="0.6" fill="#7a4a8a" />
+      <ellipse cx="12" cy="16.5" rx="9.5" ry="3" fill="#E9E9E9" />
+      <path d="M2.5 16.5c0 1.7 4.3 3 9.5 3s9.5-1.3 9.5-3c0 .4 0 2.6-9.5 2.6S2.5 16.9 2.5 16.5Z" fill="#CBCBCB" />
+      <path d="M4.5 15.4C8 8.4 16 8.4 19.5 15.4 16 17.4 8 17.4 4.5 15.4Z" fill="#CE4A41" />
+      <path d="M5.6 13.8C9 9.4 15 9.4 18.4 13.8 15 12.2 9 12.2 5.6 13.8Z" fill="#D96259" />
+      <circle cx="12" cy="12.6" r="2.6" fill="#F6B61E" />
+      <ellipse cx="11.2" cy="11.8" rx="1" ry="0.6" fill="#FAD06A" />
+      <circle cx="8" cy="14.6" r="0.7" fill="#4E9A4E" />
+      <circle cx="16" cy="14.6" r="0.7" fill="#7a4a8a" />
     </Svg>
   );
 }
 
 function FishAndChips() {
   return (
-    <Svg label="Fish &amp; chips">
-      <path d="M2.5 9 Q10 5.5 17.5 9 Q19.5 11 17.5 13 Q10 16.5 2.5 13 Q0.8 11 2.5 9 Z" fill="#E0A84E" stroke="#B8860B" strokeWidth="0.5" />
-      <circle cx="7" cy="10.6" r="0.6" fill="#C68B3A" />
-      <circle cx="11" cy="11.4" r="0.6" fill="#C68B3A" />
-      <g fill="#F2C14E" stroke="#D9A441" strokeWidth="0.3">
-        <rect x="13" y="15" width="1.7" height="6.5" rx="0.7" transform="rotate(-13 13.8 18)" />
-        <rect x="16" y="14.5" width="1.7" height="7" rx="0.7" />
-        <rect x="19" y="15" width="1.7" height="6.5" rx="0.7" transform="rotate(13 19.8 18)" />
+    <Svg label="Fish & chips">
+      <path d="M2 9.5C2 7 6.4 6 11 6c5.5 0 9 1.8 9 3.5S16.5 13 11 13C6.4 13 2 12 2 9.5Z" fill="#E2A84E" />
+      <path d="M2.2 8.6C3.6 7 7 6.6 11 6.6c4.5 0 7.4 1 8.6 2.4C18 7.6 14.5 7.2 11 7.2c-4 0-7.4.4-8.8 1.4Z" fill="#EDBE6E" />
+      <circle cx="7" cy="10" r="0.7" fill="#C68B3A" />
+      <circle cx="11" cy="10.8" r="0.7" fill="#C68B3A" />
+      <g fill="#F2C14E">
+        <rect x="12.4" y="14.6" width="2" height="7" rx="1" transform="rotate(-14 13.4 18)" />
+        <rect x="15.6" y="14" width="2" height="7.6" rx="1" />
+        <rect x="18.8" y="14.6" width="2" height="7" rx="1" transform="rotate(14 19.8 18)" />
+      </g>
+      <g fill="#F7D27A">
+        <rect x="12.7" y="14.8" width="0.7" height="6.4" rx="0.35" transform="rotate(-14 13 18)" />
+        <rect x="15.9" y="14.2" width="0.7" height="7" rx="0.35" />
       </g>
     </Svg>
   );
@@ -216,13 +248,18 @@ function FishAndChips() {
 function Charcuterie() {
   return (
     <Svg label="Charcuterie / ostbricka">
-      <rect x="2.5" y="7" width="19" height="11" rx="2" fill="#B07A43" stroke="#8A5A2F" strokeWidth="0.6" />
-      <path d="M4.5 15.5 L10.5 9 L10.5 15.5 Z" fill="#F2D24B" stroke="#D9B400" strokeWidth="0.3" />
-      <circle cx="13.5" cy="10.6" r="1.8" fill="#C0504A" stroke="#9c3f3a" strokeWidth="0.3" />
-      <circle cx="17" cy="12.4" r="1.8" fill="#C0504A" stroke="#9c3f3a" strokeWidth="0.3" />
-      <circle cx="14.2" cy="15.3" r="0.85" fill="#7a4a8a" />
-      <circle cx="15.8" cy="15.6" r="0.85" fill="#7a4a8a" />
-      <circle cx="15" cy="16.4" r="0.85" fill="#7a4a8a" />
+      <rect x="2" y="6.5" width="20" height="12" rx="2.5" fill="#B8763D" />
+      <rect x="2" y="6.5" width="20" height="3" rx="2.5" fill="#C98E54" />
+      <path d="M4 16.5 11 8.5 11 16.5Z" fill="#F3C53B" />
+      <path d="M4 16.5 11 8.5 11 10Z" fill="#F8D970" />
+      <circle cx="13.5" cy="10.5" r="2" fill="#C94A44" />
+      <circle cx="17" cy="12.6" r="2" fill="#C94A44" />
+      <circle cx="13.5" cy="10.5" r="0.7" fill="#E07a74" />
+      <g fill="#7a4a8a">
+        <circle cx="14.2" cy="15.3" r="0.95" />
+        <circle cx="16" cy="15.6" r="0.95" />
+        <circle cx="15.1" cy="16.4" r="0.95" />
+      </g>
     </Svg>
   );
 }
@@ -230,14 +267,19 @@ function Charcuterie() {
 function Nachos() {
   return (
     <Svg label="Nachos">
-      <g fill="#E8B84E" stroke="#C68B3A" strokeWidth="0.4">
-        <path d="M3.5 17 L6.5 11 L9.5 18 Z" />
-        <path d="M6.5 16.5 L10.5 8.5 L13.5 16.5 Z" />
-        <path d="M11.5 17.5 L15.5 9.5 L18.5 17.5 Z" />
+      <g fill="#E8B84E">
+        <path d="M3 17.5 6.5 10 10 17.5Z" />
+        <path d="M6.5 17 11 7.5 15.5 17Z" />
+        <path d="M11.5 18 16 8.5 20.5 18Z" />
       </g>
-      <path d="M8 12 q2.2 1.2 4.4 0" fill="none" stroke="#F2D24B" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="12" cy="13.2" r="0.8" fill="#5BA34F" />
-      <circle cx="9" cy="14.4" r="0.7" fill="#C0504A" />
+      <g fill="#F2CC6A">
+        <path d="M5 16.5 6.5 13 8 16.5Z" />
+        <path d="M9 16 11 11 13 16Z" />
+        <path d="M14 17 16 12 18 17Z" />
+      </g>
+      <path d="M7.5 12c1.6 1 3.2 1 4.8 0" fill="none" stroke="#F3D26A" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="13.4" r="1" fill="#5BA34F" />
+      <circle cx="9" cy="14.6" r="0.85" fill="#C0504A" />
     </Svg>
   );
 }
@@ -245,13 +287,17 @@ function Nachos() {
 function Tiramisu() {
   return (
     <Svg label="Tiramisu">
-      <rect x="4" y="9" width="16" height="9" rx="1" fill="#F3E3C3" />
-      <rect x="4" y="12.4" width="16" height="2.2" fill="#A9764B" />
-      <rect x="4" y="9" width="16" height="2.2" fill="#6B4423" />
-      <rect x="4" y="9" width="16" height="9" rx="1" fill="none" stroke="#D9C49A" strokeWidth="0.6" />
-      <circle cx="8" cy="10.1" r="0.4" fill="#3f2a15" />
-      <circle cx="13.5" cy="9.8" r="0.4" fill="#3f2a15" />
-      <circle cx="16.5" cy="10.2" r="0.4" fill="#3f2a15" />
+      <rect x="3.5" y="8.5" width="17" height="10" rx="1.6" fill="#F3E3C3" />
+      <rect x="3.5" y="12.2" width="17" height="2.6" fill="#A9764B" />
+      <rect x="3.5" y="8.5" width="17" height="2.6" rx="1.6" fill="#6B4423" />
+      <rect x="3.5" y="15.6" width="17" height="2.9" rx="1.6" fill="#E7D4AC" />
+      <g fill="#4a2f17">
+        <circle cx="7.5" cy="9.7" r="0.45" />
+        <circle cx="12" cy="9.4" r="0.45" />
+        <circle cx="16.5" cy="9.8" r="0.45" />
+        <circle cx="9.8" cy="10.4" r="0.4" />
+        <circle cx="14.5" cy="10.2" r="0.4" />
+      </g>
     </Svg>
   );
 }
@@ -259,26 +305,30 @@ function Tiramisu() {
 function Spritz() {
   return (
     <Svg label="Aperol Spritz">
-      <path d="M6 5 H18 L15.8 13 Q12 15 8.2 13 Z" fill="#F59A2E" fillOpacity="0.9" stroke="#D97A1A" strokeWidth="0.7" />
-      <line x1="12" y1="14" x2="12" y2="19" stroke="#bbb" strokeWidth="1.1" />
-      <line x1="8.5" y1="19.5" x2="15.5" y2="19.5" stroke="#bbb" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="16.5" cy="5.5" r="2.3" fill="#F7B733" stroke="#E0922B" strokeWidth="0.4" />
-      <path d="M16.5 3.2 v4.6 M14.2 5.5 h4.6" stroke="#E0922B" strokeWidth="0.35" />
-      <line x1="9" y1="2.5" x2="11" y2="13" stroke="#D6483B" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M5.5 5h13l-2.3 8.2c-.4 1.4-8 1.4-8.4 0Z" fill="#F2902B" />
+      <path d="M6.4 6.2h11.2l-.5 1.8c-1.6.8-8.6.8-10.2 0Z" fill="#F8AE50" />
+      <rect x="11.2" y="13.4" width="1.6" height="5.6" rx="0.8" fill="#C9CDD2" />
+      <rect x="8" y="18.8" width="8" height="1.8" rx="0.9" fill="#C9CDD2" />
+      <circle cx="16.4" cy="5.6" r="2.5" fill="#F7B733" />
+      <circle cx="16.4" cy="5.6" r="2.5" fill="none" stroke="#E0922B" strokeWidth="0.5" />
+      <path d="M16.4 3.1v5M13.9 5.6h5" stroke="#E0922B" strokeWidth="0.5" />
+      <rect x="8.6" y="2.4" width="1.3" height="11" rx="0.6" fill="#D6483B" transform="rotate(10 9 8)" />
     </Svg>
   );
 }
 
 function GinTonic() {
   return (
-    <Svg label="Gin &amp; Tonic">
-      <rect x="7" y="4.5" width="10" height="15.5" rx="1.6" fill="#EAF4FB" fillOpacity="0.75" stroke="#9CB8CC" strokeWidth="0.8" />
-      <path d="M9 5.5 a3 3 0 0 1 6 0 Z" fill="#7DBE3C" stroke="#5a9a2a" strokeWidth="0.4" />
-      <line x1="13.6" y1="3" x2="12.4" y2="19" stroke="#3a55c0" strokeWidth="0.9" strokeLinecap="round" />
-      <circle cx="10" cy="12" r="0.6" fill="#bcdcef" />
-      <circle cx="13" cy="14.5" r="0.5" fill="#bcdcef" />
-      <circle cx="11.5" cy="9.5" r="0.5" fill="#bcdcef" />
-      <circle cx="12.5" cy="16.5" r="0.5" fill="#bcdcef" />
+    <Svg label="Gin & Tonic">
+      <rect x="6.5" y="4.5" width="11" height="15.5" rx="2" fill="#DCEDF8" />
+      <rect x="6.5" y="4.5" width="3.4" height="15.5" rx="1.8" fill="#EAF5FC" />
+      <path d="M8.5 5.5a3.5 3 0 0 1 7 0Z" fill="#7DBE3C" />
+      <path d="M8.5 5.5a3.5 3 0 0 1 7 0c-1.2-1-5.8-1-7 0Z" fill="#97D156" />
+      <rect x="12.6" y="2.6" width="1.3" height="16.5" rx="0.6" fill="#3a55c0" transform="rotate(7 13 10)" />
+      <circle cx="9.5" cy="12" r="0.7" fill="#fff" />
+      <circle cx="13" cy="14.5" r="0.6" fill="#fff" />
+      <circle cx="11" cy="9.5" r="0.6" fill="#fff" />
+      <circle cx="12.5" cy="16.8" r="0.6" fill="#fff" />
     </Svg>
   );
 }
@@ -286,11 +336,15 @@ function GinTonic() {
 function Burrata() {
   return (
     <Svg label="Burrata / Caprese">
-      <ellipse cx="12" cy="16.5" rx="9" ry="2.6" fill="#eee" stroke="#cfcfcf" strokeWidth="0.5" />
-      <circle cx="7" cy="14" r="2.4" fill="#E0532B" stroke="#c4451f" strokeWidth="0.3" />
-      <circle cx="17" cy="14" r="2.4" fill="#E0532B" stroke="#c4451f" strokeWidth="0.3" />
-      <circle cx="12" cy="12.6" r="3.7" fill="#fff" stroke="#e6e6e6" strokeWidth="0.5" />
-      <path d="M12 8 q1.7 0.6 0 2.2 q-1.7 -0.6 0 -2.2 Z" fill="#4E9A4E" />
+      <ellipse cx="12" cy="16.5" rx="9.5" ry="2.8" fill="#E9E9E9" />
+      <path d="M2.5 16.5c0 1.5 4.3 2.8 9.5 2.8s9.5-1.3 9.5-2.8c0 .4 0 2.4-9.5 2.4S2.5 16.9 2.5 16.5Z" fill="#CBCBCB" />
+      <circle cx="6.8" cy="14" r="2.6" fill="#E0532B" />
+      <circle cx="17.2" cy="14" r="2.6" fill="#E0532B" />
+      <circle cx="6.8" cy="14" r="1.1" fill="#EE7250" />
+      <circle cx="17.2" cy="14" r="1.1" fill="#EE7250" />
+      <circle cx="12" cy="12.4" r="4" fill="#fff" />
+      <ellipse cx="10.5" cy="11" rx="1.6" ry="1" fill="#FFFFFF" />
+      <path d="M12 7.6c1.8.6 0 2.4 0 2.4s-1.8-1.8 0-2.4Z" fill="#4E9A4E" />
       <circle cx="9" cy="11" r="0.5" fill="#9BBF3C" />
       <circle cx="15" cy="11" r="0.5" fill="#9BBF3C" />
     </Svg>
@@ -300,18 +354,22 @@ function Burrata() {
 function Churros() {
   return (
     <Svg label="Churros">
-      <g stroke="#D9952B" strokeWidth="2.3" strokeLinecap="round" fill="none">
-        <line x1="5" y1="4" x2="7.5" y2="18" />
-        <line x1="9" y1="4" x2="10.5" y2="18" />
+      <g stroke="#D9952B" strokeWidth="2.6" strokeLinecap="round" fill="none">
+        <line x1="5" y1="4" x2="7.7" y2="18" />
+        <line x1="9" y1="4" x2="10.7" y2="18" />
+      </g>
+      <g stroke="#EBB55A" strokeWidth="0.9" strokeLinecap="round" fill="none">
+        <line x1="4.6" y1="4.2" x2="7.3" y2="18" />
+        <line x1="8.6" y1="4.2" x2="10.3" y2="18" />
       </g>
       <g fill="#fff">
-        <circle cx="6" cy="8" r="0.5" />
-        <circle cx="7" cy="13" r="0.5" />
-        <circle cx="9.5" cy="9" r="0.5" />
-        <circle cx="10" cy="14" r="0.5" />
+        <circle cx="6" cy="8" r="0.55" />
+        <circle cx="7" cy="13" r="0.55" />
+        <circle cx="9.5" cy="9" r="0.55" />
+        <circle cx="10" cy="14" r="0.55" />
       </g>
-      <path d="M14 13 H21 V15 Q21 19 17.5 19 Q14 19 14 15 Z" fill="#6B4423" stroke="#4a2f17" strokeWidth="0.4" />
-      <ellipse cx="17.5" cy="13.2" rx="3.5" ry="0.9" fill="#7a5230" />
+      <path d="M13.5 12.5H21v2.5c0 2.8-1.7 4.5-3.75 4.5S13.5 17.8 13.5 15Z" fill="#6B4423" />
+      <ellipse cx="17.25" cy="12.7" rx="3.75" ry="1" fill="#7a5230" />
     </Svg>
   );
 }
