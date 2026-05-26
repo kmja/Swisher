@@ -430,7 +430,16 @@ export default function Page() {
 
   // --- items -----------------------------------------------------------------
   const updateItem = (id: string, patch: Partial<UiItem>) =>
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== id) return it;
+        const next = { ...it, ...patch };
+        // Editing the text invalidates the model's emoji guess for the old text,
+        // so drop it and let the icon re-derive live from the new description.
+        if ("description" in patch) next.emoji = undefined;
+        return next;
+      }),
+    );
   const addItem = () =>
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
   const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));

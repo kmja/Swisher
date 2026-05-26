@@ -39,6 +39,46 @@ export default function IconDebugPage() {
           );
         })}
       </div>
+
+      <h2 className="mt-8 text-lg font-bold">Default emoji (system font)</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        How the platform renders real emoji — for comparison with the custom icons above.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        {DEFAULT_EMOJI.map(([emoji, label]) => (
+          <div key={label} className="flex w-[68px] flex-col items-center gap-1 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+            <span className="text-[34px] leading-none">{emoji}</span>
+            <span className="text-[10px] text-gray-500">{label}</span>
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
+
+const DEFAULT_EMOJI: [string, string][] = [
+  ["☕", "kaffe"],
+  ["🍺", "öl"],
+  ["🍷", "vin"],
+  ["🍸", "cocktail"],
+  ["🥃", "sprit"],
+  ["🥤", "läsk"],
+  ["🍕", "pizza"],
+  ["🍔", "burgare"],
+  ["🍟", "pommes"],
+  ["🍣", "sushi"],
+  ["🦪", "ostron"],
+  ["🍤", "räkor"],
+  ["🐟", "fisk"],
+  ["🍗", "kyckling"],
+  ["🥩", "kött"],
+  ["🥗", "sallad"],
+  ["🍲", "soppa"],
+  ["🧀", "ost"],
+  ["🥦", "grönsak"],
+  ["🍄", "svamp"],
+  ["🍨", "glass"],
+  ["🥐", "wienerbröd"],
+  ["🍰", "tårta"],
+  ["🍽️", "övrigt"],
+];
