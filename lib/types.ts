@@ -26,6 +26,10 @@ export type OcrResult = {
   place: string | null;
   /** Receipt date as YYYY-MM-DD. */
   date: string | null;
+  /** ISO 4217 currency of the printed prices (e.g. "EUR"); "SEK" by default. */
+  currency: string | null;
+  /** ISO 3166-1 alpha-2 country the receipt was issued in (e.g. "IT"). */
+  country: string | null;
 };
 
 /** Per-person computed breakdown, all amounts in öre. */

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { buildSwishUri } from "@/lib/swish";
 import { formatOre } from "@/lib/money";
+import { Money } from "@/components/Money";
 import type { Strings } from "@/lib/i18n";
 
 type Props = {
@@ -72,9 +73,7 @@ export default function QrCard({ name, payee, amountOre, message, t, primaryPay 
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="truncate text-lg font-semibold">{name}</h3>
-        <span className="shrink-0 text-xl font-bold text-swish-dark">
-          {amount} {t.currency}
-        </span>
+        <Money ore={amountOre} stack className="shrink-0 text-xl font-bold text-swish-dark" />
       </div>
 
       {primaryPay && (

@@ -7,6 +7,8 @@ import { computeRoomShares, formatOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
+import { Money, FxProvider } from "@/components/Money";
+import type { Fx } from "@/lib/currency";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
 
@@ -211,7 +213,13 @@ export default function RoomPage() {
   if (status === "unavailable") return <Centered><p>{t.unavailable}</p><HomeLink label={t.toStart} /></Centered>;
   if (!state) return <Centered>{t.loading}</Centered>;
 
+  const roomFx: Fx =
+    state.currency && state.currency !== "SEK" && state.rate > 0
+      ? { currency: state.currency, rate: state.rate }
+      : null;
+
   return (
+    <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
       {/* Share / invite */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
@@ -304,12 +312,13 @@ export default function RoomPage() {
                               {it.description}
                             </span>
                             {it.shared && (
-                              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · {formatOre(it.priceOre)} {tx.currency}</span>
+                              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
                             )}
                           </span>
-                          <span className="shrink-0 text-right text-sm font-semibold">
-                            {formatOre(it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre)} {tx.currency}
-                          </span>
+                          <Money
+                            ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
+                            className="shrink-0 text-right text-sm font-semibold"
+                          />
                         </button>
                       );
                     })}
@@ -357,7 +366,7 @@ export default function RoomPage() {
               <section className="rounded-2xl border border-dashed border-gray-300 bg-white/60 p-4">
                 <div className="flex items-baseline justify-between">
                   <span className="font-semibold">{t.youCollect}</span>
-                  <span className="text-gray-600">{formatOre(myShare.totalOre)} {tx.currency}</span>
+                  <Money ore={myShare.totalOre} className="text-gray-600" />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{t.yourShareNote}</p>
               </section>
@@ -382,17 +391,18 @@ export default function RoomPage() {
                     {s.dinerId === state.payeePersonId && <span className="ml-1 text-xs text-gray-400">★</span>}
                     {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
                   </span>
-                  <span className="text-sm font-semibold">{formatOre(s.totalOre)} {tx.currency}</span>
+                  <Money ore={s.totalOre} className="text-sm font-semibold" />
                 </div>
               ))}
             </div>
             {unassignedOre > 0 && (
-              <p className="mt-2 text-xs text-amber-600">{formatOre(unassignedOre)} {tx.currency} {lang === "sv" ? "ofördelat" : "unassigned"}</p>
+              <p className="mt-2 text-xs text-amber-600"><Money ore={unassignedOre} /> {lang === "sv" ? "ofördelat" : "unassigned"}</p>
             )}
           </section>
         </>
       )}
     </main>
+    </FxProvider>
   );
 }
 

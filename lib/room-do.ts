@@ -27,6 +27,10 @@ export type RoomState = {
   place: string;
   date: string;
   tipOre: number;
+  /** Foreign-currency context for display; amounts are always stored in SEK öre. */
+  currency: string;
+  /** SEK per 1 unit of `currency`; 1 for SEK receipts. */
+  rate: number;
   items: RoomItem[];
   people: RoomPerson[];
 };
@@ -39,6 +43,8 @@ export type RoomInit = {
   place?: string;
   date?: string;
   tipOre: number;
+  currency?: string;
+  rate?: number;
   items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean }[];
 };
 
@@ -72,6 +78,8 @@ export class RoomDO extends DurableObject {
       place: (data.place ?? "").slice(0, 60),
       date: (data.date ?? "").slice(0, 20),
       tipOre: Math.max(0, Math.round(data.tipOre || 0)),
+      currency: (data.currency ?? "SEK").slice(0, 3).toUpperCase() || "SEK",
+      rate: typeof data.rate === "number" && data.rate > 0 ? data.rate : 1,
       items: data.items.map((it) => ({
         id: uid(),
         description: it.description.slice(0, 80),

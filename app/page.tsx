@@ -8,6 +8,8 @@ import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
+import { Money, FxProvider } from "@/components/Money";
+import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -130,6 +132,13 @@ export default function Page() {
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [images, setImages] = useState<string[]>([]);
+  // Foreign-currency context: amounts are always stored in SEK öre; these drive
+  // the dual-currency display. null currency / rate=1 means a plain SEK receipt.
+  const [currency, setCurrency] = useState<string>("SEK");
+  const [fxRate, setFxRate] = useState<number | null>(1);
+  const [rateApprox, setRateApprox] = useState(false);
+  const [rateDate, setRateDate] = useState<string | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [zoomItem, setZoomItem] = useState<number | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -190,6 +199,10 @@ export default function Page() {
     () => `${mealLabel} ${eventDate}`.trim().slice(0, 50),
     [mealLabel, eventDate],
   );
+
+  const isForeign = currency !== "SEK";
+  const fx: Fx = isForeign && fxRate ? { currency, rate: fxRate, approx: rateApprox } : null;
+  const rateMissing = isForeign && !fxRate;
 
   // Cycle the scanning status text while OCR runs.
   useEffect(() => {
@@ -350,6 +363,13 @@ export default function Page() {
         setItems((prev) => [...prev, ...mapped]);
         return;
       }
+
+      const cur = typeof data.currency === "string" && /^[A-Z]{3}$/.test(data.currency) ? data.currency : "SEK";
+      setCurrency(cur);
+      setFxRate(typeof data.rate === "number" && data.rate > 0 ? data.rate : cur === "SEK" ? 1 : null);
+      setRateApprox(data.rateApprox === true);
+      setRateDate(typeof data.rateDate === "string" ? data.rateDate : null);
+      setCountry(typeof data.country === "string" && /^[A-Z]{2}$/.test(data.country) ? data.country : null);
 
       const totalOre = typeof data.total === "number" ? Math.round(data.total * 100) : null;
       const chargedOre = typeof data.charged === "number" && data.charged > 0 ? Math.round(data.charged * 100) : 0;
@@ -522,6 +542,8 @@ export default function Page() {
           place: mealLabel.trim(),
           date: eventDate,
           tipOre,
+          currency,
+          rate: fxRate ?? 1,
           items: foodItems.map((it) => ({
             description: it.description.trim() || t.rowFallback,
             priceOre: parseAmountToOre(it.priceInput) ?? 0,
@@ -571,6 +593,7 @@ export default function Page() {
 
   // --- render ----------------------------------------------------------------
   return (
+    <FxProvider value={fx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28 pt-5">
       <div className="mb-3 flex justify-end">
         <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
@@ -733,6 +756,20 @@ export default function Page() {
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
             )}
+            {isForeign && (fx ? (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
+                {t.fxLine(
+                  country ? `${flagEmoji(country)} ${regionName(country, lang)}` : "🌍",
+                  currency,
+                  `${formatOre(Math.round((fxRate ?? 0) * 100))} kr${rateDate ? `, ${rateDate}` : ""}`,
+                )}
+                {rateApprox && ` · ${t.fxApprox}`}
+              </p>
+            ) : (
+              <p className="mt-2 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700 ring-1 ring-red-200">
+                {t.fxMissing(currency)}
+              </p>
+            ))}
             <div className="mt-3 space-y-2">
               {items.map((it, idx) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
@@ -752,13 +789,18 @@ export default function Page() {
                     placeholder={t.descPlaceholder}
                     className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
                   />
-                  <input
-                    value={it.priceInput}
-                    onChange={(e) => updateItem(it.id, { priceInput: e.target.value })}
-                    inputMode="decimal"
-                    placeholder={t.pricePlaceholder}
-                    className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                  />
+                  <div className="flex w-20 shrink-0 flex-col items-stretch">
+                    <input
+                      value={it.priceInput}
+                      onChange={(e) => updateItem(it.id, { priceInput: e.target.value })}
+                      inputMode="decimal"
+                      placeholder={t.pricePlaceholder}
+                      className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                    />
+                    {fx && rowOre > 0 && (
+                      <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
+                    )}
+                  </div>
                   {it.imgIndex >= 0 && images[it.imgIndex] && (
                     <button
                       type="button"
@@ -791,7 +833,7 @@ export default function Page() {
                       </label>
                       {it.shared && divisor >= 2 && (
                         <span className="text-gray-500">
-                          {formatOre(rowOre)} {t.currency} · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
+                          <Money ore={rowOre} /> · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
                         </span>
                       )}
                     </div>
@@ -826,30 +868,24 @@ export default function Page() {
             <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
               <div className="flex justify-between">
                 <span className="text-gray-600">{t.rowsSum}</span>
-                <span className="font-semibold">
-                  {formatOre(itemsSumOre)} {t.currency}
-                </span>
+                <Money ore={itemsSumOre} className="font-semibold" />
               </div>
               {receiptTotal !== null && (
                 <div className="mt-1 flex justify-between">
                   <span className="text-gray-600">{t.receiptTotalLabel}</span>
-                  <span className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`}>
-                    {formatOre(receiptTotal)} {t.currency}
-                  </span>
+                  <Money ore={receiptTotal} className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`} />
                 </div>
               )}
               {tipOre > 0 && (
                 <div className="mt-1 flex justify-between">
                   <span className="text-gray-600">{t.tip}</span>
-                  <span className="font-semibold">+{formatOre(tipOre)} {t.currency}</span>
+                  <span className="font-semibold">+<Money ore={tipOre} /></span>
                 </div>
               )}
               {receiptChargedOre > 0 && receiptChargedOre !== receiptTotal && (
                 <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
                   <span className="text-gray-600">{t.chargedLabel}</span>
-                  <span className="font-semibold">
-                    {formatOre(receiptChargedOre)} {t.currency}
-                  </span>
+                  <Money ore={receiptChargedOre} className="font-semibold" />
                 </div>
               )}
             </div>
@@ -1037,9 +1073,7 @@ export default function Page() {
                     <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                     {it.description || t.rowFallback}
                   </span>
-                  <span className="shrink-0 text-sm text-gray-600">
-                    {formatOre(priceOre)} {t.currency}
-                  </span>
+                  <Money ore={priceOre} className="shrink-0 text-sm text-gray-600" />
                 </div>
 
                 <div className="mt-2 flex items-center gap-2">
@@ -1110,9 +1144,7 @@ export default function Page() {
 
           <div className="flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-white">
             <span className="text-sm text-white/70">{t.toDistribute}</span>
-            <span className="font-semibold">
-              {formatOre(assignedTotalOre)} {t.currency}
-            </span>
+            <Money ore={assignedTotalOre} className="font-semibold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
           </div>
           {unassignedOre > 0 && (
             <p className="-mt-2 text-sm text-amber-600">{t.unassignedWarn(formatOre(unassignedOre))}</p>
@@ -1127,9 +1159,7 @@ export default function Page() {
                 >
                   <div className="flex items-baseline justify-between">
                     <span className="font-semibold">{t.payerCard(s.name)}</span>
-                    <span className="text-gray-600">
-                      {formatOre(s.totalOre)} {t.currency}
-                    </span>
+                    <Money ore={s.totalOre} className="text-gray-600" />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">{t.payerCardHint}</p>
                 </div>
@@ -1210,6 +1240,7 @@ export default function Page() {
         }}
       />
     </main>
+    </FxProvider>
   );
 }
 

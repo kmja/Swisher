@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
 import { splitOre } from "@/lib/money";
+import { fetchRateToSek } from "@/lib/fx";
 import type { OcrResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -18,12 +19,15 @@ const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 // an ANTHROPIC_API_KEY is configured, with Workers AI as the fallback.
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
-const PROMPT = `You read a photographed Swedish restaurant receipt (kvitto). Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","emoji":string,"y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null}
+const PROMPT = `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","emoji":string,"y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
 - "date" is the receipt date as "YYYY-MM-DD" (convert formats like "16jan17" → "2017-01-16"). null if unreadable.
+- "currency" is the ISO 4217 code of the printed prices: "SEK" for Swedish kronor ("kr", ":-", "moms"), "EUR" (€), "USD"/"$", "GBP"/"£", "NOK"/"DKK" (also "kr" but Norwegian/Danish text and place), "CHF", "THB" (฿), "JPY" (¥), "PLN", "CZK", etc. Infer it from the currency symbol, the language, the VAT label (moms=Sweden, MwSt=Germany/Austria, TVA=France/Belgium, IVA=Italy/Spain, BTW=Netherlands), and the address. Default "SEK" when it is clearly a Swedish receipt.
+- "country" is the ISO 3166-1 alpha-2 country code where the receipt was issued ("SE","NO","DK","FI","DE","FR","IT","ES","GB","US","CH","NL","TH","JP"…), inferred from the address, phone prefix, language and currency. null if unclear.
+- Always report every price EXACTLY as printed in the receipt's own currency. NEVER convert amounts to SEK or any other currency yourself — just read the numbers shown.
 - "y" is the vertical position of this item's line on the receipt image as a percent from the top (0 = very top edge, 100 = very bottom edge). Estimate it as accurately as you can.
 - "items" are the ordered dishes/drinks: a short description and the price.
 - The description is the item NAME only. Strip the leading quantity (it goes in "quantity"): "2 glas Sybille Kuntz" → description "Glas Sybille Kuntz", quantity 2; "3 Kaffe" → "Kaffe", quantity 3.
@@ -108,7 +112,17 @@ function extractJson(text: string): OcrResult {
   const cleaned = raw.replace(/,(\s*[}\]])/g, "$1");
 
   let parsed:
-    | { items?: unknown; total?: unknown; moms?: unknown; dricks?: unknown; charged?: unknown; place?: unknown; date?: unknown }
+    | {
+        items?: unknown;
+        total?: unknown;
+        moms?: unknown;
+        dricks?: unknown;
+        charged?: unknown;
+        place?: unknown;
+        date?: unknown;
+        currency?: unknown;
+        country?: unknown;
+      }
     | null = null;
   try {
     parsed = JSON.parse(cleaned);
@@ -116,6 +130,8 @@ function extractJson(text: string): OcrResult {
     parsed = null;
   }
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const cur = (v: unknown) => (typeof v === "string" && /^[A-Za-z]{3}$/.test(v.trim()) ? v.trim().toUpperCase() : null);
+  const ctry = (v: unknown) => (typeof v === "string" && /^[A-Za-z]{2}$/.test(v.trim()) ? v.trim().toUpperCase() : null);
 
   if (parsed && Array.isArray(parsed.items)) {
     const items: OcrResult["items"] = [];
@@ -150,6 +166,8 @@ function extractJson(text: string): OcrResult {
       charged: num(parsed.charged),
       place: str(parsed.place),
       date: str(parsed.date),
+      currency: cur(parsed.currency),
+      country: ctry(parsed.country),
     };
   }
 
@@ -187,7 +205,40 @@ function extractJson(text: string): OcrResult {
     charged: grab("charged"),
     place: grabStr("place"),
     date: grabStr("date"),
+    currency: cur(grabStr("currency")),
+    country: ctry(grabStr("country")),
   };
+}
+
+/** Multiply every monetary field by the SEK rate, leaving the rest untouched. */
+function toSek(r: OcrResult, rate: number): OcrResult {
+  const c = (v: number | null) => (v == null ? null : v * rate);
+  return {
+    ...r,
+    items: r.items.map((it) => ({ ...it, price: it.price * rate })),
+    total: c(r.total),
+    moms: c(r.moms),
+    dricks: c(r.dricks),
+    charged: c(r.charged),
+  };
+}
+
+/**
+ * Wrap a parsed result with currency info, converting amounts to SEK when the
+ * receipt is foreign so the rest of the app (and Swish) can work in kronor.
+ */
+async function withCurrency(parsed: OcrResult): Promise<Record<string, unknown>> {
+  const currency = parsed.currency ?? "SEK";
+  if (currency === "SEK") {
+    return { ...parsed, currency: "SEK", rate: 1, rateApprox: false, rateDate: null };
+  }
+  // Use the rate from the receipt's own date (what the diners actually paid).
+  const fx = await fetchRateToSek(currency, parsed.date);
+  if (!fx) {
+    // No rate available: keep native amounts and let the UI warn + offer manual fix.
+    return { ...parsed, currency, rate: null, rateApprox: false, rateDate: null };
+  }
+  return { ...toSek(parsed, fx.rate), currency, rate: fx.rate, rateApprox: fx.approx, rateDate: fx.date ?? null };
 }
 
 export async function POST(req: Request) {
@@ -259,7 +310,7 @@ export async function POST(req: Request) {
       }
       const parsed = extractJson(text);
       if (parsed.items.length > 0 || parsed.total !== null) {
-        return NextResponse.json(parsed, { headers: { "X-Ocr-Model": name } });
+        return NextResponse.json(await withCurrency(parsed), { headers: { "X-Ocr-Model": name } });
       }
       diag.push(`${name}:no-items`);
     } catch (err) {

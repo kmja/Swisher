@@ -99,6 +99,11 @@ export interface Strings {
   currency: string;
   mealDefault: string;
 
+  // foreign currency
+  fxLine: (country: string, currency: string, rate: string) => string;
+  fxApprox: string;
+  fxMissing: (currency: string) => string;
+
   // QrCard
   shareTitle: (name: string) => string;
   shareText: (name: string, amt: string) => string;
@@ -203,6 +208,11 @@ const sv: Strings = {
   currency: "kr",
   mealDefault: "Middag",
 
+  fxLine: (country, currency, rate) => `${country} · priser omräknade från ${currency} (1 ${currency} ≈ ${rate})`,
+  fxApprox: "uppskattad kurs",
+  fxMissing: (currency) =>
+    `Kunde inte hämta växelkurs för ${currency}. Beloppen visas i ${currency} – justera till kronor manuellt.`,
+
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
   payWithSwish: (amt) => `Betala ${amt} kr med Swish`,
@@ -306,6 +316,11 @@ const en: Strings = {
 
   currency: "kr",
   mealDefault: "Dinner",
+
+  fxLine: (country, currency, rate) => `${country} · prices converted from ${currency} (1 ${currency} ≈ ${rate})`,
+  fxApprox: "estimated rate",
+  fxMissing: (currency) =>
+    `Couldn't fetch an exchange rate for ${currency}. Amounts are shown in ${currency} — adjust to kronor manually.`,
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,

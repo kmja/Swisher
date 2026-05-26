@@ -35,6 +35,8 @@ export async function POST(req: Request) {
     place?: string;
     date?: string;
     tipOre?: number;
+    currency?: string;
+    rate?: number;
     items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown }[];
   };
   try {
@@ -72,6 +74,8 @@ export async function POST(req: Request) {
     place: String(body.place ?? "").slice(0, 60),
     date: String(body.date ?? "").slice(0, 20),
     tipOre: Number(body.tipOre) || 0,
+    currency: typeof body.currency === "string" ? body.currency : "SEK",
+    rate: typeof body.rate === "number" && body.rate > 0 ? body.rate : 1,
     items,
   });
 
