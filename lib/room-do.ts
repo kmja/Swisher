@@ -31,6 +31,8 @@ export type RoomState = {
   currency: string;
   /** SEK per 1 unit of `currency`; 1 for SEK receipts. */
   rate: number;
+  /** ISO 3166-1 alpha-2 country the receipt was issued in, for the header flag. */
+  country: string;
   items: RoomItem[];
   people: RoomPerson[];
 };
@@ -45,6 +47,7 @@ export type RoomInit = {
   tipOre: number;
   currency?: string;
   rate?: number;
+  country?: string;
   items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean }[];
 };
 
@@ -80,6 +83,7 @@ export class RoomDO extends DurableObject {
       tipOre: Math.max(0, Math.round(data.tipOre || 0)),
       currency: (data.currency ?? "SEK").slice(0, 3).toUpperCase() || "SEK",
       rate: typeof data.rate === "number" && data.rate > 0 ? data.rate : 1,
+      country: (data.country ?? "").slice(0, 2).toUpperCase(),
       items: data.items.map((it) => ({
         id: uid(),
         description: it.description.slice(0, 80),

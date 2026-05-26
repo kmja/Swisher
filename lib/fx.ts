@@ -52,9 +52,10 @@ export async function fetchRateToSek(currency: string, date?: string | null): Pr
   if (cur === "SEK") return { rate: 1, approx: false };
 
   const dated = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
-  // Don't ask for a future date (clock skew / mis-read year) — the API rejects it.
+  // Frankfurter's ECB series starts 1999-01-04; ignore dates outside
+  // [that, today] (mis-read years, clock skew) and use the latest rate instead.
   const today = new Date().toISOString().slice(0, 10);
-  const histDate = dated && dated <= today ? dated : null;
+  const histDate = dated && dated >= "1999-01-04" && dated <= today ? dated : null;
 
   // 1) Frankfurter (ECB reference rates, keyless) on the receipt's date.
   if (histDate) {

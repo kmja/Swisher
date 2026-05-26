@@ -103,6 +103,7 @@ export interface Strings {
   fxLine: (country: string, currency: string, rate: string) => string;
   fxApprox: string;
   fxMissing: (currency: string) => string;
+  currencyLabel: string;
 
   // QrCard
   shareTitle: (name: string) => string;
@@ -212,6 +213,7 @@ const sv: Strings = {
   fxApprox: "uppskattad kurs",
   fxMissing: (currency) =>
     `Kunde inte hämta växelkurs för ${currency}. Beloppen visas i ${currency} – justera till kronor manuellt.`,
+  currencyLabel: "Valuta",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,
@@ -321,6 +323,7 @@ const en: Strings = {
   fxApprox: "estimated rate",
   fxMissing: (currency) =>
     `Couldn't fetch an exchange rate for ${currency}. Amounts are shown in ${currency} — adjust to kronor manually.`,
+  currencyLabel: "Currency",
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} kr`,

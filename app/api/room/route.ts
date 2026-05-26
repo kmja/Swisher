@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     tipOre?: number;
     currency?: string;
     rate?: number;
+    country?: string;
     items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown }[];
   };
   try {
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
     tipOre: Number(body.tipOre) || 0,
     currency: typeof body.currency === "string" ? body.currency : "SEK",
     rate: typeof body.rate === "number" && body.rate > 0 ? body.rate : 1,
+    country: typeof body.country === "string" ? body.country : "",
     items,
   });
 

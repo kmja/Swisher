@@ -33,6 +33,13 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** Currencies the host can pick from when correcting a mis-detected receipt. */
+const COMMON_CURRENCIES = [
+  "SEK", "EUR", "USD", "GBP", "NOK", "DKK", "CHF", "ISK", "JPY", "THB",
+  "AUD", "CAD", "PLN", "CZK", "HUF", "TRY", "SGD", "HKD", "AED", "INR",
+  "MXN", "BRL", "ZAR", "NZD",
+];
+
 /** Friendly names for the OCR model that answered (from the X-Ocr-Model header). */
 const OCR_MODEL_LABEL: Record<string, string> = {
   "claude-sonnet-4-6": "Claude Sonnet 4.6",
@@ -139,6 +146,7 @@ export default function Page() {
   const [rateApprox, setRateApprox] = useState(false);
   const [rateDate, setRateDate] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
+  const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [zoomItem, setZoomItem] = useState<number | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -203,6 +211,52 @@ export default function Page() {
   const isForeign = currency !== "SEK";
   const fx: Fx = isForeign && fxRate ? { currency, rate: fxRate, approx: rateApprox } : null;
   const rateMissing = isForeign && !fxRate;
+  const currencyOptions = Array.from(new Set([currency, ...COMMON_CURRENCIES]));
+
+  // Host corrects a mis-detected currency: re-fetch its rate for the receipt
+  // date and re-scale every amount (recovering the printed figure, then
+  // converting it at the new rate). All amounts stay stored as SEK öre.
+  async function changeCurrency(next: string) {
+    if (next === currency || fxChanging) return;
+    const oldRate = fxRate ?? 1;
+    let newRate: number | null = 1;
+    let approx = false;
+    let date = rateDate;
+    if (next === "SEK") {
+      newRate = 1;
+      date = null;
+    } else {
+      setFxChanging(true);
+      try {
+        const r = await fetch(`/api/fx?currency=${next}&date=${encodeURIComponent(eventDate)}`).then((x) => x.json());
+        if (r && typeof r.rate === "number" && r.rate > 0) {
+          newRate = r.rate;
+          approx = r.approx === true;
+          if (typeof r.date === "string") date = r.date;
+        } else {
+          newRate = null;
+        }
+      } catch {
+        newRate = null;
+      } finally {
+        setFxChanging(false);
+      }
+    }
+    const factor = newRate && oldRate ? newRate / oldRate : null;
+    if (factor && factor > 0 && Math.abs(factor - 1) > 1e-9) {
+      const rescale = (s: string) => {
+        const ore = parseAmountToOre(s);
+        return ore == null ? s : formatOre(Math.round(ore * factor));
+      };
+      setItems((prev) => prev.map((it) => ({ ...it, priceInput: rescale(it.priceInput) })));
+      setReceiptTotal((v) => (v == null ? v : Math.round(v * factor)));
+      setReceiptChargedOre((v) => Math.round(v * factor));
+    }
+    setCurrency(next);
+    setFxRate(newRate);
+    setRateApprox(approx);
+    setRateDate(date);
+  }
 
   // Cycle the scanning status text while OCR runs.
   useEffect(() => {
@@ -402,7 +456,16 @@ export default function Page() {
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
-      if (typeof data.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) setEventDate(data.date);
+      // Only trust a plausible receipt date (a mis-read year shouldn't set 2107
+      // or 1917); otherwise keep today's default.
+      if (
+        typeof data.date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(data.date) &&
+        data.date >= "2000-01-01" &&
+        data.date <= today
+      ) {
+        setEventDate(data.date);
+      }
       // Tick a counter through the found rows, then move on.
       const n = mapped.length;
       if (n === 0) {
@@ -544,6 +607,7 @@ export default function Page() {
           tipOre,
           currency,
           rate: fxRate ?? 1,
+          country: country ?? "",
           items: foodItems.map((it) => ({
             description: it.description.trim() || t.rowFallback,
             priceOre: parseAmountToOre(it.priceInput) ?? 0,
@@ -756,6 +820,22 @@ export default function Page() {
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
             )}
+            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <span>{t.currencyLabel}</span>
+              <select
+                value={currency}
+                onChange={(e) => changeCurrency(e.target.value)}
+                disabled={fxChanging}
+                className="rounded-lg bg-white px-2 py-1 font-medium text-ink ring-1 ring-black/10 outline-none disabled:opacity-50"
+              >
+                {currencyOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              {fxChanging && <span className="text-gray-400">…</span>}
+            </div>
             {isForeign && (fx ? (
               <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
                 {t.fxLine(

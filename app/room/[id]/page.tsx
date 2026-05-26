@@ -8,7 +8,7 @@ import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
-import type { Fx } from "@/lib/currency";
+import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
 
@@ -227,6 +227,12 @@ export default function RoomPage() {
           <div className="min-w-0">
             <p className="truncate text-lg font-bold">{state.place || "Swisher"}</p>
             <p className="text-sm text-gray-500">{[state.date, code].filter(Boolean).join(" · ")}</p>
+            {roomFx && (
+              <p className="mt-0.5 text-xs text-gray-400">
+                {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
+                {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} kr`}
+              </p>
+            )}
           </div>
           <button
             type="button"
