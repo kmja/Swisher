@@ -885,6 +885,11 @@ export default function Page() {
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
             )}
+            {ocrModel && !ocrModel.startsWith("claude") && (
+              <p className="mt-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
+                {t.ocrFallback}
+              </p>
+            )}
             <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
               <span>{t.currencyLabel}</span>
               <select

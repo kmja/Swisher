@@ -25,6 +25,7 @@ export interface Strings {
   itemsTitle: string;
   itemsHint: string;
   readBy: (model: string) => string;
+  ocrFallback: string;
   descPlaceholder: string;
   pricePlaceholder: string;
   removeRow: string;
@@ -159,6 +160,7 @@ const sv: Strings = {
   itemsTitle: "Rader",
   itemsHint: "Kontrollera och rätta avläsningen. Priser inkl. moms.",
   readBy: (model) => `Avläst av ${model}`,
+  ocrFallback: "Avläst med en reservläsare – kontrollera beloppen extra noga.",
   descPlaceholder: "Beskrivning",
   pricePlaceholder: "0,00",
   removeRow: "Ta bort rad",
@@ -284,6 +286,7 @@ const en: Strings = {
   itemsTitle: "Items",
   itemsHint: "Check and fix the scan. Prices include VAT.",
   readBy: (model) => `Read by ${model}`,
+  ocrFallback: "Read by a fallback model — double-check the amounts.",
   descPlaceholder: "Description",
   pricePlaceholder: "0.00",
   removeRow: "Remove row",
