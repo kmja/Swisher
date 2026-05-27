@@ -29,6 +29,10 @@ export interface Strings {
   descPlaceholder: string;
   pricePlaceholder: string;
   removeRow: string;
+  removedItem: (desc: string) => string;
+  undo: string;
+  removedTitle: (n: number) => string;
+  restore: string;
   addRow: string;
   addPhoto: string;
   addingPhoto: string;
@@ -166,6 +170,10 @@ const sv: Strings = {
   descPlaceholder: "Beskrivning",
   pricePlaceholder: "0,00",
   removeRow: "Ta bort rad",
+  removedItem: (desc) => `Tog bort ${desc}`,
+  undo: "Ångra",
+  removedTitle: (n) => `Borttagna (${n})`,
+  restore: "Återställ",
   addRow: "+ Lägg till rad",
   addPhoto: "+ Lägg till foto (långt kvitto)",
   addingPhoto: "Skannar…",
@@ -294,6 +302,10 @@ const en: Strings = {
   descPlaceholder: "Description",
   pricePlaceholder: "0.00",
   removeRow: "Remove row",
+  removedItem: (desc) => `Removed ${desc}`,
+  undo: "Undo",
+  removedTitle: (n) => `Removed (${n})`,
+  restore: "Restore",
   addRow: "+ Add row",
   addPhoto: "+ Add another photo (long receipt)",
   addingPhoto: "Scanning…",

@@ -38,9 +38,6 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
-/** Display order in the items list: shared first, then normal, tip last. */
-const sharedRank = (it: { shared: boolean; isTip?: boolean }) => (it.isTip ? 2 : it.shared ? 0 : 1);
-
 /** Currencies the host can pick from when correcting a mis-detected receipt. */
 const COMMON_CURRENCIES = [
   "SEK", "EUR", "USD", "GBP", "NOK", "DKK", "CHF", "ISK", "JPY", "THB",
@@ -146,6 +143,10 @@ export default function Page() {
   const [scanPhase, setScanPhase] = useState(0);
 
   const [items, setItems] = useState<UiItem[]>([]);
+  const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
+  const [undoItem, setUndoItem] = useState<UiItem | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
   const [images, setImages] = useState<string[]>([]);
   // Foreign-currency context: amounts are always stored in SEK öre; these drive
   // the dual-currency display. null currency / rate=1 means a plain SEK receipt.
@@ -477,6 +478,8 @@ export default function Page() {
         });
       }
       setItems(mapped);
+      setRemovedItems([]);
+      setUndoItem(null);
       // Reset the group size for the new receipt; it's re-seeded (below) once a
       // shared item or tip is present, whether detected now or toggled later.
       setGroupSize(0);
@@ -552,7 +555,24 @@ export default function Page() {
     );
   const addItem = () =>
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
-  const removeItem = (id: string) => setItems((prev) => prev.filter((it) => it.id !== id));
+  // Soft-delete: move to the removed list (kept out of the totals/shares), with
+  // a transient undo and a persistent collapsed list to restore from.
+  const removeItem = (id: string) => {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    setItems((prev) => prev.filter((x) => x.id !== id));
+    setRemovedItems((r) => [it, ...r.filter((x) => x.id !== id)]);
+    setUndoItem(it);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndoItem(null), 6000);
+  };
+  const restoreItem = (id: string) => {
+    const it = removedItems.find((x) => x.id === id);
+    if (!it) return;
+    setRemovedItems((r) => r.filter((x) => x.id !== id));
+    setItems((prev) => [...prev, it]);
+    setUndoItem((u) => (u?.id === id ? null : u));
+  };
 
   const updateDiner = (id: string, name: string) =>
     setDiners((prev) => prev.map((d) => (d.id === id ? { ...d, name } : d)));
@@ -944,10 +964,7 @@ export default function Page() {
               </p>
             ))}
             <div className="mt-3 space-y-2">
-              {[...items]
-                .map((it, i) => ({ it, idx: i }))
-                .sort((a, b) => sharedRank(a.it) - sharedRank(b.it))
-                .map(({ it, idx }) => {
+              {items.map((it, idx) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
                 const d = itemDivisorFor(it);
@@ -1054,6 +1071,14 @@ export default function Page() {
                 );
               })}
             </div>
+            {undoItem && (
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white">
+                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
+                <button type="button" onClick={() => restoreItem(undoItem.id)} className="shrink-0 font-semibold text-swish underline-offset-2">
+                  {t.undo}
+                </button>
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
                 {t.addRow}
@@ -1095,6 +1120,22 @@ export default function Page() {
             </div>
             {!totalReconciles && (
               <p className="mt-1 text-xs text-amber-600">{t.totalDiff(formatOre(Math.abs(totalDiffOre)))}</p>
+            )}
+            {removedItems.length > 0 && (
+              <details className="mt-3 rounded-xl bg-white/60 px-4 py-2 ring-1 ring-black/5">
+                <summary className="cursor-pointer text-sm font-medium text-gray-500">{t.removedTitle(removedItems.length)}</summary>
+                <div className="mt-2 space-y-1.5">
+                  {removedItems.map((it) => (
+                    <div key={it.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description || t.rowFallback}</span>
+                      <span className="shrink-0 text-gray-400">{it.priceInput}</span>
+                      <button type="button" onClick={() => restoreItem(it.id)} className="shrink-0 font-medium text-swish-dark active:opacity-70">
+                        {t.restore}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </details>
             )}
           </div>
 
