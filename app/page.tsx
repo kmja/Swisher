@@ -989,13 +989,13 @@ export default function Page() {
                   </button>
                   </div>
                   {!it.isTip && (
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
                       <label className="inline-flex cursor-pointer items-center gap-1.5 text-gray-600">
                         <input
                           type="checkbox"
                           checked={it.shared}
                           onChange={() => toggleShared(it.id)}
-                          className="h-4 w-4 rounded border-gray-300 accent-swish"
+                          className="h-6 w-6 rounded border-gray-300 accent-swish"
                         />
                         {t.sharedToggle}
                       </label>
@@ -1015,16 +1015,16 @@ export default function Page() {
                             type="button"
                             aria-label="−"
                             onClick={() => setShareCount(it.id, d - 1)}
-                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                           >
                             −
                           </button>
-                          <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
+                          <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
                           <button
                             type="button"
                             aria-label="+"
                             onClick={() => setShareCount(it.id, d + 1)}
-                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                           >
                             +
                           </button>
@@ -1034,7 +1034,7 @@ export default function Page() {
                     </div>
                   )}
                   {it.isTip && (
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 pl-1 text-xs">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
                       <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
                       {divisor >= 2 && (
                         <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}</span>
@@ -1328,27 +1328,27 @@ export default function Page() {
                       type="checkbox"
                       checked={it.shared}
                       onChange={() => toggleShared(it.id)}
-                      className="h-4 w-4 rounded border-gray-300 accent-swish"
+                      className="h-6 w-6 rounded border-gray-300 accent-swish"
                     />
                     {t.sharedToggle}
                   </label>
                   {it.shared && (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-500">
                       <span>{t.splitWays}</span>
                       <button
                         type="button"
                         aria-label="−"
                         onClick={() => setShareCount(it.id, d - 1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                       >
                         −
                       </button>
-                      <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
+                      <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
                       <button
                         type="button"
                         aria-label="+"
                         onClick={() => setShareCount(it.id, d + 1)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                       >
                         +
                       </button>

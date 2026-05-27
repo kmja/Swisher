@@ -54,8 +54,9 @@ const R = {
     newReceipt: "Nytt kvitto",
     history: "Historik",
     editItems: "Rätta rader",
+    editRow: "Rätta rad",
     doneEditing: "Klar",
-    addRow: "Lägg till",
+    addRow: "Lägg till rad",
     descPh: "Beskrivning",
     pricePh: "0,00",
     removeRow: "Ta bort rad",
@@ -98,8 +99,9 @@ const R = {
     newReceipt: "New receipt",
     history: "History",
     editItems: "Fix items",
+    editRow: "Edit item",
     doneEditing: "Done",
-    addRow: "Add",
+    addRow: "Add item",
     descPh: "Description",
     pricePh: "0.00",
     removeRow: "Remove row",
@@ -122,7 +124,8 @@ export default function RoomPage() {
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
 
@@ -156,11 +159,11 @@ export default function RoomPage() {
 
   useEffect(() => {
     refresh();
-    // Pause live polling while the host edits items, so it can't clobber inputs.
-    if (editing) return;
+    // Pause live polling while editing/adding an item, so it can't clobber inputs.
+    if (editingItemId || addingItem) return;
     const timer = setInterval(refresh, 2500);
     return () => clearInterval(timer);
-  }, [refresh, editing]);
+  }, [refresh, editingItemId, addingItem]);
 
   // Remember this room locally so it shows up in history.
   useEffect(() => {
@@ -257,6 +260,7 @@ export default function RoomPage() {
     await postAction({ action: "addItem", description: newDesc.trim(), priceOre, shared: false });
     setNewDesc("");
     setNewPrice("");
+    setAddingItem(false);
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
@@ -371,120 +375,10 @@ export default function RoomPage() {
             {joining ? t.joining : t.join}
           </button>
         </section>
-      ) : editing && isPayee ? (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">{t.editItems}</h2>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="rounded-full bg-swish px-4 py-1.5 text-sm font-semibold text-white active:bg-swish-dark"
-            >
-              {t.doneEditing}
-            </button>
-          </div>
-          <div className="space-y-2">
-            {state.items.map((it) => {
-              const d = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, state.people.length);
-              return (
-                <div key={it.id} className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
-                  <div className="flex items-center gap-2">
-                    <input
-                      defaultValue={it.description}
-                      onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
-                      placeholder={t.descPh}
-                      className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                    />
-                    <input
-                      defaultValue={formatOre(it.priceOre)}
-                      onBlur={(e) => {
-                        const o = parseAmountToOre(e.target.value);
-                        if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
-                      }}
-                      inputMode="decimal"
-                      placeholder={t.pricePh}
-                      className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                    />
-                    <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
-                      ✕
-                    </button>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 pl-1 text-xs text-gray-500">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5">
-                      <input
-                        type="checkbox"
-                        checked={!!it.shared}
-                        onChange={() => editItem(it.id, { shared: !it.shared })}
-                        className="h-4 w-4 rounded border-gray-300 accent-swish"
-                      />
-                      {tx.sharedToggle}
-                    </label>
-                    {it.shared && (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span>{tx.splitWays}</span>
-                        <button
-                          type="button"
-                          aria-label="−"
-                          onClick={() => editItem(it.id, { shareCount: Math.max(2, d - 1) })}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                        >
-                          −
-                        </button>
-                        <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
-                        <button
-                          type="button"
-                          aria-label="+"
-                          onClick={() => editItem(it.id, { shareCount: Math.min(50, d + 1) })}
-                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                        >
-                          +
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
-            <input
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              placeholder={t.descPh}
-              className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-            />
-            <input
-              value={newPrice}
-              onChange={(e) => setNewPrice(e.target.value)}
-              inputMode="decimal"
-              placeholder={t.pricePh}
-              className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-            />
-            <button
-              type="button"
-              onClick={addItemRow}
-              disabled={!newDesc.trim() || (parseAmountToOre(newPrice) ?? 0) <= 0}
-              className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
-            >
-              {t.addRow}
-            </button>
-          </div>
-        </section>
       ) : (
         <>
           <section>
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
-              {isPayee && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="shrink-0 rounded-full bg-swish/10 px-3.5 py-1.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"
-                >
-                  ✏️ {t.editItems}
-                </button>
-              )}
-            </div>
+            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
               {CATEGORY_ORDER.map((cat) => {
@@ -505,38 +399,97 @@ export default function RoomPage() {
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
                     {mainItems.map((it) => {
+                      if (editingItemId === it.id) {
+                        const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, state.people.length);
+                        return (
+                          <div key={it.id} className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
+                            <div className="flex items-center gap-2">
+                              <input
+                                defaultValue={it.description}
+                                onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
+                                placeholder={t.descPh}
+                                className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                              />
+                              <input
+                                defaultValue={formatOre(it.priceOre)}
+                                onBlur={(e) => {
+                                  const o = parseAmountToOre(e.target.value);
+                                  if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
+                                }}
+                                inputMode="decimal"
+                                placeholder={t.pricePh}
+                                className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                              />
+                              <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
+                                ✕
+                              </button>
+                              <button type="button" onClick={() => setEditingItemId(null)} aria-label={t.doneEditing} className="px-1 text-lg text-swish-dark">
+                                ✓
+                              </button>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 pl-1 text-sm text-gray-500">
+                              <label className="inline-flex cursor-pointer items-center gap-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={!!it.shared}
+                                  onChange={() => editItem(it.id, { shared: !it.shared })}
+                                  className="h-6 w-6 rounded border-gray-300 accent-swish"
+                                />
+                                {tx.sharedToggle}
+                              </label>
+                              {it.shared && (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span>{tx.splitWays}</span>
+                                  <button type="button" aria-label="−" onClick={() => editItem(it.id, { shareCount: Math.max(2, dv - 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">−</button>
+                                  <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
+                                  <button type="button" aria-label="+" onClick={() => editItem(it.id, { shareCount: Math.min(50, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">+</button>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
                       const mine = isMine(it);
                       return (
-                        <button
-                          key={it.id}
-                          type="button"
-                          onClick={() => toggleClaim(it.id)}
-                          disabled={busyItem === it.id}
-                          className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-                            mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-                              mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+                        <div key={it.id} className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleClaim(it.id)}
+                            disabled={busyItem === it.id}
+                            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+                              mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
                             }`}
                           >
-                            ✓
-                          </span>
-                          <span className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate font-medium">
-                              <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-                              {it.description}
+                            <span
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+                                mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+                              }`}
+                            >
+                              ✓
                             </span>
-                            {it.shared && (
-                              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
-                            )}
-                          </span>
-                          <Money
-                            ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
-                            className="shrink-0 text-right text-sm font-semibold"
-                          />
-                        </button>
+                            <span className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate font-medium">
+                                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+                                {it.description}
+                              </span>
+                              {it.shared && (
+                                <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
+                              )}
+                            </span>
+                            <Money
+                              ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
+                              className="shrink-0 text-right text-sm font-semibold"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingItemId(it.id)}
+                            aria-label={t.editRow}
+                            className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
+                          >
+                            ✏️
+                          </button>
+                        </div>
                       );
                     })}
                     {othersItems.length > 0 && (
@@ -568,6 +521,44 @@ export default function RoomPage() {
               <p className="mt-2 text-xs text-amber-600">{t.unclaimed(unclaimedCount)}</p>
             ) : (
               <p className="mt-2 text-xs text-emerald-600">{t.allClaimed}</p>
+            )}
+            {addingItem ? (
+              <div className="mt-2 flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
+                <input
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder={t.descPh}
+                  autoFocus
+                  className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                />
+                <input
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  inputMode="decimal"
+                  placeholder={t.pricePh}
+                  className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={addItemRow}
+                  disabled={!newDesc.trim() || (parseAmountToOre(newPrice) ?? 0) <= 0}
+                  className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+                >
+                  {t.addRow}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingItem(false); setNewDesc(""); setNewPrice(""); }}
+                  aria-label="✕"
+                  className="px-1 text-gray-400 active:text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAddingItem(true)} className="mt-2 text-sm font-medium text-swish-dark active:opacity-70">
+                + {t.addRow}
+              </button>
             )}
           </section>
 

@@ -164,7 +164,7 @@ export class RoomDO extends DurableObject {
     return state;
   }
 
-  /** Host-only: fix a mis-read line (description, price in öre, shared/count). */
+  /** Any diner can fix a mis-read line (description, price in öre, shared/count). */
   async editItem(
     actorId: string,
     itemId: string,
@@ -172,7 +172,7 @@ export class RoomDO extends DurableObject {
   ): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
-    if (actorId !== state.payeePersonId) return state;
+    if (!state.people.some((p) => p.id === actorId)) return state;
     const item = state.items.find((i) => i.id === itemId);
     if (item) {
       if (typeof patch.description === "string") item.description = patch.description.slice(0, 80);
@@ -191,21 +191,21 @@ export class RoomDO extends DurableObject {
     return state;
   }
 
-  /** Host-only: drop a line OCR invented or that doesn't belong. */
+  /** Any diner can drop a line OCR invented or that doesn't belong. */
   async removeItem(actorId: string, itemId: string): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
-    if (actorId !== state.payeePersonId) return state;
+    if (!state.people.some((p) => p.id === actorId)) return state;
     state.items = state.items.filter((i) => i.id !== itemId);
     await this.save(state);
     return state;
   }
 
-  /** Host-only: add a line OCR missed. Shared lines are pre-claimed for all. */
+  /** Any diner can add a line OCR missed. Shared lines are pre-claimed for all. */
   async addItem(actorId: string, data: { description: string; priceOre: number; shared?: boolean }): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
-    if (actorId !== state.payeePersonId) return state;
+    if (!state.people.some((p) => p.id === actorId)) return state;
     const priceOre = Math.max(0, Math.round(Number(data.priceOre) || 0));
     if (!data.description?.trim() || priceOre <= 0) return state;
     state.items.push({
