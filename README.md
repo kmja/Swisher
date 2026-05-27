@@ -1,63 +1,112 @@
 # Swisher
 
-Mobile-first receipt splitter for Sweden. Photograph a restaurant receipt, tap who
-ate what, and get a **locked Swish QR code + `swish://` link per person** so each diner
-pays the bill-payer directly.
+Mobile-first receipt splitter. Photograph a restaurant receipt, tap who ate what, and
+get a **locked payment QR + link per person** so each diner pays the bill-payer directly.
+Built Sweden-first (Swish), with euro-area receipts handled too.
 
 ## The constraint that shapes everything
 
 The app **never touches money**. It only generates payment *instructions*; funds flow
-diner → bill-payer on Swish's own rails. That is what keeps it license-free (no PSD2 /
-Finansinspektionen money-remittance obligations). There is therefore no auto-fire — each
-person scans their QR (or taps the link) and confirms with BankID. One tap per person.
+diner → bill-payer on the payment provider's own rails (Swish, or a SEPA bank transfer).
+That is what keeps it license-free (no PSD2 / Finansinspektionen money-remittance
+obligations). There is no auto-fire — each person scans their QR (or taps the link) and
+confirms in their own banking/Swish app. One tap per person.
+
+This principle is also why only **open, account-to-account** rails are supported. Swish
+exposes a consumer `swish://` deep link and the euro **EPC/Girocode QR** encodes a direct
+SEPA transfer to the payee's IBAN — both point straight at the payee. Wallets like
+Vipps/MobilePay/Bizum only prefill payments through a *merchant* API that routes money
+through a business account, which would break the constraint, so they're deliberately out.
 
 ## Flow
 
-1. **Foto** — photograph the receipt (or pick from gallery).
-2. **Rader** — Workers AI vision OCR extracts line items + total; review and correct
-   them, then add the bill-payer (their Swish number) and the other diners.
-3. **Fördela** — tap each diner onto the items they shared. Shared items split equally.
-4. **Betala** — optional dricks (tip) %, then a locked Swish QR + link per person.
+1. **Foto** — photograph the receipt (or pick from gallery). OCR runs automatically.
+2. **Rader** — the model extracts line items, total, tip and the receipt's currency;
+   review and correct them. For a foreign receipt the currency is auto-detected and
+   amounts are converted to SEK (the host can correct the currency). Then the bill-payer
+   adds how they want to be paid.
+3. **Fördela** — tap each diner onto the items they shared, or split everything evenly.
+   Shared items (a bottle, a platter) split across the whole group.
+4. **Betala** — a locked payment QR + link per person.
 
-All Swish fields (payee, amount, message) are **non-editable**, so no one can change the
-amount or recipient before confirming.
+All payment fields (payee, amount, message) are **non-editable**, so no one can change
+the amount or recipient before confirming.
 
-## Swedish specifics
+## Payment rails
+
+- **Swish (SEK)** — the default. A locked `swish://payment` deep link + the official
+  getSwish prefilled QR. Any Swedish phone with Swish opens it straight to a locked payment.
+- **SEPA / EPC "Girocode" (EUR)** — offered for euro receipts. The host enters an IBAN
+  (remembered after the first time, validated by ISO 7064 mod-97); each diner gets a
+  standard EPC069-12 QR that European banking apps scan and prefill (name, IBAN, amount,
+  reference). If the host also supplies a Swish number, payers who have Swish can pay the
+  kronor amount instead from the same card.
+
+## Currencies
+
+A foreign receipt is converted to SEK using the exchange rate **on the day it was
+printed** (what the diners actually paid): historical ECB rates via Frankfurter, with
+open.er-api as a latest-rate fallback and a small static table as a last resort
+(flagged as estimated). Both the original currency and SEK are shown everywhere amounts
+appear. EPC payouts settle in EUR; everything else settles in SEK.
+
+## Live rooms
+
+Instead of assigning items yourself, create a **room**: everyone opens the link (or scans
+the join QR) on their own phone, types their name, and taps the items they had. Shared
+items are pre-claimed for the whole group. The host sees each person's total and can mark
+shares **paid/unpaid** (bookkeeping only — still no money moves). Rooms are backed by a
+Cloudflare **Durable Object**, so concurrent claims can't race.
+
+## History
+
+Past splits (rooms you hosted or joined) are listed under **/history** with a live
+summary of what's still outstanding, plus a button to start a new receipt. Stored locally
+in the browser; the rooms themselves live server-side, keyed by code.
+
+## Swedish / money specifics
 
 - Prices are **VAT-inclusive** (moms baked in), so shares are just the sum of each
   person's items — no proportional tax distribution.
 - Amounts are handled in **öre (integers)** end-to-end; per-item splits are distributed
   öre-by-öre so each person's share sums back exactly to the line total.
+- Tip is detected from a printed tip line, or inferred when the card was charged more than
+  the itemised total, and split equally.
 - Input accepts comma decimals and space thousands separators (`1 234,50`).
 
 ## Stack
 
-- **Next.js (App Router) + TypeScript + Tailwind v4** — one deploy serves the
-  mobile UI and the server routes.
-- `app/api/ocr` — **Cloudflare Workers AI** vision (Llama 3.2 Vision) via the `AI`
-  binding. Keyless: no API key, billed against the account's free daily Neuron
-  allocation. Without the binding (e.g. plain `next start`) it returns 503 and the UI
-  falls back to manual entry.
-- `app/api/qr` — proxies the public getSwish prefilled-QR generator
-  (`mpc.getswish.net/qrg-swish/api/v1/prefilled`); if that endpoint is unreachable it
-  falls back to generating a QR of the locked `swish://` deep link locally (still
-  scannable cross-device).
+- **Next.js (App Router) + TypeScript + Tailwind v4** — one deploy serves the mobile UI
+  and the server routes.
+- `app/api/ocr` — receipt OCR. Uses **Claude (Sonnet 4.6) via the Anthropic API** when
+  `ANTHROPIC_API_KEY` is set (it reads faint thermal receipts far better), falling back to
+  **Cloudflare Workers AI** vision (Llama 4 Scout → Mistral Small 3.1 → LLaVA) via the
+  keyless `AI` binding. Returns the detected items, totals, currency and country.
+- `app/api/fx` — looks up a currency's SEK rate for a given date (used when the host
+  corrects a mis-detected currency).
+- `app/api/qr` — Swish QR via the public getSwish generator (local `swish://` QR as
+  fallback), and EPC/Girocode QR generated locally for SEPA.
+- `app/api/room/*` + `lib/room-do.ts` — the live-room Durable Object (join, claim, paid).
 
-This uses only the **public** prefilled-QR generator — no Företagsswish, no merchant
-agreement, no money routed through a business account.
+Item glyphs are matched from a keyword/brand table, with hand-drawn SVG icons for dishes
+that lack a good emoji (see the gallery at **/debug/icons**).
+
+No merchant agreement and no money routed through a business account — only public,
+account-to-account payment instructions.
 
 ## Run
 
 ```bash
 npm install
 npm run dev                     # http://localhost:3000
+npm test                        # unit tests (money, IBAN, FX, currency, categories)
 ```
 
-No API keys are needed. OCR runs on Cloudflare Workers AI, which is only available
-once deployed (or under `npm run cf:preview` with `wrangler login`); during plain
-`next dev`/`next start` the OCR call returns 503 and the UI falls back to manual
-entry. Everything else works locally. Open it on your phone (same network, or deploy
-it) for the camera capture flow.
+OCR needs either an `ANTHROPIC_API_KEY` (Claude) or the Cloudflare Workers AI binding
+(only available once deployed, or under `npm run cf:preview`); during plain
+`next dev`/`next start` without a key the OCR call returns 503 and the UI falls back to
+manual entry. Everything else works locally. Open it on your phone (same network, or
+deploy it) for the camera capture flow.
 
 ### Scripts
 
@@ -65,6 +114,7 @@ it) for the camera capture flow.
 | --- | --- |
 | `npm run dev` | dev server |
 | `npm run build` / `npm run start` | production build / serve |
+| `npm test` | unit tests for the pure logic |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run cf:preview` | build + run on the Cloudflare runtime (workerd) locally |
 | `npm run cf:deploy` | build + deploy to Cloudflare Workers |
@@ -72,18 +122,15 @@ it) for the camera capture flow.
 ## Deploy to Cloudflare
 
 The app runs on **Cloudflare Workers** via the [OpenNext](https://opennext.js.org/cloudflare)
-adapter. `wrangler.jsonc` enables `nodejs_compat`, binds static assets and the **`AI`**
-binding (for OCR), and points at the generated `.open-next/worker.js` — so both API
-routes (OCR and QR) run server-side on the Workers runtime. **No secrets required.**
+adapter. `wrangler.jsonc` enables `nodejs_compat`, binds static assets, the **`AI`**
+binding (OCR fallback) and the **`ROOM`** Durable Object namespace, and points at the
+generated `.open-next/worker.js`. Set `ANTHROPIC_API_KEY` as a secret to use Claude for OCR.
 
 ### Option A — Git integration (recommended)
 
-1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository**, pick
-   this repo.
-2. Set the **deploy command** to `npm run cf:deploy` (and, if asked for a separate
-   build command, `npm run cf:build`).
-3. Every push to the production branch redeploys. The Workers AI binding is created
-   automatically from `wrangler.jsonc` — nothing to configure.
+1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository**, pick this repo.
+2. Set the **deploy command** to `npm run cf:deploy` (build command `npm run cf:build`).
+3. Every push to the production branch redeploys. Bindings come from `wrangler.jsonc`.
 
 ### Option B — From your machine
 
@@ -92,7 +139,5 @@ npx wrangler login
 npm run cf:deploy
 ```
 
-The Worker comes up at `https://swisher.<your-subdomain>.workers.dev`. Unlike a
-local sandbox, Cloudflare's network can reach `mpc.getswish.net`, so QR codes use
-the official getSwish generator (with the local `swish://` QR kept as a fallback),
-and Workers AI powers the OCR.
+Unlike a local sandbox, Cloudflare's network can reach `mpc.getswish.net` and the FX/AI
+endpoints, so QR codes use the official getSwish generator and OCR/currency conversion work.
