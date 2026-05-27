@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { FxProvider } from "@/components/Money";
-import { formatOre } from "@/lib/money";
+import { formatOre, parseAmountToOre } from "@/lib/money";
 import { formatNative, flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { translations } from "@/lib/i18n";
-import { readLocalSplit, toggleLocalPaid, type LocalSplit } from "@/lib/local-split";
+import { readLocalSplit, saveLocalSplit, toggleLocalPaid, type LocalSplit } from "@/lib/local-split";
+
+const uid = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
 type Lang = "sv" | "en";
 
@@ -23,6 +26,12 @@ const R = {
     paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
     paid: "Betald",
     markPaid: "Markera betald",
+    editItems: "Rätta belopp",
+    doneEditing: "Klar",
+    addRow: "Lägg till",
+    namePh: "Namn",
+    pricePh: "0,00",
+    removeRow: "Ta bort",
   },
   en: {
     loading: "Loading…",
@@ -35,6 +44,12 @@ const R = {
     paidOf: (paid: number, total: number) => `${paid} of ${total} paid`,
     paid: "Paid",
     markPaid: "Mark paid",
+    editItems: "Fix amounts",
+    doneEditing: "Done",
+    addRow: "Add",
+    namePh: "Name",
+    pricePh: "0.00",
+    removeRow: "Remove",
   },
 } as const;
 
@@ -49,6 +64,9 @@ export default function SplitPage() {
 
   const [lang, setLang] = useState<Lang>("sv");
   const [split, setSplit] = useState<LocalSplit | null | undefined>(undefined);
+  const [editing, setEditing] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newAmount, setNewAmount] = useState("");
 
   const t = R[lang];
   const tx = translations[lang];
@@ -67,6 +85,30 @@ export default function SplitPage() {
   function toggle(shareId: string) {
     const next = toggleLocalPaid(id, shareId);
     if (next) setSplit({ ...next });
+  }
+
+  function update(next: LocalSplit) {
+    saveLocalSplit(next);
+    setSplit({ ...next });
+  }
+  function editShare(shareId: string, patch: { name?: string; totalOre?: number }) {
+    if (!split) return;
+    update({ ...split, shares: split.shares.map((s) => (s.id === shareId ? { ...s, ...patch } : s)) });
+  }
+  function removeShare(shareId: string) {
+    if (!split) return;
+    update({
+      ...split,
+      shares: split.shares.filter((s) => s.id !== shareId),
+      paidBy: split.paidBy.filter((p) => p !== shareId),
+    });
+  }
+  function addShare() {
+    const ore = parseAmountToOre(newAmount) ?? 0;
+    if (!split || !newName.trim() || ore <= 0) return;
+    update({ ...split, shares: [...split.shares, { id: uid(), name: newName.trim(), totalOre: ore }] });
+    setNewName("");
+    setNewAmount("");
   }
 
   if (split === undefined) return <Centered>{t.loading}</Centered>;
@@ -112,42 +154,113 @@ export default function SplitPage() {
           </div>
         </header>
 
-        <div className="space-y-3">
-          {payees.map((s) =>
-            paid.has(s.id) ? (
+        {!editing && (
+          <div className="-mt-1 flex justify-end">
+            <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium text-swish-dark active:opacity-70">
+              ✏️ {t.editItems}
+            </button>
+          </div>
+        )}
+
+        {editing ? (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">{t.editItems}</h2>
               <button
-                key={s.id}
                 type="button"
-                onClick={() => toggle(s.id)}
-                className="flex w-full items-center justify-between gap-2 rounded-2xl bg-white px-4 py-3 text-left shadow-sm ring-1 ring-black/5"
+                onClick={() => setEditing(false)}
+                className="rounded-full bg-swish px-4 py-1.5 text-sm font-semibold text-white active:bg-swish-dark"
               >
-                <span className="font-medium text-emerald-600">✓ {s.name}</span>
-                <span className="text-sm text-gray-400 line-through">{money(s.totalOre, fx)}</span>
+                {t.doneEditing}
               </button>
-            ) : (
-              <div key={s.id}>
-                <QrCard
-                  name={s.name}
-                  method={split.method === "sepa" ? "sepa" : "swish"}
-                  amountOre={s.totalOre}
-                  swishPayee={split.payeeNumber || undefined}
-                  iban={split.method === "sepa" ? split.payeeIban : undefined}
-                  payeeName={split.payeeName}
-                  eurCents={split.method === "sepa" ? eurCentsFor(s.totalOre) : undefined}
-                  message={split.message}
-                  t={tx}
-                />
+            </div>
+            <div className="space-y-2">
+              {split.shares.map((s) => (
+                <div key={s.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                  <input
+                    defaultValue={s.name}
+                    onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== s.name && editShare(s.id, { name: e.target.value.trim() })}
+                    placeholder={t.namePh}
+                    className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                  />
+                  <input
+                    defaultValue={formatOre(s.totalOre)}
+                    onBlur={(e) => {
+                      const o = parseAmountToOre(e.target.value);
+                      if (o != null && o !== s.totalOre) editShare(s.id, { totalOre: o });
+                    }}
+                    inputMode="decimal"
+                    placeholder={t.pricePh}
+                    className="w-24 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                  />
+                  <button type="button" onClick={() => removeShare(s.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={t.namePh}
+                className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+              />
+              <input
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                inputMode="decimal"
+                placeholder={t.pricePh}
+                className="w-24 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+              />
+              <button
+                type="button"
+                onClick={addShare}
+                disabled={!newName.trim() || (parseAmountToOre(newAmount) ?? 0) <= 0}
+                className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+              >
+                {t.addRow}
+              </button>
+            </div>
+          </section>
+        ) : (
+          <div className="space-y-3">
+            {payees.map((s) =>
+              paid.has(s.id) ? (
                 <button
+                  key={s.id}
                   type="button"
                   onClick={() => toggle(s.id)}
-                  className="mt-2 w-full rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-ink active:bg-gray-200"
+                  className="flex w-full items-center justify-between gap-2 rounded-2xl bg-white px-4 py-3 text-left shadow-sm ring-1 ring-black/5"
                 >
-                  {t.markPaid}
+                  <span className="font-medium text-emerald-600">✓ {s.name}</span>
+                  <span className="text-sm text-gray-400 line-through">{money(s.totalOre, fx)}</span>
                 </button>
-              </div>
-            ),
-          )}
-        </div>
+              ) : (
+                <div key={s.id}>
+                  <QrCard
+                    name={s.name}
+                    method={split.method === "sepa" ? "sepa" : "swish"}
+                    amountOre={s.totalOre}
+                    swishPayee={split.payeeNumber || undefined}
+                    iban={split.method === "sepa" ? split.payeeIban : undefined}
+                    payeeName={split.payeeName}
+                    eurCents={split.method === "sepa" ? eurCentsFor(s.totalOre) : undefined}
+                    message={split.message}
+                    t={tx}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggle(s.id)}
+                    className="mt-2 w-full rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-ink active:bg-gray-200"
+                  >
+                    {t.markPaid}
+                  </button>
+                </div>
+              ),
+            )}
+          </div>
+        )}
       </main>
     </FxProvider>
   );

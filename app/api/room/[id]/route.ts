@@ -29,7 +29,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const stub = stubFor(id);
   if (!stub) return NextResponse.json({ error: "Live rooms unavailable here." }, { status: 503 });
 
-  let body: { action?: string; name?: string; personId?: string; itemId?: string; targetId?: string };
+  let body: {
+    action?: string;
+    name?: string;
+    personId?: string;
+    itemId?: string;
+    targetId?: string;
+    description?: string;
+    priceOre?: number;
+    shared?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -49,6 +58,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     case "paid": {
       const state = await stub.togglePaid(String(body.personId ?? ""), String(body.targetId ?? ""));
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
+    case "edit": {
+      const patch: { description?: string; priceOre?: number } = {};
+      if (typeof body.description === "string") patch.description = body.description;
+      if (typeof body.priceOre === "number") patch.priceOre = body.priceOre;
+      const state = await stub.editItem(String(body.personId ?? ""), String(body.itemId ?? ""), patch);
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
+    case "removeItem": {
+      const state = await stub.removeItem(String(body.personId ?? ""), String(body.itemId ?? ""));
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
+    case "addItem": {
+      const state = await stub.addItem(String(body.personId ?? ""), {
+        description: String(body.description ?? ""),
+        priceOre: Number(body.priceOre),
+        shared: body.shared === true,
+      });
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });
     }

@@ -160,4 +160,48 @@ export class RoomDO extends DurableObject {
     }
     return state;
   }
+
+  /** Host-only: fix a mis-read line (description / price in öre). */
+  async editItem(actorId: string, itemId: string, patch: { description?: string; priceOre?: number }): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (actorId !== state.payeePersonId) return state;
+    const item = state.items.find((i) => i.id === itemId);
+    if (item) {
+      if (typeof patch.description === "string") item.description = patch.description.slice(0, 80);
+      if (typeof patch.priceOre === "number" && Number.isFinite(patch.priceOre) && patch.priceOre >= 0) {
+        item.priceOre = Math.round(patch.priceOre);
+      }
+      await this.save(state);
+    }
+    return state;
+  }
+
+  /** Host-only: drop a line OCR invented or that doesn't belong. */
+  async removeItem(actorId: string, itemId: string): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (actorId !== state.payeePersonId) return state;
+    state.items = state.items.filter((i) => i.id !== itemId);
+    await this.save(state);
+    return state;
+  }
+
+  /** Host-only: add a line OCR missed. Shared lines are pre-claimed for all. */
+  async addItem(actorId: string, data: { description: string; priceOre: number; shared?: boolean }): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (actorId !== state.payeePersonId) return state;
+    const priceOre = Math.max(0, Math.round(Number(data.priceOre) || 0));
+    if (!data.description?.trim() || priceOre <= 0) return state;
+    state.items.push({
+      id: uid(),
+      description: String(data.description).slice(0, 80),
+      priceOre,
+      shared: data.shared === true,
+      claimedBy: data.shared === true ? state.people.map((p) => p.id) : [],
+    });
+    await this.save(state);
+    return state;
+  }
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeRoomShares, formatOre } from "@/lib/money";
+import { computeRoomShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -48,6 +48,12 @@ const R = {
     markPaid: "Markera betald",
     newReceipt: "Nytt kvitto",
     history: "Historik",
+    editItems: "Rätta rader",
+    doneEditing: "Klar",
+    addRow: "Lägg till",
+    descPh: "Beskrivning",
+    pricePh: "0,00",
+    removeRow: "Ta bort rad",
   },
   en: {
     loading: "Loading the room…",
@@ -81,6 +87,12 @@ const R = {
     markPaid: "Mark paid",
     newReceipt: "New receipt",
     history: "History",
+    editItems: "Fix items",
+    doneEditing: "Done",
+    addRow: "Add",
+    descPh: "Description",
+    pricePh: "0.00",
+    removeRow: "Remove row",
   },
 } as const;
 
@@ -100,6 +112,9 @@ export default function RoomPage() {
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [newDesc, setNewDesc] = useState("");
+  const [newPrice, setNewPrice] = useState("");
 
   const t = R[lang];
   const tx = translations[lang];
@@ -131,9 +146,11 @@ export default function RoomPage() {
 
   useEffect(() => {
     refresh();
+    // Pause live polling while the host edits items, so it can't clobber inputs.
+    if (editing) return;
     const timer = setInterval(refresh, 2500);
     return () => clearInterval(timer);
-  }, [refresh]);
+  }, [refresh, editing]);
 
   // Remember this room locally so it shows up in history.
   useEffect(() => {
@@ -206,6 +223,30 @@ export default function RoomPage() {
       body: JSON.stringify({ action: "paid", personId, targetId }),
     });
     if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+  }
+
+  async function postAction(payload: Record<string, unknown>) {
+    if (!personId) return;
+    const res = await fetch(`/api/room/${code}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId, ...payload }),
+    });
+    if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+  }
+
+  function editItem(itemId: string, patch: { description?: string; priceOre?: number }) {
+    return postAction({ action: "edit", itemId, ...patch });
+  }
+  function removeItemRow(itemId: string) {
+    return postAction({ action: "removeItem", itemId });
+  }
+  async function addItemRow() {
+    const priceOre = parseAmountToOre(newPrice) ?? 0;
+    if (!newDesc.trim() || priceOre <= 0) return;
+    await postAction({ action: "addItem", description: newDesc.trim(), priceOre, shared: false });
+    setNewDesc("");
+    setNewPrice("");
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
@@ -311,8 +352,76 @@ export default function RoomPage() {
             {joining ? t.joining : t.join}
           </button>
         </section>
+      ) : editing && isPayee ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">{t.editItems}</h2>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-full bg-swish px-4 py-1.5 text-sm font-semibold text-white active:bg-swish-dark"
+            >
+              {t.doneEditing}
+            </button>
+          </div>
+          <div className="space-y-2">
+            {state.items.map((it) => (
+              <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                <input
+                  defaultValue={it.description}
+                  onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
+                  placeholder={t.descPh}
+                  className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                />
+                <input
+                  defaultValue={formatOre(it.priceOre)}
+                  onBlur={(e) => {
+                    const o = parseAmountToOre(e.target.value);
+                    if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
+                  }}
+                  inputMode="decimal"
+                  placeholder={t.pricePh}
+                  className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                />
+                <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+            <input
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              placeholder={t.descPh}
+              className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+            />
+            <input
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              inputMode="decimal"
+              placeholder={t.pricePh}
+              className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+            />
+            <button
+              type="button"
+              onClick={addItemRow}
+              disabled={!newDesc.trim() || (parseAmountToOre(newPrice) ?? 0) <= 0}
+              className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+            >
+              {t.addRow}
+            </button>
+          </div>
+        </section>
       ) : (
         <>
+          {isPayee && (
+            <div className="-mb-1 flex justify-end">
+              <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium text-swish-dark active:opacity-70">
+                ✏️ {t.editItems}
+              </button>
+            </div>
+          )}
           <section>
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
