@@ -6,6 +6,7 @@ import {
   computeShares,
   computeRoomShares,
   sumItemsOre,
+  estimateGroupSize,
 } from "../lib/money";
 import type { Diner, LineItem } from "../lib/types";
 
@@ -129,6 +130,25 @@ describe("computeRoomShares", () => {
     const { shares } = computeRoomShares([{ priceOre: 5000, claimedBy: ["A"] }], people, 3000);
     expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(5000);
     expect(shares.map((s) => s.tipOre)).toEqual([1000, 1000, 1000]);
+  });
+});
+
+describe("estimateGroupSize", () => {
+  it("uses the number of mains when present, ignoring extra drinks", () => {
+    // 4 mains, 6 drinks (some had two), 2 desserts → 4 people
+    expect(estimateGroupSize({ food: 4, drink: 6, dessert: 2, total: 12 })).toBe(4);
+    // a wine-heavy table shouldn't be over-counted by drinks
+    expect(estimateGroupSize({ food: 4, drink: 12, dessert: 0, total: 16 })).toBe(4);
+  });
+  it("falls back to drinks (discounted) when there are no mains", () => {
+    expect(estimateGroupSize({ food: 0, drink: 6, dessert: 0, total: 6 })).toBe(4);
+  });
+  it("keeps desserts as a floor", () => {
+    expect(estimateGroupSize({ food: 3, drink: 0, dessert: 5, total: 8 })).toBe(5);
+  });
+  it("clamps to 2–12", () => {
+    expect(estimateGroupSize({ food: 1, drink: 0, dessert: 0, total: 1 })).toBe(2);
+    expect(estimateGroupSize({ food: 20, drink: 0, dessert: 0, total: 20 })).toBe(12);
   });
 });
 

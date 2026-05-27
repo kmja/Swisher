@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
+import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban } from "@/lib/sepa";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
@@ -582,12 +582,16 @@ export default function Page() {
   const needsGroupSize = hasSharedItems || tipOre > 0;
 
   // When shared items (or a tip) first appear, seed a sensible group size from
-  // the receipt (~4 ordered items per head) so the picker is never blank.
+  // the individual items by category (mains ≈ heads), so the picker is never
+  // blank. Editable afterwards.
   useEffect(() => {
-    if (needsGroupSize && groupSize === 0) {
-      setGroupSize(Math.min(12, Math.max(2, Math.round(foodItems.length / 4))));
-    }
-  }, [needsGroupSize, groupSize, foodItems.length]);
+    if (!needsGroupSize || groupSize !== 0) return;
+    const indiv = foodItems.filter((it) => !it.shared);
+    const byCat = (c: string) => indiv.filter((it) => categoryFor(it.description, it.category) === c).length;
+    setGroupSize(
+      estimateGroupSize({ food: byCat("food"), drink: byCat("drink"), dessert: byCat("dessert"), total: indiv.length }),
+    );
+  }, [needsGroupSize, groupSize, foodItems]);
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && payDestOk;

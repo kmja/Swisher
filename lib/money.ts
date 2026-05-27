@@ -131,6 +131,22 @@ export function sumItemsOre(items: LineItem[]): number {
 }
 
 /**
+ * Guess how many people are at the table from the individual (non-shared)
+ * items, to seed the shared-item divisor. Mains track headcount best (≈ one per
+ * person), so when there are any we trust their count (with dessert as a floor)
+ * and ignore drinks, since people often have several. With no mains we fall
+ * back to drinks (discounted for refills), then to a rough items count.
+ * Clamped to 2–12; it's only a starting point the host can adjust.
+ */
+export function estimateGroupSize(counts: { food: number; drink: number; dessert: number; total: number }): number {
+  let est: number;
+  if (counts.food > 0) est = Math.max(counts.food, counts.dessert);
+  else if (counts.drink > 0) est = Math.max(Math.round(counts.drink / 1.5), counts.dessert);
+  else est = Math.max(counts.dessert, Math.round(counts.total / 4));
+  return Math.min(12, Math.max(2, est));
+}
+
+/**
  * Live-room shares from per-item claims. A normal item splits equally among the
  * people who claimed it. A `shared` item splits across the WHOLE group (one
  * per-person share each), pre-claimed for everyone; a person who deselects it
