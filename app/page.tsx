@@ -38,6 +38,9 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** Display order in the items list: shared first, then normal, tip last. */
+const sharedRank = (it: { shared: boolean; isTip?: boolean }) => (it.isTip ? 2 : it.shared ? 0 : 1);
+
 /** Currencies the host can pick from when correcting a mis-detected receipt. */
 const COMMON_CURRENCIES = [
   "SEK", "EUR", "USD", "GBP", "NOK", "DKK", "CHF", "ISK", "JPY", "THB",
@@ -930,7 +933,10 @@ export default function Page() {
               </p>
             ))}
             <div className="mt-3 space-y-2">
-              {items.map((it, idx) => {
+              {[...items]
+                .map((it, i) => ({ it, idx: i }))
+                .sort((a, b) => sharedRank(a.it) - sharedRank(b.it))
+                .map(({ it, idx }) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
                 const d = itemDivisorFor(it);
