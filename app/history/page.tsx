@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { computeRoomShares, formatOre } from "@/lib/money";
 import { formatNative, type Fx } from "@/lib/currency";
 import { readHistory, removeHistory, type HistoryEntry } from "@/lib/history";
+import { readLocalSplit, removeLocalSplit } from "@/lib/local-split";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner } from "@/lib/types";
 
@@ -87,6 +88,32 @@ export default function HistoryPage() {
   useEffect(() => {
     let cancelled = false;
     entries.forEach((e) => {
+      if (e.kind === "local") {
+        const split = readLocalSplit(e.id);
+        if (!split) {
+          setSummaries((prev) => ({ ...prev, [e.id]: { status: "gone" } }));
+          return;
+        }
+        const fx: Fx = split.currency !== "SEK" && split.rate > 0 ? { currency: split.currency, rate: split.rate } : null;
+        const paid = new Set(split.paidBy);
+        const payees = split.shares.filter((s) => s.totalOre > 0);
+        setSummaries((prev) => ({
+          ...prev,
+          [e.id]: {
+            status: "ok",
+            place: split.place || "Swisher",
+            date: split.date,
+            isHost: true,
+            fx,
+            paidCount: payees.filter((s) => paid.has(s.id)).length,
+            payeeCount: payees.length,
+            outstandingOre: payees.filter((s) => !paid.has(s.id)).reduce((a, s) => a + s.totalOre, 0),
+            myOre: 0,
+            iPaid: false,
+          },
+        }));
+        return;
+      }
       setSummaries((prev) => (prev[e.id] ? prev : { ...prev, [e.id]: { status: "loading" } }));
       (async () => {
         try {
@@ -144,6 +171,7 @@ export default function HistoryPage() {
 
   function remove(id: string) {
     removeHistory(id);
+    removeLocalSplit(id);
     setEntries(readHistory());
   }
 
@@ -165,10 +193,10 @@ export default function HistoryPage() {
             const s = summaries[e.id];
             return (
               <div key={e.id} className="relative rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
-                <a href={`/room/${e.id}`} className="block px-4 py-3 active:bg-gray-50">
+                <a href={e.kind === "local" ? `/split/${e.id}` : `/room/${e.id}`} className="block px-4 py-3 active:bg-gray-50">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="min-w-0 truncate font-semibold">{(s && s.status === "ok" && s.place) || e.place || "Swisher"}</span>
-                    <span className="shrink-0 text-xs text-gray-400">{[(s && s.status === "ok" ? s.date : e.date), e.id].filter(Boolean).join(" · ")}</span>
+                    <span className="shrink-0 text-xs text-gray-400">{[(s && s.status === "ok" ? s.date : e.date), e.kind === "room" ? e.id : null].filter(Boolean).join(" · ")}</span>
                   </div>
                   <div className="mt-1 text-sm">
                     {!s || s.status === "loading" ? (

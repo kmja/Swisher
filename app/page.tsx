@@ -12,6 +12,7 @@ import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
+import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -160,6 +161,7 @@ export default function Page() {
   // Payout rail: Swish (SEK) by default; SEPA/EPC (EUR) for euro receipts.
   const [payMethod, setPayMethod] = useState<"swish" | "sepa">("swish");
   const [payeeIban, setPayeeIban] = useState("");
+  const [splitId, setSplitId] = useState<string | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
   const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
@@ -678,6 +680,38 @@ export default function Page() {
   const payer = namedDiners[0];
   const normalizedPayer = normalizePhone(payerPhone) ?? "";
   const assignedTotalOre = shares.reduce((acc, s) => acc + s.totalOre, 0);
+
+  // Persist a local (no-room) split so it lands in history and the host can
+  // reopen it to show the QR codes again and track who's paid.
+  function persistLocalSplit() {
+    const payees = shares
+      .filter((s) => s.dinerId !== payer?.id && s.totalOre > 0)
+      .map((s) => ({ id: s.dinerId, name: s.name, totalOre: s.totalOre }));
+    if (payees.length === 0) return;
+    let id = splitId;
+    if (!id) {
+      id = uid();
+      setSplitId(id);
+    }
+    const prev = readLocalSplit(id);
+    saveLocalSplit({
+      id,
+      createdAt: prev?.createdAt ?? Date.now(),
+      place: mealLabel.trim(),
+      date: eventDate,
+      message,
+      currency,
+      rate: fxRate ?? 1,
+      country: country ?? "",
+      method,
+      payeeName: payer?.name ?? "",
+      payeeNumber: normalizedPayer,
+      payeeIban: method === "sepa" ? normalizeIban(payeeIban) : "",
+      shares: payees,
+      paidBy: prev?.paidBy ?? [],
+    });
+    addHistory({ id, place: mealLabel.trim(), date: eventDate, role: "host", kind: "local" });
+  }
 
   // --- render ----------------------------------------------------------------
   return (
@@ -1401,7 +1435,10 @@ export default function Page() {
           if (i > 0) setStep(order[i - 1]);
         }}
         onForward={() => {
-          if (step === "assign") setStep("result");
+          if (step === "assign") {
+            persistLocalSplit();
+            setStep("result");
+          }
         }}
       />
     </main>

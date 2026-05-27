@@ -8,11 +8,13 @@ const KEY = "swisher-history";
 const MAX = 50;
 
 export type HistoryEntry = {
-  /** Room code. */
+  /** Room code, or a local split id. */
   id: string;
   place: string;
   date: string;
   role: "host" | "guest";
+  /** "room" = live (server) room; "local" = a split saved only on this device. */
+  kind: "room" | "local";
   /** When this entry was first added locally (ms). */
   addedAt: number;
 };
@@ -24,14 +26,15 @@ export function readHistory(): HistoryEntry[] {
     if (!Array.isArray(raw)) return [];
     return raw
       .filter((e): e is HistoryEntry => e && typeof e.id === "string")
+      .map((e): HistoryEntry => ({ ...e, kind: e.kind === "local" ? "local" : "room" }))
       .sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0));
   } catch {
     return [];
   }
 }
 
-/** Add or refresh an entry (deduped by room code), keeping the newest MAX. */
-export function addHistory(entry: Omit<HistoryEntry, "addedAt"> & { addedAt?: number }): void {
+/** Add or refresh an entry (deduped by id), keeping the newest MAX. */
+export function addHistory(entry: Omit<HistoryEntry, "addedAt" | "kind"> & { addedAt?: number; kind?: "room" | "local" }): void {
   if (typeof window === "undefined" || !entry.id) return;
   try {
     const existing = readHistory();
@@ -41,6 +44,7 @@ export function addHistory(entry: Omit<HistoryEntry, "addedAt"> & { addedAt?: nu
       place: entry.place || prev?.place || "",
       date: entry.date || prev?.date || "",
       role: entry.role || prev?.role || "guest",
+      kind: entry.kind || prev?.kind || "room",
       addedAt: prev?.addedAt ?? entry.addedAt ?? Date.now(),
     };
     const next = [merged, ...existing.filter((e) => e.id !== entry.id)].slice(0, MAX);
