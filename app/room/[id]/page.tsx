@@ -38,6 +38,7 @@ const R = {
     dontPaySelf: "du betalar inte dig själv",
     itemsTitle: "Vad åt du?",
     claimHint: "Tryck på det du åt. Delar ni på något tar ni samma rad.",
+    sharedSection: "Delas av alla",
     sharedBy: (n: number) => `delas av ${n}`,
     eachShort: (amt: string) => `≈ ${amt} SEK/pers`,
     peopleTitle: "Vilka är med",
@@ -83,6 +84,7 @@ const R = {
     dontPaySelf: "you don't pay yourself",
     itemsTitle: "What did you have?",
     claimHint: "Tap what you had. Sharing something? You both tap it.",
+    sharedSection: "Shared by everyone",
     sharedBy: (n: number) => `shared by ${n}`,
     eachShort: (amt: string) => `≈ ${amt} SEK each`,
     peopleTitle: "Who's in",
@@ -313,6 +315,107 @@ export default function RoomPage() {
   const claimedNamesFor = (dinerId: string) =>
     state.items.filter((i) => i.claimedBy.includes(dinerId)).map((i) => i.description);
 
+  const peopleCount = Math.max(1, state.people.length);
+  const isMine = (it: RoomState["items"][number]) => !!personId && it.claimedBy.includes(personId);
+
+  // One row in the claim list: an inline editor when it's being edited, else a
+  // tappable claim row with a pencil to edit. Reused for the shared group and
+  // each category section.
+  function claimItemRow(it: RoomState["items"][number]) {
+    if (editingItemId === it.id) {
+      const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, peopleCount);
+      return (
+        <div key={it.id} className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
+          <div className="flex items-center gap-2">
+            <input
+              defaultValue={it.description}
+              onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
+              placeholder={t.descPh}
+              className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+            />
+            <input
+              defaultValue={formatOre(it.priceOre)}
+              onBlur={(e) => {
+                const o = parseAmountToOre(e.target.value);
+                if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
+              }}
+              inputMode="decimal"
+              placeholder={t.pricePh}
+              className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+            />
+            <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
+              ✕
+            </button>
+            <button type="button" onClick={() => setEditingItemId(null)} aria-label={t.doneEditing} className="px-1 text-lg text-swish-dark">
+              ✓
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 pl-1 text-sm text-gray-500">
+            <label className="inline-flex cursor-pointer items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={!!it.shared}
+                onChange={() => editItem(it.id, { shared: !it.shared })}
+                className="h-6 w-6 rounded border-gray-300 accent-swish"
+              />
+              {tx.sharedToggle}
+            </label>
+            {it.shared && (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{tx.splitWays}</span>
+                <button type="button" aria-label="−" onClick={() => editItem(it.id, { shareCount: Math.max(2, dv - 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">−</button>
+                <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
+                <button type="button" aria-label="+" onClick={() => editItem(it.id, { shareCount: Math.min(50, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">+</button>
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+    const mine = isMine(it);
+    return (
+      <div key={it.id} className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => toggleClaim(it.id)}
+          disabled={busyItem === it.id}
+          className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+            mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+          }`}
+        >
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+              mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+            }`}
+          >
+            ✓
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-medium">
+              <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+              {it.description}
+            </span>
+            {it.shared && (
+              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
+            )}
+          </span>
+          <Money
+            ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
+            className="shrink-0 text-right text-sm font-semibold"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditingItemId(it.id)}
+          aria-label={t.editRow}
+          className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
+        >
+          ✏️
+        </button>
+      </div>
+    );
+  }
+
   return (
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
@@ -381,15 +484,21 @@ export default function RoomPage() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
+              {state.items.some((it) => it.shared) && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
+                    <span aria-hidden>🍽️</span>
+                    <span>{t.sharedSection}</span>
+                  </div>
+                  {state.items.filter((it) => it.shared).map(claimItemRow)}
+                </div>
+              )}
               {CATEGORY_ORDER.map((cat) => {
-                const all = state.items.filter((it) => categoryFor(it.description, it.category) === cat);
+                const all = state.items.filter((it) => !it.shared && categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
-                const isMine = (it: RoomState["items"][number]) => it.claimedBy.includes(personId);
-                // Shared items (split across everyone) always stay in the main list.
-                // Otherwise: unclaimed items + the ones I claimed; others collapse.
-                const mainItems = all.filter((it) => it.shared || it.claimedBy.length === 0 || isMine(it));
-                const othersItems = all.filter((it) => !it.shared && it.claimedBy.length > 0 && !isMine(it));
-                const peopleCount = Math.max(1, state.people.length);
+                // Unclaimed items + the ones I claimed stay; items others claimed collapse.
+                const mainItems = all.filter((it) => it.claimedBy.length === 0 || isMine(it));
+                const othersItems = all.filter((it) => it.claimedBy.length > 0 && !isMine(it));
                 const claimers = (it: RoomState["items"][number]) =>
                   it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
                 return (
@@ -398,100 +507,7 @@ export default function RoomPage() {
                       <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
-                    {mainItems.map((it) => {
-                      if (editingItemId === it.id) {
-                        const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, state.people.length);
-                        return (
-                          <div key={it.id} className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
-                            <div className="flex items-center gap-2">
-                              <input
-                                defaultValue={it.description}
-                                onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
-                                placeholder={t.descPh}
-                                className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                              />
-                              <input
-                                defaultValue={formatOre(it.priceOre)}
-                                onBlur={(e) => {
-                                  const o = parseAmountToOre(e.target.value);
-                                  if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
-                                }}
-                                inputMode="decimal"
-                                placeholder={t.pricePh}
-                                className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                              />
-                              <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
-                                ✕
-                              </button>
-                              <button type="button" onClick={() => setEditingItemId(null)} aria-label={t.doneEditing} className="px-1 text-lg text-swish-dark">
-                                ✓
-                              </button>
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 pl-1 text-sm text-gray-500">
-                              <label className="inline-flex cursor-pointer items-center gap-1.5">
-                                <input
-                                  type="checkbox"
-                                  checked={!!it.shared}
-                                  onChange={() => editItem(it.id, { shared: !it.shared })}
-                                  className="h-6 w-6 rounded border-gray-300 accent-swish"
-                                />
-                                {tx.sharedToggle}
-                              </label>
-                              {it.shared && (
-                                <span className="inline-flex items-center gap-1.5">
-                                  <span>{tx.splitWays}</span>
-                                  <button type="button" aria-label="−" onClick={() => editItem(it.id, { shareCount: Math.max(2, dv - 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">−</button>
-                                  <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
-                                  <button type="button" aria-label="+" onClick={() => editItem(it.id, { shareCount: Math.min(50, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">+</button>
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      }
-                      const mine = isMine(it);
-                      return (
-                        <div key={it.id} className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => toggleClaim(it.id)}
-                            disabled={busyItem === it.id}
-                            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-                              mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
-                            }`}
-                          >
-                            <span
-                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-                                mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
-                              }`}
-                            >
-                              ✓
-                            </span>
-                            <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate font-medium">
-                                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-                                {it.description}
-                              </span>
-                              {it.shared && (
-                                <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
-                              )}
-                            </span>
-                            <Money
-                              ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
-                              className="shrink-0 text-right text-sm font-semibold"
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingItemId(it.id)}
-                            aria-label={t.editRow}
-                            className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
-                          >
-                            ✏️
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {mainItems.map(claimItemRow)}
                     {othersItems.length > 0 && (
                       <details className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
                         <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(othersItems.length)}</summary>
