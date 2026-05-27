@@ -477,12 +477,9 @@ export default function Page() {
         });
       }
       setItems(mapped);
-      // If anything is shared (incl. the tip), default the group size from the
-      // number of ordered items (~one main + drink + side per head); editable.
-      if (mapped.some((it) => it.shared)) {
-        const units = mapped.filter((it) => !it.isTip).length;
-        setGroupSize(Math.min(12, Math.max(2, Math.round(units / 4))));
-      }
+      // Reset the group size for the new receipt; it's re-seeded (below) once a
+      // shared item or tip is present, whether detected now or toggled later.
+      setGroupSize(0);
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
@@ -583,6 +580,14 @@ export default function Page() {
   // The tip is itself a shared item, so the group-size control matters whenever
   // there's a shared row or a tip.
   const needsGroupSize = hasSharedItems || tipOre > 0;
+
+  // When shared items (or a tip) first appear, seed a sensible group size from
+  // the receipt (~4 ordered items per head) so the picker is never blank.
+  useEffect(() => {
+    if (needsGroupSize && groupSize === 0) {
+      setGroupSize(Math.min(12, Math.max(2, Math.round(foodItems.length / 4))));
+    }
+  }, [needsGroupSize, groupSize, foodItems.length]);
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && payDestOk;
