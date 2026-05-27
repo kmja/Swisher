@@ -38,6 +38,42 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** A sample dinner order for 8 (shared items, drinks, dessert) loaded via
+ *  "/?demo=1" — handy for exercising the split flow without a real receipt. */
+const DEMO_ORDER: { d: string; o: number; c: string; s?: boolean }[] = [
+  { d: "Bröd & smör", o: 6500, c: "food", s: true },
+  { d: "Charkbricka", o: 24500, c: "food", s: true },
+  { d: "Skaldjursplateau", o: 89000, c: "food", s: true },
+  { d: "Oliver", o: 7900, c: "food", s: true },
+  { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
+  { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
+  { d: "Entrecôte 250g", o: 32900, c: "food" },
+  { d: "Oxfilé", o: 36900, c: "food" },
+  { d: "Fläskkarré", o: 24900, c: "food" },
+  { d: "Wallenbergare", o: 26500, c: "food" },
+  { d: "Räkpasta", o: 23900, c: "food" },
+  { d: "Vegetarisk lasagne", o: 21900, c: "food" },
+  { d: "Stekt torsk", o: 27900, c: "food" },
+  { d: "Lammracks", o: 33900, c: "food" },
+  { d: "Flaska vatten", o: 4500, c: "drink" },
+  { d: "Stor stark", o: 8900, c: "drink" },
+  { d: "Stor stark", o: 8900, c: "drink" },
+  { d: "Stor stark", o: 8900, c: "drink" },
+  { d: "Glas rödvin", o: 11500, c: "drink" },
+  { d: "Glas rödvin", o: 11500, c: "drink" },
+  { d: "Coca-Cola", o: 4500, c: "drink" },
+  { d: "Alkoholfri öl", o: 6900, c: "drink" },
+  { d: "Bryggkaffe", o: 3900, c: "drink" },
+  { d: "Bryggkaffe", o: 3900, c: "drink" },
+  { d: "Bryggkaffe", o: 3900, c: "drink" },
+  { d: "Bryggkaffe", o: 3900, c: "drink" },
+  { d: "Crème brûlée", o: 9900, c: "dessert" },
+  { d: "Crème brûlée", o: 9900, c: "dessert" },
+  { d: "Kladdkaka med glass", o: 8900, c: "dessert" },
+  { d: "Glass", o: 6900, c: "dessert" },
+  { d: "Cheesecake", o: 9900, c: "dessert" },
+];
+
 /** Currencies the host can pick from when correcting a mis-detected receipt. */
 const COMMON_CURRENCIES = [
   "SEK", "EUR", "USD", "GBP", "NOK", "DKK", "CHF", "ISK", "JPY", "THB",
@@ -147,6 +183,25 @@ export default function Page() {
   const [undoItem, setUndoItem] = useState<UiItem | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
+  // "/?demo=1": load a sample order so the split flow can be tested end-to-end.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("demo") == null) return;
+    setItems(
+      DEMO_ORDER.map((x) => ({
+        id: uid(),
+        description: x.d,
+        priceInput: formatOre(x.o),
+        sharers: [],
+        shared: !!x.s,
+        category: x.c,
+        imgIndex: -1,
+      })),
+    );
+    setMealLabel("Demomiddag");
+    setStep("items");
+  }, []);
   const [images, setImages] = useState<string[]>([]);
   // Foreign-currency context: amounts are always stored in SEK öre; these drive
   // the dual-currency display. null currency / rate=1 means a plain SEK receipt.
@@ -779,7 +834,7 @@ export default function Page() {
           <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_BUILD_ID && <>v{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
-            <a href="/debug/icons" className="underline">icons</a>
+            <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
           </p>
 
           <div className="relative mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
