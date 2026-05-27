@@ -31,6 +31,11 @@ const R = {
     copied: "Kopierad!",
     youCollect: "Du samlar in",
     yourShareNote: "Din egen del – du swishar inte dig själv.",
+    remainingToCollect: "Kvar att få in",
+    paidProgress: (paid: number, total: number) => `${paid} av ${total} har betalat`,
+    allCollected: "Allt inbetalt ✓",
+    ownShare: "Din egen del",
+    dontPaySelf: "du betalar inte dig själv",
     itemsTitle: "Vad åt du?",
     claimHint: "Tryck på det du åt. Delar ni på något tar ni samma rad.",
     sharedBy: (n: number) => `delas av ${n}`,
@@ -70,6 +75,11 @@ const R = {
     copied: "Copied!",
     youCollect: "You collect",
     yourShareNote: "Your own share — you don't Swish yourself.",
+    remainingToCollect: "Remaining to collect",
+    paidProgress: (paid: number, total: number) => `${paid} of ${total} paid`,
+    allCollected: "All collected ✓",
+    ownShare: "Your own share",
+    dontPaySelf: "you don't pay yourself",
     itemsTitle: "What did you have?",
     claimHint: "Tap what you had. Sharing something? You both tap it.",
     sharedBy: (n: number) => `shared by ${n}`,
@@ -290,6 +300,15 @@ export default function RoomPage() {
       ? { currency: state.currency, rate: state.rate }
       : null;
 
+  // What the host still needs to collect: everyone else's shares, minus those
+  // already marked paid. Their own share isn't collected.
+  const paidSet = new Set(state.paidBy ?? []);
+  const otherShares = shares.filter((s) => s.dinerId !== state.payeePersonId && s.totalOre > 0);
+  const paidCount = otherShares.filter((s) => paidSet.has(s.dinerId)).length;
+  const toCollectOre = otherShares.filter((s) => !paidSet.has(s.dinerId)).reduce((a, s) => a + s.totalOre, 0);
+  const claimedNamesFor = (dinerId: string) =>
+    state.items.filter((i) => i.claimedBy.includes(dinerId)).map((i) => i.description);
+
   return (
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
@@ -453,15 +472,19 @@ export default function RoomPage() {
         </section>
       ) : (
         <>
-          {isPayee && (
-            <div className="-mb-1 flex justify-end">
-              <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium text-swish-dark active:opacity-70">
-                ✏️ {t.editItems}
-              </button>
-            </div>
-          )}
           <section>
-            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+              {isPayee && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="shrink-0 rounded-full bg-swish/10 px-3.5 py-1.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"
+                >
+                  ✏️ {t.editItems}
+                </button>
+              )}
+            </div>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
               {CATEGORY_ORDER.map((cat) => {
@@ -558,11 +581,24 @@ export default function RoomPage() {
           {myShare && (
             isPayee ? (
               <section className="rounded-2xl border border-dashed border-gray-300 bg-white/60 p-4">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-semibold">{t.youCollect}</span>
-                  <Money ore={myShare.totalOre} className="text-gray-600" />
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold">{t.remainingToCollect}</span>
+                  {toCollectOre > 0 ? (
+                    <Money ore={toCollectOre} className="text-xl font-bold text-swish-dark" />
+                  ) : otherShares.length > 0 ? (
+                    <span className="text-sm font-semibold text-emerald-600">{t.allCollected}</span>
+                  ) : (
+                    <Money ore={0} className="text-xl font-bold text-swish-dark" />
+                  )}
                 </div>
-                <p className="mt-1 text-xs text-gray-500">{t.yourShareNote}</p>
+                {otherShares.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">{t.paidProgress(paidCount, otherShares.length)}</p>
+                )}
+                {myShare.totalOre > 0 && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    {t.ownShare} <Money ore={myShare.totalOre} className="font-medium" /> · {t.dontPaySelf}
+                  </p>
+                )}
               </section>
             ) : myShare.totalOre > 0 ? (
               <QrCard
@@ -591,15 +627,19 @@ export default function RoomPage() {
                 const isPaid = (state.paidBy ?? []).includes(s.dinerId);
                 // The host (collector) or the person themselves can settle a share.
                 const canToggle = !isHostRow && s.totalOre > 0 && (isPayee || s.dinerId === personId);
+                const claimed = claimedNamesFor(s.dinerId);
                 return (
                   <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
                       {initials(nameById.get(s.dinerId) ?? "?")}
                     </span>
-                    <span className="flex-1 truncate text-sm font-medium">
-                      {nameById.get(s.dinerId)}
-                      {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
-                      {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {nameById.get(s.dinerId)}
+                        {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
+                        {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
+                      </span>
+                      {claimed.length > 0 && <span className="truncate text-[11px] text-gray-400">{claimed.join(", ")}</span>}
                     </span>
                     {!isHostRow && s.totalOre > 0 ? (
                       <button
