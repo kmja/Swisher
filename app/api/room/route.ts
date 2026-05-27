@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     country?: string;
     method?: string;
     payeeIban?: string;
-    items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown }[];
+    items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown }[];
   };
   try {
     body = await req.json();
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
       category: typeof it?.category === "string" ? it.category : undefined,
       emoji: typeof it?.emoji === "string" ? it.emoji : undefined,
       shared: it?.shared === true,
+      shareCount: Number.isFinite(Number(it?.shareCount)) && Number(it?.shareCount) > 0 ? Math.round(Number(it?.shareCount)) : undefined,
     }))
     .filter((it) => it.description && Number.isFinite(it.priceOre) && it.priceOre > 0)
     .slice(0, 100);

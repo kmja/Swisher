@@ -31,7 +31,7 @@ export function Money({
 }) {
   const fx = useFx();
   const native = formatNative(ore, fx);
-  const main = `${formatOre(ore)} kr`;
+  const main = `${formatOre(ore)} SEK`;
   if (!native) return <span className={className}>{main}</span>;
   if (stack) {
     return (

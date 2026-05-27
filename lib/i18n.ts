@@ -90,6 +90,7 @@ export interface Strings {
   sharedToggle: string;
   shareThis: string;
   sharedSplit: (n: number, amt: string) => string;
+  splitWays: string;
 
   // flow
   splitYourself: string;
@@ -174,7 +175,7 @@ const sv: Strings = {
   receiptTotalLabel: "Kvittots total",
   chargedLabel: "Betalat (kort)",
   totalDiff: (amt) =>
-    `Summan stämmer inte – ${amt} kr ifrån kvittots total. Kontrollera om en rad saknas eller är felläst.`,
+    `Summan stämmer inte – ${amt} SEK ifrån kvittots total. Kontrollera om en rad saknas eller är felläst.`,
   payerTitle: "Vem la ut för notan?",
   payerHint: "Den första personen får pengarna via Swish.",
   yourName: "Ditt namn",
@@ -191,16 +192,16 @@ const sv: Strings = {
   rowFallback: "Rad",
   clear: "Rensa",
   all: "Alla",
-  perPerson: (amt) => `≈ ${amt} kr per person`,
+  perPerson: (amt) => `≈ ${amt} SEK per person`,
   notAssignedYet: "Inte fördelad än",
-  unassignedNote: (amt) => `${amt} kr är inte fördelat och räknas inte med.`,
+  unassignedNote: (amt) => `${amt} SEK är inte fördelat och räknas inte med.`,
 
   payTitle: "Betala",
   tip: "Dricks",
   none: "Ingen",
   customPercent: "Eget värde (%)",
   toDistribute: "Att fördela",
-  unassignedWarn: (amt) => `Obs: ${amt} kr är inte fördelat.`,
+  unassignedWarn: (amt) => `Obs: ${amt} SEK är inte fördelat.`,
   payerCard: (name) => `${name} (du – får pengarna)`,
   payerCardHint: "Din egen del. Du swishar inte dig själv.",
 
@@ -220,13 +221,14 @@ const sv: Strings = {
   sharedGroupPrompt: "Ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
   shareThis: "Dela",
-  sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} kr/pers`,
+  sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} SEK/pers`,
+  splitWays: "Dela på",
 
   splitYourself: "Dela upp själv i stället",
   assignManually: "Fördela på nästa steg →",
-  tipSplitNote: (amt) => `Dricks ${amt} kr från kvittot – delas lika`,
+  tipSplitNote: (amt) => `Dricks ${amt} SEK från kvittot – delas lika`,
 
-  currency: "kr",
+  currency: "SEK",
   mealDefault: "Middag",
 
   fxLine: (country, currency, rate) => `${country} · priser omräknade från ${currency} (1 ${currency} ≈ ${rate})`,
@@ -238,8 +240,8 @@ const sv: Strings = {
   newReceipt: "Nytt kvitto",
 
   shareTitle: (name) => `Swish – ${name}`,
-  shareText: (name, amt) => `${name}: ${amt} kr`,
-  payWithSwish: (amt) => `Betala ${amt} kr med Swish`,
+  shareText: (name, amt) => `${name}: ${amt} SEK`,
+  payWithSwish: (amt) => `Betala ${amt} SEK med Swish`,
   qrError: "Kunde inte skapa QR-kod. Använd länken nedan.",
   qrAlt: (name) => `Swish QR-kod för ${name}`,
   qrLockedTo: (payee) => `Skanna med valfri telefon · betalningen är låst till ${payee}`,
@@ -260,7 +262,7 @@ const sv: Strings = {
   sepaTo: (name) => `Till ${name}`,
   copyIban: "Kopiera IBAN",
   ibanCopied: "IBAN kopierat!",
-  haveSwish: (amt) => `Har du Swish? Betala ${amt} kr i stället`,
+  haveSwish: (amt) => `Har du Swish? Betala ${amt} SEK i stället`,
   sepaSettlesEur: "Betalningar sker i euro via banköverföring (SEPA).",
 };
 
@@ -300,7 +302,7 @@ const en: Strings = {
   receiptTotalLabel: "Receipt total",
   chargedLabel: "Charged (card)",
   totalDiff: (amt) =>
-    `The sums don't match — ${amt} kr from the receipt total. Check for a missing or misread row.`,
+    `The sums don't match — ${amt} SEK from the receipt total. Check for a missing or misread row.`,
   payerTitle: "Who paid the bill?",
   payerHint: "This person receives the money via Swish.",
   yourName: "Your name",
@@ -317,16 +319,16 @@ const en: Strings = {
   rowFallback: "Item",
   clear: "Clear",
   all: "All",
-  perPerson: (amt) => `≈ ${amt} kr each`,
+  perPerson: (amt) => `≈ ${amt} SEK each`,
   notAssignedYet: "Not assigned yet",
-  unassignedNote: (amt) => `${amt} kr is unassigned and not counted.`,
+  unassignedNote: (amt) => `${amt} SEK is unassigned and not counted.`,
 
   payTitle: "Pay",
   tip: "Tip",
   none: "None",
   customPercent: "Custom (%)",
   toDistribute: "To split",
-  unassignedWarn: (amt) => `Note: ${amt} kr is unassigned.`,
+  unassignedWarn: (amt) => `Note: ${amt} SEK is unassigned.`,
   payerCard: (name) => `${name} (you – receive the money)`,
   payerCardHint: "Your own share. You don't Swish yourself.",
 
@@ -346,13 +348,14 @@ const en: Strings = {
   sharedGroupPrompt: "You have shared items — how many are you?",
   sharedToggle: "Shared",
   shareThis: "Share",
-  sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} kr each`,
+  sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} SEK each`,
+  splitWays: "Split",
 
   splitYourself: "Split it yourself instead",
   assignManually: "Assign on the next screen →",
-  tipSplitNote: (amt) => `${amt} kr tip from the receipt — split equally`,
+  tipSplitNote: (amt) => `${amt} SEK tip from the receipt — split equally`,
 
-  currency: "kr",
+  currency: "SEK",
   mealDefault: "Dinner",
 
   fxLine: (country, currency, rate) => `${country} · prices converted from ${currency} (1 ${currency} ≈ ${rate})`,
@@ -364,8 +367,8 @@ const en: Strings = {
   newReceipt: "New receipt",
 
   shareTitle: (name) => `Swish – ${name}`,
-  shareText: (name, amt) => `${name}: ${amt} kr`,
-  payWithSwish: (amt) => `Pay ${amt} kr with Swish`,
+  shareText: (name, amt) => `${name}: ${amt} SEK`,
+  payWithSwish: (amt) => `Pay ${amt} SEK with Swish`,
   qrError: "Couldn't create a QR code. Use the link below.",
   qrAlt: (name) => `Swish QR code for ${name}`,
   qrLockedTo: (payee) => `Scan with any phone · payment is locked to ${payee}`,
@@ -386,7 +389,7 @@ const en: Strings = {
   sepaTo: (name) => `To ${name}`,
   copyIban: "Copy IBAN",
   ibanCopied: "IBAN copied!",
-  haveSwish: (amt) => `Have Swish? Pay ${amt} kr instead`,
+  haveSwish: (amt) => `Have Swish? Pay ${amt} SEK instead`,
   sepaSettlesEur: "Payments are made in euros via bank transfer (SEPA).",
 };
 

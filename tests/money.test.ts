@@ -74,6 +74,13 @@ describe("computeShares", () => {
     expect(unassignedOre).toBe(5000); // two of four group members aren't present
   });
 
+  it("honours a per-item share count over the group size", () => {
+    const items: LineItem[] = [{ id: "1", description: "bottle", priceOre: 12000, sharers: [], shared: true, shareCount: 4 }];
+    const { shares, unassignedOre } = computeShares(items, diners); // 2 diners present
+    expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(3000); // 12000 / 4
+    expect(unassignedOre).toBe(6000); // two of the four shares aren't present
+  });
+
   it("splits the tip equally on top", () => {
     const { shares } = computeShares([], diners, 6000);
     expect(shares.map((s) => s.tipOre)).toEqual([3000, 3000]);
@@ -105,6 +112,17 @@ describe("computeRoomShares", () => {
     expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(3000);
     expect(shares.find((s) => s.dinerId === "C")?.subtotalOre).toBe(0);
     expect(unassignedOre).toBe(3000);
+  });
+
+  it("respects a per-item share count instead of the room size", () => {
+    // shareCount 2 with the two who kept it claimed → fully covered, nothing banked
+    const { shares, unassignedOre } = computeRoomShares(
+      [{ priceOre: 10000, shared: true, shareCount: 2, claimedBy: ["A", "B"] }],
+      people,
+    );
+    expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(5000);
+    expect(shares.find((s) => s.dinerId === "B")?.subtotalOre).toBe(5000);
+    expect(unassignedOre).toBe(0);
   });
 
   it("splits a normal item among its claimers and the tip across everyone", () => {

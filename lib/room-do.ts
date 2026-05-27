@@ -9,6 +9,8 @@ export type RoomItem = {
   emoji?: string;
   /** Split across the whole group (pre-claimed for everyone), not claim-one. */
   shared?: boolean;
+  /** Fixed number of ways a shared item splits; falls back to the room size. */
+  shareCount?: number;
   /** Person ids who claimed this item. Multiple claimers = split equally. */
   claimedBy: string[];
 };
@@ -56,7 +58,7 @@ export type RoomInit = {
   currency?: string;
   rate?: number;
   country?: string;
-  items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean }[];
+  items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -101,6 +103,7 @@ export class RoomDO extends DurableObject {
         category: it.category,
         emoji: it.emoji,
         shared: it.shared === true,
+        shareCount: typeof it.shareCount === "number" && it.shareCount > 0 ? Math.round(it.shareCount) : undefined,
         // Shared items start claimed by the host (and each diner as they join).
         claimedBy: it.shared === true ? [host.id] : [],
       })),
@@ -161,8 +164,12 @@ export class RoomDO extends DurableObject {
     return state;
   }
 
-  /** Host-only: fix a mis-read line (description / price in öre). */
-  async editItem(actorId: string, itemId: string, patch: { description?: string; priceOre?: number }): Promise<RoomState | null> {
+  /** Host-only: fix a mis-read line (description, price in öre, shared/count). */
+  async editItem(
+    actorId: string,
+    itemId: string,
+    patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number | null },
+  ): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
     if (actorId !== state.payeePersonId) return state;
@@ -172,6 +179,13 @@ export class RoomDO extends DurableObject {
       if (typeof patch.priceOre === "number" && Number.isFinite(patch.priceOre) && patch.priceOre >= 0) {
         item.priceOre = Math.round(patch.priceOre);
       }
+      if (typeof patch.shared === "boolean" && patch.shared !== item.shared) {
+        item.shared = patch.shared;
+        // Turning shared on pre-claims it for everyone (matches join behaviour).
+        if (patch.shared) item.claimedBy = state.people.map((p) => p.id);
+      }
+      if (patch.shareCount === null || patch.shareCount === 0) item.shareCount = undefined;
+      else if (typeof patch.shareCount === "number" && patch.shareCount > 0) item.shareCount = Math.round(patch.shareCount);
       await this.save(state);
     }
     return state;

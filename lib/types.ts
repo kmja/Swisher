@@ -7,6 +7,8 @@ export type LineItem = {
   sharers: string[];
   /** Split across the whole group rather than specific diners. */
   shared?: boolean;
+  /** Fixed number of ways a shared item splits; falls back to the group size. */
+  shareCount?: number;
 };
 
 export type Diner = {

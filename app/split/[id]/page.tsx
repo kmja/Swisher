@@ -55,7 +55,7 @@ const R = {
 
 function money(ore: number, fx: Fx): string {
   const native = formatNative(ore, fx);
-  return `${formatOre(ore)} kr${native ? ` · ${native}` : ""}`;
+  return `${formatOre(ore)} SEK${native ? ` · ${native}` : ""}`;
 }
 
 export default function SplitPage() {
@@ -145,7 +145,7 @@ export default function SplitPage() {
           {fx && (
             <p className="mt-0.5 text-xs text-gray-400">
               {split.country ? `${flagEmoji(split.country)} ${regionName(split.country, lang)} · ` : ""}
-              {`1 ${fx.currency} ≈ ${formatOre(Math.round(fx.rate * 100))} kr`}
+              {`1 ${fx.currency} ≈ ${formatOre(Math.round(fx.rate * 100))} SEK`}
             </p>
           )}
           <div className="mt-2 flex items-baseline justify-between border-t border-gray-100 pt-2">

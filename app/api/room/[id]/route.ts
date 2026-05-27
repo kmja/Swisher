@@ -38,6 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     description?: string;
     priceOre?: number;
     shared?: boolean;
+    shareCount?: number | null;
   };
   try {
     body = await req.json();
@@ -62,9 +63,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ state });
     }
     case "edit": {
-      const patch: { description?: string; priceOre?: number } = {};
+      const patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number | null } = {};
       if (typeof body.description === "string") patch.description = body.description;
       if (typeof body.priceOre === "number") patch.priceOre = body.priceOre;
+      if (typeof body.shared === "boolean") patch.shared = body.shared;
+      if (body.shareCount === null || typeof body.shareCount === "number") patch.shareCount = body.shareCount;
       const state = await stub.editItem(String(body.personId ?? ""), String(body.itemId ?? ""), patch);
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });

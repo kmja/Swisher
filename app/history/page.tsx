@@ -65,7 +65,7 @@ type Summary =
 
 function money(ore: number, fx: Fx): string {
   const native = formatNative(ore, fx);
-  return `${formatOre(ore)} kr${native ? ` · ${native}` : ""}`;
+  return `${formatOre(ore)} SEK${native ? ` · ${native}` : ""}`;
 }
 
 export default function HistoryPage() {

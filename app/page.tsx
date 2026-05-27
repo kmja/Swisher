@@ -31,6 +31,8 @@ type UiItem = {
   emoji?: string;
   /** Tip row — shared by everyone, kept out of the food/bill total. */
   isTip?: boolean;
+  /** Fixed number of ways a shared item splits; falls back to the group size. */
+  shareCount?: number;
 };
 
 const uid = () =>
@@ -606,9 +608,14 @@ export default function Page() {
   }
   function toggleShared(itemId: string) {
     setItems((prev) =>
-      prev.map((it) => (it.id === itemId ? { ...it, shared: !it.shared, sharers: [] } : it)),
+      prev.map((it) => (it.id === itemId ? { ...it, shared: !it.shared, sharers: [], shareCount: undefined } : it)),
     );
   }
+  // Ways a shared item splits: its own count, else the group size, else the
+  // number of diners — never below 2 (sharing one way makes no sense).
+  const itemDivisorFor = (it: UiItem) =>
+    Math.max(2, it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize > 0 ? groupSize : namedDiners.length);
+  const setShareCount = (id: string, n: number) => updateItem(id, { shareCount: Math.max(2, Math.min(50, n)) });
 
   // --- live room -------------------------------------------------------------
   const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && payDestOk;
@@ -641,6 +648,7 @@ export default function Page() {
             // Shared items split across the whole room (pre-claimed for everyone),
             // rather than becoming separate claimable slots.
             shared: it.shared,
+            shareCount: it.shareCount,
           })),
         }),
       });
@@ -668,6 +676,7 @@ export default function Page() {
         priceOre: parseAmountToOre(it.priceInput) ?? 0,
         sharers: it.sharers,
         shared: it.shared,
+        shareCount: it.shareCount,
       })),
     [foodItems],
   );
@@ -911,7 +920,7 @@ export default function Page() {
                 {t.fxLine(
                   country ? `${flagEmoji(country)} ${regionName(country, lang)}` : "🌍",
                   currency,
-                  `${formatOre(Math.round((fxRate ?? 0) * 100))} kr${rateDate ? `, ${rateDate}` : ""}`,
+                  `${formatOre(Math.round((fxRate ?? 0) * 100))} SEK${rateDate ? `, ${rateDate}` : ""}`,
                 )}
                 {rateApprox && ` · ${t.fxApprox}`}
               </p>
@@ -924,6 +933,7 @@ export default function Page() {
               {items.map((it, idx) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
+                const d = itemDivisorFor(it);
                 return (
                 <div
                   key={it.id}
@@ -981,9 +991,27 @@ export default function Page() {
                         />
                         {t.sharedToggle}
                       </label>
-                      {it.shared && divisor >= 2 && (
-                        <span className="text-gray-500">
-                          <Money ore={rowOre} /> · {t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}
+                      {it.shared && (
+                        <span className="inline-flex items-center gap-1.5 text-gray-500">
+                          <span>{t.splitWays}</span>
+                          <button
+                            type="button"
+                            aria-label="−"
+                            onClick={() => setShareCount(it.id, d - 1)}
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                          >
+                            −
+                          </button>
+                          <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
+                          <button
+                            type="button"
+                            aria-label="+"
+                            onClick={() => setShareCount(it.id, d + 1)}
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                          >
+                            +
+                          </button>
+                          <span className="text-gray-400">≈ {formatOre(Math.floor(rowOre / d))} SEK</span>
                         </span>
                       )}
                     </div>
@@ -1133,7 +1161,7 @@ export default function Page() {
                   <button
                     type="button"
                     aria-label="−"
-                    onClick={() => setGroupSize(Math.max(0, groupSize - 1))}
+                    onClick={() => setGroupSize(Math.max(2, groupSize - 1))}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xl font-bold text-gray-600 active:bg-gray-200"
                   >
                     −
@@ -1142,7 +1170,7 @@ export default function Page() {
                   <button
                     type="button"
                     aria-label="+"
-                    onClick={() => setGroupSize(Math.min(50, groupSize + 1))}
+                    onClick={() => setGroupSize(Math.min(50, Math.max(2, groupSize + 1)))}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-swish text-xl font-bold text-white active:bg-swish-dark"
                   >
                     +
@@ -1237,7 +1265,10 @@ export default function Page() {
               min={0}
               inputMode="numeric"
               value={groupSize || ""}
-              onChange={(e) => setGroupSize(Math.max(0, Math.min(50, Number(e.target.value) || 0)))}
+              onChange={(e) => {
+                const v = Number(e.target.value) || 0;
+                setGroupSize(v <= 0 ? 0 : Math.max(2, Math.min(50, v)));
+              }}
               placeholder={String(namedDiners.length)}
               className="w-16 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none"
             />
@@ -1254,11 +1285,9 @@ export default function Page() {
                 </div>
                 {groupItems.map((it) => {
             const priceOre = parseAmountToOre(it.priceInput) ?? 0;
-            const sharedDivisor = groupSize > 0 ? groupSize : namedDiners.length;
+            const d = itemDivisorFor(it);
             const per = it.shared
-              ? sharedDivisor > 0
-                ? Math.floor(priceOre / sharedDivisor)
-                : 0
+              ? Math.floor(priceOre / d)
               : it.sharers.length > 0
                 ? Math.floor(priceOre / it.sharers.length)
                 : 0;
@@ -1286,7 +1315,29 @@ export default function Page() {
                     />
                     {t.sharedToggle}
                   </label>
-                  {it.shared && <span className="text-xs text-gray-500">{t.sharedSplit(sharedDivisor, formatOre(per))}</span>}
+                  {it.shared && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                      <span>{t.splitWays}</span>
+                      <button
+                        type="button"
+                        aria-label="−"
+                        onClick={() => setShareCount(it.id, d - 1)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                      >
+                        −
+                      </button>
+                      <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => setShareCount(it.id, d + 1)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                      >
+                        +
+                      </button>
+                      <span className="text-gray-400">≈ {formatOre(per)} SEK</span>
+                    </span>
+                  )}
                 </div>
 
                 {!it.shared && (

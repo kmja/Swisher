@@ -84,7 +84,8 @@ export function computeShares(
   let unassignedOre = 0;
   for (const item of items) {
     if (item.shared) {
-      const divisor = groupSize > 0 ? groupSize : diners.length;
+      const divisor =
+        item.shareCount && item.shareCount > 0 ? item.shareCount : groupSize > 0 ? groupSize : diners.length;
       if (divisor <= 0) {
         unassignedOre += item.priceOre;
         continue;
@@ -137,7 +138,7 @@ export function sumItemsOre(items: LineItem[]): number {
  * splits equally across everyone.
  */
 export function computeRoomShares(
-  items: { priceOre: number; shared?: boolean; claimedBy: string[] }[],
+  items: { priceOre: number; shared?: boolean; shareCount?: number; claimedBy: string[] }[],
   people: Diner[],
   tipOre = 0,
 ): { shares: Share[]; unassignedOre: number } {
@@ -149,7 +150,8 @@ export function computeRoomShares(
   for (const item of items) {
     const claimers = item.claimedBy.filter((id) => subtotals.has(id));
     if (item.shared) {
-      const parts = splitOre(item.priceOre, Math.max(1, n));
+      const divisor = item.shareCount && item.shareCount > 0 ? item.shareCount : Math.max(1, n);
+      const parts = splitOre(item.priceOre, divisor);
       claimers.forEach((id, i) => {
         if (i < parts.length) subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);
       });

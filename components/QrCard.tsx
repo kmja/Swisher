@@ -110,7 +110,7 @@ export default function QrCard({
         {isSepa ? (
           <span className="inline-flex shrink-0 flex-col items-end leading-tight text-xl font-bold text-swish-dark">
             <span>{formatEur(eurCents!)}</span>
-            <span className="text-xs font-normal text-gray-400">≈ {sekAmount} kr</span>
+            <span className="text-xs font-normal text-gray-400">≈ {sekAmount} SEK</span>
           </span>
         ) : (
           <Money ore={amountOre} stack className="shrink-0 text-xl font-bold text-swish-dark" />

@@ -34,7 +34,7 @@ const R = {
     itemsTitle: "Vad åt du?",
     claimHint: "Tryck på det du åt. Delar ni på något tar ni samma rad.",
     sharedBy: (n: number) => `delas av ${n}`,
-    eachShort: (amt: string) => `≈ ${amt} kr/pers`,
+    eachShort: (amt: string) => `≈ ${amt} SEK/pers`,
     peopleTitle: "Vilka är med",
     unclaimed: (n: number) => `${n} rad${n === 1 ? "" : "er"} ofördelade`,
     allClaimed: "Allt är fördelat",
@@ -73,7 +73,7 @@ const R = {
     itemsTitle: "What did you have?",
     claimHint: "Tap what you had. Sharing something? You both tap it.",
     sharedBy: (n: number) => `shared by ${n}`,
-    eachShort: (amt: string) => `≈ ${amt} kr each`,
+    eachShort: (amt: string) => `≈ ${amt} SEK each`,
     peopleTitle: "Who's in",
     unclaimed: (n: number) => `${n} item${n === 1 ? "" : "s"} unassigned`,
     allClaimed: "Everything's assigned",
@@ -235,7 +235,7 @@ export default function RoomPage() {
     if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
   }
 
-  function editItem(itemId: string, patch: { description?: string; priceOre?: number }) {
+  function editItem(itemId: string, patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number }) {
     return postAction({ action: "edit", itemId, ...patch });
   }
   function removeItemRow(itemId: string) {
@@ -312,7 +312,7 @@ export default function RoomPage() {
             {roomFx && (
               <p className="mt-0.5 text-xs text-gray-400">
                 {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
-                {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} kr`}
+                {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} SEK`}
               </p>
             )}
           </div>
@@ -365,29 +365,67 @@ export default function RoomPage() {
             </button>
           </div>
           <div className="space-y-2">
-            {state.items.map((it) => (
-              <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
-                <input
-                  defaultValue={it.description}
-                  onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
-                  placeholder={t.descPh}
-                  className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                />
-                <input
-                  defaultValue={formatOre(it.priceOre)}
-                  onBlur={(e) => {
-                    const o = parseAmountToOre(e.target.value);
-                    if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
-                  }}
-                  inputMode="decimal"
-                  placeholder={t.pricePh}
-                  className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                />
-                <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
-                  ✕
-                </button>
-              </div>
-            ))}
+            {state.items.map((it) => {
+              const d = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, state.people.length);
+              return (
+                <div key={it.id} className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      defaultValue={it.description}
+                      onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
+                      placeholder={t.descPh}
+                      className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                    />
+                    <input
+                      defaultValue={formatOre(it.priceOre)}
+                      onBlur={(e) => {
+                        const o = parseAmountToOre(e.target.value);
+                        if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
+                      }}
+                      inputMode="decimal"
+                      placeholder={t.pricePh}
+                      className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                    />
+                    <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
+                      ✕
+                    </button>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 pl-1 text-xs text-gray-500">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!!it.shared}
+                        onChange={() => editItem(it.id, { shared: !it.shared })}
+                        className="h-4 w-4 rounded border-gray-300 accent-swish"
+                      />
+                      {tx.sharedToggle}
+                    </label>
+                    {it.shared && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{tx.splitWays}</span>
+                        <button
+                          type="button"
+                          aria-label="−"
+                          onClick={() => editItem(it.id, { shareCount: Math.max(2, d - 1) })}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center font-semibold tabular-nums text-gray-700">{d}</span>
+                        <button
+                          type="button"
+                          aria-label="+"
+                          onClick={() => editItem(it.id, { shareCount: Math.min(50, d + 1) })}
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          +
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5">
             <input
