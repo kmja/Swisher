@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { emojiFor } from "../lib/categories";
+import { emojiFor, sharedSuggestion } from "../lib/categories";
+
+describe("sharedSuggestion", () => {
+  it("auto-marks near-certain shared lines", () => {
+    expect(sharedSuggestion("Flaska Rioja 75cl")).toBe("auto");
+    expect(sharedSuggestion("Plankstek för 2")).toBe("auto");
+    expect(sharedSuggestion("Antipasti")).toBe("auto");
+    expect(sharedSuggestion("Skaldjursplateau att dela")).toBe("auto");
+  });
+  it("only suggests for often-but-not-always shared items", () => {
+    expect(sharedSuggestion("Vitlöksbröd")).toBe("suggest");
+    expect(sharedSuggestion("Nachos")).toBe("suggest");
+    expect(sharedSuggestion("Flaska vatten")).toBe("suggest"); // a bottle, but maybe individual water
+  });
+  it("stays out of the way for individual servings", () => {
+    expect(sharedSuggestion("Stor stark")).toBeNull();
+    expect(sharedSuggestion("Glas rödvin")).toBeNull();
+    expect(sharedSuggestion("Cappuccino")).toBeNull();
+  });
+});
 
 describe("emojiFor", () => {
   it("maps common items to emoji", () => {

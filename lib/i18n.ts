@@ -91,6 +91,7 @@ export interface Strings {
   shareThis: string;
   sharedSplit: (n: number, amt: string) => string;
   splitWays: string;
+  maybeShared: string;
 
   // flow
   splitYourself: string;
@@ -223,6 +224,7 @@ const sv: Strings = {
   shareThis: "Dela",
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} SEK/pers`,
   splitWays: "Dela på",
+  maybeShared: "Delas?",
 
   splitYourself: "Dela upp själv i stället",
   assignManually: "Fördela på nästa steg →",
@@ -350,6 +352,7 @@ const en: Strings = {
   shareThis: "Share",
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} SEK each`,
   splitWays: "Split",
+  maybeShared: "Shared?",
 
   splitYourself: "Split it yourself instead",
   assignManually: "Assign on the next screen →",

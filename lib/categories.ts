@@ -212,6 +212,31 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["kaka", "cake", "cheesecake", "tårta", "ostkaka", "kladdkaka", "muffins", "cupcake"]), "🍰"],
 ];
 
+// --- shared-item detection -------------------------------------------------
+// A deterministic second layer on top of the model's `shared` guess. "auto"
+// cues are near-certain (we mark them shared automatically); "suggest" cues are
+// often-but-not-always shared (we only hint, the user confirms).
+const autoSharedMatch = makeMatcher([
+  "att dela", "to share", "för bordet", "till bordet", "för två", "for two", "for the table", "fruits de mer",
+  "75cl", "70cl", "100cl", "150cl", "magnum", "helflaska", "karaff", "carafe", "tillbringare", "pitcher",
+  "plankstek", "plateau", "charkbricka", "ostbricka", "delikatessbricka", "skaldjursplatå", "skaldjursplateau",
+  "delningsbricka", "antipasti", "antipasto", "tapas", "meze", "mezze",
+]);
+const maybeSharedMatch = makeMatcher([
+  "mixed grill", "blandad grill", "flaska", "btl", "bottle", "bröd", "vitlöksbröd", "oliver", "olives",
+  "nachos", "guacamole", "hummus", "bruschetta", "lökringar", "edamame",
+]);
+
+/**
+ * Whether an item description looks like a shared one. "auto" = mark it shared
+ * automatically; "suggest" = offer a one-tap hint; null = no signal.
+ */
+export function sharedSuggestion(description: string): "auto" | "suggest" | null {
+  if (autoSharedMatch(description)) return "auto";
+  if (maybeSharedMatch(description)) return "suggest";
+  return null;
+}
+
 /** A model-supplied emoji is usable only if it's an emoji, not stray text. */
 function isEmoji(s: string | undefined): s is string {
   return !!s && s.length <= 8 && !/[a-z0-9]/i.test(s);

@@ -7,7 +7,7 @@ import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban } from "@/lib/sepa";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
-import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
@@ -431,7 +431,9 @@ export default function Page() {
         description: it.description,
         priceInput: formatOre(Math.round(it.price * 100)),
         sharers: [],
-        shared: it.shared === true,
+        // Trust the model's call, but auto-mark near-certain shared lines it missed
+        // (a 75cl bottle, a sharing platter, "att dela", …).
+        shared: it.shared === true || sharedSuggestion(it.description) === "auto",
         category: it.category ?? "",
         emoji: it.emoji,
         imgIndex,
@@ -997,6 +999,15 @@ export default function Page() {
                         />
                         {t.sharedToggle}
                       </label>
+                      {!it.shared && sharedSuggestion(it.description) && (
+                        <button
+                          type="button"
+                          onClick={() => toggleShared(it.id)}
+                          className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
+                        >
+                          {t.maybeShared}
+                        </button>
+                      )}
                       {it.shared && (
                         <span className="inline-flex items-center gap-1.5 text-gray-500">
                           <span>{t.splitWays}</span>
