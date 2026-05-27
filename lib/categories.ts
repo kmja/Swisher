@@ -219,7 +219,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
 const autoSharedMatch = makeMatcher([
   "att dela", "to share", "för bordet", "till bordet", "för två", "for two", "for the table", "fruits de mer",
   "75cl", "70cl", "100cl", "150cl", "magnum", "helflaska", "karaff", "carafe", "tillbringare", "pitcher",
-  "plankstek", "plateau", "charkbricka", "ostbricka", "delikatessbricka", "skaldjursplatå", "skaldjursplateau",
+  "plateau", "charkbricka", "ostbricka", "delikatessbricka", "skaldjursplatå", "skaldjursplateau",
   "delningsbricka", "antipasti", "antipasto", "tapas", "meze", "mezze",
 ]);
 const maybeSharedMatch = makeMatcher([

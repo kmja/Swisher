@@ -4,9 +4,11 @@ import { emojiFor, sharedSuggestion } from "../lib/categories";
 describe("sharedSuggestion", () => {
   it("auto-marks near-certain shared lines", () => {
     expect(sharedSuggestion("Flaska Rioja 75cl")).toBe("auto");
-    expect(sharedSuggestion("Plankstek för 2")).toBe("auto");
     expect(sharedSuggestion("Antipasti")).toBe("auto");
     expect(sharedSuggestion("Skaldjursplateau att dela")).toBe("auto");
+  });
+  it("leaves individual mains alone (plankstek is not shared)", () => {
+    expect(sharedSuggestion("Plankstek")).toBeNull();
   });
   it("only suggests for often-but-not-always shared items", () => {
     expect(sharedSuggestion("Vitlöksbröd")).toBe("suggest");
