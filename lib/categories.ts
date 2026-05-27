@@ -42,7 +42,14 @@ function makeMatcher(words: string[]): (desc: string) => boolean {
     // (soda) matches "sockerläsk" but NOT "fläsk" (pork) or "råraka" vs "räka".
     return tokens.some((tok) =>
       whole.has(tok) ||
-      affix.some((w) => tok === w || tok.startsWith(w) || (tok.endsWith(w) && tok.length >= w.length + 3)),
+      affix.some(
+        (w) =>
+          tok === w ||
+          // Compound prefix only for distinctive (≥5-char) words, so a short
+          // keyword like "böna" doesn't swallow a brand like "Bonaqua".
+          (w.length >= 5 && tok.startsWith(w)) ||
+          (tok.endsWith(w) && tok.length >= w.length + 3),
+      ),
     );
   };
 }
@@ -159,7 +166,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["whisky", "whiskey", "vodka", "rom", "tequila", "sprit", "snaps", "nubbe", "shot", "konjak", "cognac", "gin"]), "🥃"],
   [makeMatcher(["kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato", "cortado"]), "☕"],
   [makeMatcher(["te", "tea", "chai"]), "🍵"],
-  [makeMatcher(["läsk", "soda", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "trocadero", "pommac", "champis", "zingo", "loka", "ramlösa", "tonic"]), "🥤"],
+  [makeMatcher(["läsk", "soda", "softdrink", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "trocadero", "pommac", "champis", "zingo", "loka", "ramlösa", "bonaqua", "tonic"]), "🥤"],
   [makeMatcher(["cider", "kopparberg", "rekorderlig", "somersby", "briska"]), "🍏"],
   [makeMatcher(["energidryck", "red bull", "redbull", "nocco"]), "⚡"],
   [makeMatcher(["juice", "apelsinjuice", "äppeljuice", "smoothie", "saft"]), "🧃"],

@@ -19,6 +19,12 @@ describe("emojiFor", () => {
     expect(emojiFor("fläskkarré")).toBe("🥩");
   });
 
+  it("doesn't let a short keyword prefix-match a brand (Bonaqua ≠ broccoli)", () => {
+    expect(emojiFor("Bonaqua")).not.toBe("🥦");
+    expect(emojiFor("S Softdrink nr 2 Bonaqua Glassf")).toBe("🥤");
+    expect(emojiFor("broccoli")).toBe("🥦");
+  });
+
   it("prefers a brand-aware model emoji over the category fallback", () => {
     // A wine brand the keyword rules don't know — the model's 🍷 should win
     // over the generic drink mug.
