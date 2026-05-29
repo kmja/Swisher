@@ -877,7 +877,8 @@ export default function Page() {
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
           <p className="mt-1 text-[11px] text-gray-300">
-            {process.env.NEXT_PUBLIC_BUILD_ID && <>v{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
+            {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
+            {process.env.NEXT_PUBLIC_BUILD_ID && <>{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
             <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
           </p>
 
