@@ -50,6 +50,8 @@ const R = {
     itemsTitle: "Vad åt du?",
     claimHint: "Tryck på det du åt. Delar ni på något tar ni samma rad.",
     sharedSection: "Delas av alla",
+    nLeft: (n: number) => `${n} kvar`,
+    cartEmpty: "Inget taget än",
     sharedBy: (n: number) => `delas av ${n}`,
     eachShort: (amt: string) => `≈ ${amt} SEK/pers`,
     peopleTitle: "Vilka är med",
@@ -105,6 +107,8 @@ const R = {
     itemsTitle: "What did you have?",
     claimHint: "Tap what you had. Sharing something? You both tap it.",
     sharedSection: "Shared by everyone",
+    nLeft: (n: number) => `${n} left`,
+    cartEmpty: "Nothing claimed yet",
     sharedBy: (n: number) => `shared by ${n}`,
     eachShort: (amt: string) => `≈ ${amt} SEK each`,
     peopleTitle: "Who's in",
@@ -148,6 +152,7 @@ export default function RoomPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptImages, setReceiptImages] = useState<string[] | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
@@ -488,6 +493,106 @@ export default function RoomPage() {
     );
   }
 
+  type ItemRow = RoomState["items"][number];
+  type ItemGroup = { copies: ItemRow[]; mine: ItemRow[]; available: ItemRow[]; others: ItemRow[] };
+
+  /** Build a (description+price+shareCount) key so identical copies group together. */
+  function groupKey(it: ItemRow): string {
+    return `${it.description}|${it.priceOre}|${it.shareCount ?? ""}`;
+  }
+
+  /** Render one group of identical (non-shared) copies as a single claim row.
+   *  Single-copy groups fall through to the existing claimItemRow so nothing
+   *  changes for them; multi-copy groups show a counter when the user has any. */
+  function renderClaimGroup(g: ItemGroup) {
+    const rep = g.copies[0];
+    const editingCopy = g.copies.find((c) => c.id === editingItemId);
+    if (editingCopy) return claimItemRow(editingCopy);
+    if (g.copies.length === 1) return claimItemRow(rep);
+
+    const mineCount = g.mine.length;
+    const availableCount = g.available.length;
+    const totalCount = g.copies.length;
+    const taken = mineCount > 0;
+    const myTotalOre = mineCount * rep.priceOre;
+
+    const claimOne = () => g.available.length > 0 && toggleClaim(g.available[0].id);
+    const releaseOne = () => g.mine.length > 0 && toggleClaim(g.mine[g.mine.length - 1].id);
+    const tapRow = () => {
+      if (availableCount > 0) claimOne();
+      else if (mineCount > 0) releaseOne();
+    };
+
+    return (
+      <div key={rep.id} className="flex flex-col gap-1">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={tapRow}
+            disabled={availableCount === 0 && mineCount === 0}
+            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+              taken ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+            }`}
+          >
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+                taken ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+              }`}
+            >
+              ✓
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate font-medium">
+                <span aria-hidden className="mr-1"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+                {rep.description}
+                <span className="ml-1 text-xs font-normal text-gray-400">×{totalCount}</span>
+              </span>
+              {!taken && (
+                <span className="text-[11px] text-gray-500">{t.nLeft(availableCount)}</span>
+              )}
+            </span>
+            <Money
+              ore={taken ? myTotalOre : rep.priceOre}
+              className="shrink-0 text-right text-sm font-semibold"
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingItemId(rep.id)}
+            aria-label={t.editRow}
+            className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
+          >
+            ✏️
+          </button>
+        </div>
+        {taken && (
+          <div className="flex items-center gap-2 pl-12 text-xs text-gray-500">
+            <button
+              type="button"
+              disabled={mineCount === 0}
+              onClick={releaseOne}
+              aria-label="−"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+            >
+              −
+            </button>
+            <span className="w-7 text-center text-base font-semibold tabular-nums text-gray-700">{mineCount}</span>
+            <button
+              type="button"
+              disabled={availableCount === 0}
+              onClick={claimOne}
+              aria-label="+"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+            >
+              +
+            </button>
+            {availableCount > 0 && <span className="ml-1">{t.nLeft(availableCount)}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
@@ -578,36 +683,62 @@ export default function RoomPage() {
               {CATEGORY_ORDER.map((cat) => {
                 const all = state.items.filter((it) => !it.shared && categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
-                // Unclaimed items + the ones I claimed stay; items others claimed collapse.
-                const mainItems = all.filter((it) => it.claimedBy.length === 0 || isMine(it));
-                const othersItems = all.filter((it) => it.claimedBy.length > 0 && !isMine(it));
-                const claimers = (it: RoomState["items"][number]) =>
-                  it.claimedBy.map((id) => (id === personId ? t.you : nameById.get(id) ?? "?")).join(", ");
+                // Group identical copies (same description, price and share count)
+                // so "3 × Bryggkaffe" reads as one row with a counter.
+                const groupMap = new Map<string, ItemRow[]>();
+                for (const it of all) {
+                  const k = groupKey(it);
+                  const arr = groupMap.get(k) ?? [];
+                  arr.push(it);
+                  groupMap.set(k, arr);
+                }
+                const mainGroups: ItemGroup[] = [];
+                const othersGroups: ItemGroup[] = [];
+                for (const copies of groupMap.values()) {
+                  const mine = copies.filter((c) => personId !== null && c.claimedBy.includes(personId));
+                  const available = copies.filter((c) => c.claimedBy.length === 0);
+                  const others = copies.filter((c) => c.claimedBy.length > 0 && !(personId !== null && c.claimedBy.includes(personId)));
+                  const g: ItemGroup = { copies, mine, available, others };
+                  if (mine.length > 0 || available.length > 0) mainGroups.push(g);
+                  else othersGroups.push(g);
+                }
+                const othersClaimerNames = (g: ItemGroup) =>
+                  Array.from(new Set(g.copies.flatMap((c) => c.claimedBy)))
+                    .map((id) => (id === personId ? t.you : nameById.get(id) ?? "?"))
+                    .join(", ");
+                const othersTotal = othersGroups.reduce((acc, g) => acc + g.copies.length, 0);
                 return (
                   <div key={cat} className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
                       <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
-                    {mainItems.map(claimItemRow)}
-                    {othersItems.length > 0 && (
+                    {mainGroups.map(renderClaimGroup)}
+                    {othersGroups.length > 0 && (
                       <details className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
-                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(othersItems.length)}</summary>
+                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(othersTotal)}</summary>
                         <div className="mt-2 space-y-1">
-                          {othersItems.map((it) => (
-                            <button
-                              key={it.id}
-                              type="button"
-                              onClick={() => toggleClaim(it.id)}
-                              disabled={busyItem === it.id}
-                              className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-gray-100"
-                            >
-                              <span className="text-emerald-500">✓</span>
-                              <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description}</span>
-                              <span className="shrink-0 text-xs text-gray-400">{claimers(it)}</span>
-                              <span className="shrink-0 text-gray-400 line-through">{formatOre(it.priceOre)}</span>
-                            </button>
-                          ))}
+                          {othersGroups.map((g) => {
+                            const rep = g.copies[0];
+                            const totalCount = g.copies.length;
+                            return (
+                              <button
+                                key={rep.id}
+                                type="button"
+                                onClick={() => toggleClaim(rep.id)}
+                                disabled={busyItem === rep.id}
+                                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-gray-100"
+                              >
+                                <span className="text-emerald-500">✓</span>
+                                <span className="min-w-0 flex-1 truncate text-gray-400 line-through">
+                                  {rep.description}
+                                  {totalCount > 1 && <span className="ml-1">×{totalCount}</span>}
+                                </span>
+                                <span className="shrink-0 text-xs text-gray-400">{othersClaimerNames(g)}</span>
+                                <span className="shrink-0 text-gray-400 line-through">{formatOre(rep.priceOre)}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </details>
                     )}
@@ -761,24 +892,62 @@ export default function RoomPage() {
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = personId && (state.doneBy ?? []).includes(personId);
+        // What I've claimed, aggregated by description so "3 × Bryggkaffe"
+        // reads as one cart row.
+        const cart: { description: string; count: number; oreEach: number; shared: boolean }[] = [];
+        const cartMap = new Map<string, { description: string; count: number; oreEach: number; shared: boolean }>();
+        for (const it of state.items) {
+          if (!personId || !it.claimedBy.includes(personId)) continue;
+          const oreEach = it.shared
+            ? Math.floor(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(1, peopleCount)))
+            : Math.floor(it.priceOre / Math.max(1, it.claimedBy.length));
+          const k = `${it.description}|${oreEach}|${it.shared ? 1 : 0}`;
+          const ex = cartMap.get(k);
+          if (ex) ex.count++;
+          else cartMap.set(k, { description: it.description, count: 1, oreEach, shared: !!it.shared });
+        }
+        for (const v of cartMap.values()) cart.push(v);
+        cart.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
         return (
-          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-stretch border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
-            <button
-              type="button"
-              onClick={() => document.getElementById("pay-qr")?.scrollIntoView({ behavior: "smooth", block: "center" })}
-              className="flex flex-1 items-center justify-between gap-3 px-5 py-3"
-            >
-              <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
-              <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
-              <span className="text-base">↓</span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDone}
-              className={`shrink-0 border-l border-white/10 px-4 text-xs font-semibold ${iAmDone ? "bg-emerald-500/20 text-emerald-300" : "text-white/80 active:bg-white/10"}`}
-            >
-              {iAmDone ? t.doneOn : t.imDone}
-            </button>
+          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
+            {cartOpen && (
+              <div className="max-h-[42vh] overflow-y-auto border-b border-white/10 px-4 py-3 text-sm">
+                {cart.length === 0 ? (
+                  <p className="py-2 text-center text-white/60">{t.cartEmpty}</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {cart.map((g, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="w-6 shrink-0 text-right text-white/60 tabular-nums">{g.count}×</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {g.description}
+                          {g.shared && <span className="ml-1 text-xs text-white/40">· {tx.sharedToggle.toLowerCase()}</span>}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-white/85">{formatOre(g.count * g.oreEach)} SEK</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div className="flex items-stretch">
+              <button
+                type="button"
+                onClick={() => setCartOpen((v) => !v)}
+                className="flex flex-1 items-center justify-between gap-3 px-5 py-3"
+              >
+                <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
+                <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
+                <span className="text-base">{cartOpen ? "▾" : "▴"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={toggleDone}
+                className={`shrink-0 border-l border-white/10 px-4 text-xs font-semibold ${iAmDone ? "bg-emerald-500/20 text-emerald-300" : "text-white/80 active:bg-white/10"}`}
+              >
+                {iAmDone ? t.doneOn : t.imDone}
+              </button>
+            </div>
           </div>
         );
       })()}
