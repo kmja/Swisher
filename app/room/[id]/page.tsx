@@ -187,6 +187,46 @@ export default function RoomPage() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
+  // Long-press → inline edit for description or price. The pencil button is
+  // still there for "full" edits (shared, split count, delete); this is the
+  // shortcut for the most common fixes (the OCR's typo, the wrong digit).
+  const [quickEdit, setQuickEdit] = useState<{ itemId: string; field: "description" | "price" } | null>(null);
+  const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lpFired = useRef(false);
+  const lpStart = useRef({ x: 0, y: 0 });
+  const cancelLongPress = useCallback(() => {
+    if (lpTimer.current) {
+      clearTimeout(lpTimer.current);
+      lpTimer.current = null;
+    }
+  }, []);
+  const startLongPress = useCallback((onFire: () => void) => (e: React.PointerEvent) => {
+    lpFired.current = false;
+    lpStart.current = { x: e.clientX, y: e.clientY };
+    cancelLongPress();
+    lpTimer.current = setTimeout(() => {
+      lpFired.current = true;
+      lpTimer.current = null;
+      onFire();
+      // Subtle haptic so the user knows the edit was armed.
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
+    }, 450);
+  }, [cancelLongPress]);
+  const moveLongPress = useCallback((e: React.PointerEvent) => {
+    if (!lpTimer.current) return;
+    const dx = e.clientX - lpStart.current.x;
+    const dy = e.clientY - lpStart.current.y;
+    if (dx * dx + dy * dy > 64) cancelLongPress();
+  }, [cancelLongPress]);
+  const swallowLongPressClick = useCallback((e: React.MouseEvent) => {
+    if (lpFired.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      lpFired.current = false;
+    }
+  }, []);
+  useEffect(() => () => cancelLongPress(), [cancelLongPress]);
+
   const t = R[lang];
   const tx = translations[lang];
 
@@ -550,19 +590,38 @@ export default function RoomPage() {
     const shareCap = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
     const sharesTaken = it.claimedBy.length;
     const sharesFull = partialShare && !mine && sharesTaken >= shareCap;
+    const editingDesc = quickEdit?.itemId === it.id && quickEdit.field === "description";
+    const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
+    const anyQuickEdit = editingDesc || editingPrice;
     return (
       <div key={it.id} className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => toggleClaim(it.id)}
-          disabled={busyItem === it.id || sharesFull}
-          className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
+        {/* The row stays a single big tap target for claim, but we switch from
+            <button> to <div role="button"> so the <input> children that take
+            over on long-press are valid HTML and don't bubble clicks back into
+            a claim toggle. */}
+        <div
+          role="button"
+          tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
+          aria-pressed={mine}
+          aria-disabled={anyQuickEdit || sharesFull}
+          onClick={() => {
+            if (anyQuickEdit || sharesFull || busyItem === it.id) return;
+            toggleClaim(it.id);
+          }}
+          onKeyDown={(e) => {
+            if (anyQuickEdit) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleClaim(it.id);
+            }
+          }}
+          className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
             mine
               ? "bg-swish/10 ring-swish"
               : sharesFull
               ? "bg-gray-50 opacity-60 ring-black/5"
               : "bg-white ring-black/5"
-          }`}
+          } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
         >
           <span
             className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
@@ -574,14 +633,42 @@ export default function RoomPage() {
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex min-w-0 items-center gap-2 font-medium">
               <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-              <span className="min-w-0 truncate">
-                {it.description}
-                {it.shared && (
-                  <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
-                    {sharesTaken}/{shareCap}
-                  </span>
-                )}
-              </span>
+              {editingDesc ? (
+                <input
+                  autoFocus
+                  defaultValue={it.description}
+                  placeholder={t.descPh}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    else if (e.key === "Escape") setQuickEdit(null);
+                  }}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== it.description) editItem(it.id, { description: v });
+                    setQuickEdit(null);
+                  }}
+                  className="min-w-0 flex-1 rounded-lg bg-white px-2 py-1 outline-none ring-1 ring-swish/40"
+                />
+              ) : (
+                <span
+                  onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "description" }))}
+                  onPointerMove={moveLongPress}
+                  onPointerUp={cancelLongPress}
+                  onPointerCancel={cancelLongPress}
+                  onClick={swallowLongPressClick}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="min-w-0 truncate select-none [-webkit-touch-callout:none]"
+                >
+                  {it.description}
+                  {it.shared && (
+                    <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
+                      {sharesTaken}/{shareCap}
+                    </span>
+                  )}
+                </span>
+              )}
             </span>
             {it.shared && (
               <span className="text-[11px] text-swish-dark">
@@ -589,11 +676,42 @@ export default function RoomPage() {
               </span>
             )}
           </span>
-          <Money
-            ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
-            className="shrink-0 text-right text-sm font-semibold"
-          />
-        </button>
+          {editingPrice ? (
+            <input
+              autoFocus
+              defaultValue={formatOre(it.priceOre)}
+              inputMode="decimal"
+              placeholder={t.pricePh}
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                else if (e.key === "Escape") setQuickEdit(null);
+              }}
+              onBlur={(e) => {
+                const o = parseAmountToOre(e.target.value);
+                if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
+                setQuickEdit(null);
+              }}
+              className="w-24 shrink-0 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none ring-1 ring-swish/40"
+            />
+          ) : (
+            <span
+              onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "price" }))}
+              onPointerMove={moveLongPress}
+              onPointerUp={cancelLongPress}
+              onPointerCancel={cancelLongPress}
+              onClick={swallowLongPressClick}
+              onContextMenu={(e) => e.preventDefault()}
+              className="shrink-0 select-none [-webkit-touch-callout:none]"
+            >
+              <Money
+                ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
+                className="text-right text-sm font-semibold"
+              />
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setEditingItemId(it.id)}
