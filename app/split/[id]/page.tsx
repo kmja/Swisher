@@ -246,7 +246,7 @@ export default function SplitPage() {
                     iban={split.method === "sepa" ? split.payeeIban : undefined}
                     payeeName={split.payeeName}
                     eurCents={split.method === "sepa" ? eurCentsFor(s.totalOre) : undefined}
-                    message={split.message}
+                    message={`${s.name} - ${split.message}`.slice(0, 50)}
                     t={tx}
                   />
                   <button

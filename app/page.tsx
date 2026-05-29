@@ -1587,7 +1587,7 @@ export default function Page() {
                   iban={method === "sepa" ? normalizeIban(payeeIban) : undefined}
                   payeeName={payer?.name}
                   eurCents={method === "sepa" ? eurCentsFor(s.totalOre) : undefined}
-                  message={message}
+                  message={`${s.name} - ${message}`.slice(0, 50)}
                   t={t}
                 />
               ) : null,

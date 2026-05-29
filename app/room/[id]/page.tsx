@@ -599,7 +599,7 @@ export default function RoomPage() {
                 iban={state.method === "sepa" ? state.payeeIban : undefined}
                 payeeName={state.payeeName}
                 eurCents={state.method === "sepa" && state.rate > 0 ? Math.round(myShare.totalOre / state.rate) : undefined}
-                message={state.message}
+                message={`${myShare.name} - ${state.message}`.slice(0, 50)}
                 t={tx}
                 primaryPay
               />
