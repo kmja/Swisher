@@ -56,6 +56,9 @@ describe("emojiFor", () => {
     expect(emojiFor("kanelbulle")).toBe("ci:bun");
     expect(emojiFor("risotto")).toBe("ci:risotto");
     expect(emojiFor("bao bun")).toBe("ci:bao");
+    // Lasagne has its own hand-drawn icon, not the generic 🍝 spaghetti.
+    expect(emojiFor("Vegetarisk lasagne")).toBe("ci:lasagne");
+    expect(emojiFor("Lasagna bolognese")).toBe("ci:lasagne");
   });
 
   it("does not let the soda rule swallow fläsk (suffix-match regression)", () => {

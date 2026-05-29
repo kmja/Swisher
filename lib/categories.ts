@@ -169,6 +169,7 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
   risotto: ["risotto"],
   cannoli: ["cannoli", "cannolo"],
   mochi: ["mochi"],
+  lasagne: ["lasagne", "lasagna"],
 };
 
 const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
@@ -202,7 +203,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["mjölk", "milk", "milkshake", "pucko"]), "🥛"],
   // food
   [makeMatcher(["pizza", "calzone"]), "🍕"],
-  [makeMatcher(["pasta", "spaghetti", "carbonara", "lasagne", "tagliatelle", "penne", "bolognese"]), "🍝"],
+  [makeMatcher(["pasta", "spaghetti", "carbonara", "tagliatelle", "penne", "bolognese"]), "🍝"],
   [makeMatcher(["burgare", "burger", "hamburgare", "cheeseburgare"]), "🍔"],
   [makeMatcher(["pommes", "fries", "strips"]), "🍟"],
   [makeMatcher(["sushi", "nigiri", "maki", "sashimi", "poke", "löjrom", "löjromstoast"]), "🍣"],

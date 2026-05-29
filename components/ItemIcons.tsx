@@ -577,6 +577,33 @@ function Cannoli() {
   );
 }
 
+function Lasagne() {
+  return (
+    <>
+      {/* plate */}
+      <ellipse cx="12" cy="19.6" rx="10.5" ry="2.2" fill="#EFEEE8" />
+      <path d="M1.5 19.6c0 1.6 4.7 3 10.5 3s10.5-1.4 10.5-3c0 .4 0 2.2-10.5 2.2S1.5 20 1.5 19.6Z" fill="#D7D5CC" />
+      {/* body — alternating pasta + filling layers, top to bottom */}
+      <rect x="3.5" y="8" width="17" height="11.6" rx="1.6" fill="#F1D38A" />
+      <rect x="3.5" y="8" width="17" height="2.8" rx="1.6" fill="#F2C24A" />
+      <rect x="3.5" y="10.8" width="17" height="2.2" fill="#C24D3A" />
+      <rect x="3.5" y="13" width="17" height="1.3" fill="#F4D78F" />
+      <rect x="3.5" y="14.3" width="17" height="1.6" fill="#FCEFCD" />
+      <rect x="3.5" y="15.9" width="17" height="2.2" fill="#C24D3A" />
+      <rect x="3.5" y="18.1" width="17" height="1.5" rx="1.6" fill="#F4D78F" />
+      {/* browned cheese bits on top */}
+      <g fill="#B97E1F">
+        <circle cx="6.5" cy="9.2" r="0.4" />
+        <circle cx="10.5" cy="8.8" r="0.4" />
+        <circle cx="14" cy="9.4" r="0.4" />
+        <circle cx="17.5" cy="9.1" r="0.4" />
+      </g>
+      {/* basil leaf */}
+      <path d="M10.6 6.8 q 0.6 -1.6 1.8 -1.8 q -0.3 1.6 -1.8 1.8 z" fill="#3F9B53" />
+    </>
+  );
+}
+
 function Mochi() {
   return (
     <>
@@ -628,6 +655,7 @@ const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   risotto: { label: "Risotto", Body: Risotto },
   cannoli: { label: "Cannoli", Body: Cannoli },
   mochi: { label: "Mochi", Body: Mochi },
+  lasagne: { label: "Lasagne", Body: Lasagne },
 };
 
 export type IconEntry = { label: string; Icon: () => ReactElement };
