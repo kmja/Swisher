@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
@@ -152,6 +152,7 @@ const initials = (name: string) =>
 
 export default function RoomPage() {
   const params = useParams<{ id: string | string[] }>();
+  const searchParams = useSearchParams();
   const code = String(Array.isArray(params.id) ? params.id[0] : params.id ?? "").toUpperCase();
   const storageKey = `swisher-room:${code}`;
 
@@ -188,6 +189,18 @@ export default function RoomPage() {
 
   const t = R[lang];
   const tx = translations[lang];
+
+  // When the host lands here from createRoom (?invite=1), pop the QR/share
+  // dialog right away and strip the query so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get("invite") !== "1") return;
+    setShareOpen(true);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("invite");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     try {
@@ -674,7 +687,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
+    <main className="step-enter mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
       {/* Navigation */}
       <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
         <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">

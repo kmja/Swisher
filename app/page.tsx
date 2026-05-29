@@ -804,7 +804,9 @@ export default function Page() {
       // back button once a room exists (it'd risk spawning a second room and
       // orphaning the first). Going back from the room goes outside the app;
       // "New receipt" in the room nav is the way to start fresh.
-      router.replace(`/room/${data.id}`);
+      // ?invite=1 tells the room page to pop the QR/share dialog straight away
+      // — the host's first job is to invite the table, not to scroll items.
+      router.replace(`/room/${data.id}?invite=1`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
       setCreatingRoom(false);
@@ -905,7 +907,7 @@ export default function Page() {
       {step !== "capture" && <Header step={step} t={t} />}
 
       {step === "capture" && (
-        <section className="mt-2 flex flex-1 flex-col">
+        <section key="capture" className="step-enter mt-2 flex flex-1 flex-col">
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
@@ -979,18 +981,58 @@ export default function Page() {
 
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
-          <div className="mt-5 space-y-2">
-            {ocrLoading ? (
-              <div className="py-4 text-center text-sm font-semibold text-swish-dark">{t.scanning}</div>
-            ) : scanCount !== null ? (
-              <div className="flex flex-col items-center gap-1 py-3">
-                <span className="text-5xl font-bold tabular-nums text-swish-dark">{scanCount}</span>
-                <span className="text-sm text-gray-600">{t.itemsFound(scanCount)}</span>
-                {ocrModel && (
-                  <span className="text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</span>
+          {(ocrLoading || scanCount !== null) && (
+            <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
+                </p>
+                {ocrLoading && (
+                  <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
                 )}
               </div>
-            ) : (
+              <div className="flex items-stretch gap-2">
+                <input
+                  value={diners[0]?.name ?? ""}
+                  onChange={(e) => updateDiner(diners[0].id, e.target.value)}
+                  placeholder={t.yourName}
+                  className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
+                />
+                <input
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder={t.swishNumber}
+                  className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-gray-600">{t.groupSizeLabel}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    aria-label="−"
+                    onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
+                  <button
+                    type="button"
+                    aria-label="+"
+                    onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-swish text-2xl font-bold leading-none text-white active:bg-swish-dark"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5 space-y-2">
+            {ocrLoading || scanCount !== null ? null : (
               <>
                 {imageUrl ? (
                   <>
@@ -1045,7 +1087,7 @@ export default function Page() {
       )}
 
       {step === "items" && (
-        <section className="mt-6 flex flex-1 flex-col gap-6">
+        <section key="items" className="step-enter mt-6 flex flex-1 flex-col gap-6">
           <div>
             <h2 className="text-xl font-bold">{t.payerTitle}</h2>
 
@@ -1504,7 +1546,7 @@ export default function Page() {
       )}
 
       {step === "assign" && (
-        <section className="mt-6 flex flex-1 flex-col gap-3">
+        <section key="assign" className="step-enter mt-6 flex flex-1 flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">{t.assignTitle}</h2>
             <button type="button" onClick={spreadEverything} className="text-sm font-medium text-swish-dark">
@@ -1639,7 +1681,7 @@ export default function Page() {
       )}
 
       {step === "result" && (
-        <section className="mt-6 flex flex-1 flex-col gap-4">
+        <section key="result" className="step-enter mt-6 flex flex-1 flex-col gap-4">
           <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
           {tipOre > 0 && (
