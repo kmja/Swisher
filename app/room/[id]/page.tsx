@@ -512,13 +512,14 @@ export default function RoomPage() {
       );
     }
     const mine = isMine(it);
-    // Partial shares (e.g. one bottle for 2 of 4) show up in their category
-    // section and behave like multi-copy items: an "×N" badge for the shares
-    // still up for grabs, and the row gets disabled when they're all taken.
+    // For shared items, show "X/Y" — X people have taken a share, Y total
+    // shares — so the table can see the group size at a glance. Partial
+    // shares (Y < groupSize) still dim and disable the row once every share
+    // is taken by someone other than the viewer.
     const partialShare = it.shared && !isFullyShared(it, groupSize);
     const shareCap = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
-    const sharesAvailable = partialShare ? Math.max(0, shareCap - it.claimedBy.length) : 0;
-    const sharesFull = partialShare && !mine && sharesAvailable === 0;
+    const sharesTaken = it.claimedBy.length;
+    const sharesFull = partialShare && !mine && sharesTaken >= shareCap;
     return (
       <div key={it.id} className="flex items-center gap-1">
         <button
@@ -545,16 +546,17 @@ export default function RoomPage() {
               <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
               <span className="min-w-0 truncate">
                 {it.description}
-                {partialShare && sharesAvailable > 0 && (
-                  <span className="ml-1 text-xs font-normal text-gray-400">×{sharesAvailable}</span>
+                {it.shared && (
+                  <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
+                    {sharesTaken}/{shareCap}
+                  </span>
                 )}
               </span>
             </span>
-            {it.shared && !partialShare && (
-              <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
-            )}
-            {partialShare && (
-              <span className="text-[11px] text-swish-dark">{tx.splitWays} {shareCap} · <Money ore={it.priceOre} /></span>
+            {it.shared && (
+              <span className="text-[11px] text-swish-dark">
+                {partialShare ? `${tx.splitWays} ${shareCap}` : tx.sharedToggle} · <Money ore={it.priceOre} />
+              </span>
             )}
           </span>
           <Money

@@ -1330,18 +1330,26 @@ export default function Page() {
                   {!rep.isTip && (
                     <button
                       type="button"
+                      role="switch"
                       onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
-                      aria-pressed={rep.shared}
+                      aria-checked={rep.shared}
                       aria-label={t.sharedToggle}
                       title={t.sharedToggle}
-                      className={`flex w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl ring-1 transition ${
-                        rep.shared
-                          ? "bg-swish text-white ring-swish shadow-sm"
-                          : "bg-white text-gray-300 ring-gray-200 active:bg-gray-50 active:text-gray-500"
-                      }`}
+                      className="flex w-14 shrink-0 flex-col items-center justify-center gap-1.5"
                     >
-                      <span aria-hidden className="text-2xl leading-none">🤝</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wide">{t.shareThis}</span>
+                      <span aria-hidden className="text-xl leading-none">🤝</span>
+                      <span
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          rep.shared ? "bg-swish" : "bg-gray-300"
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
+                            rep.shared ? "translate-x-5" : "translate-x-0.5"
+                          }`}
+                        />
+                      </span>
                     </button>
                   )}
                 </div>
