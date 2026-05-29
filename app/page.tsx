@@ -98,19 +98,123 @@ const OCR_MODEL_LABEL: Record<string, string> = {
   llava: "LLaVA",
 };
 
-/** Grayscale + mild contrast, to give a cleaner "scanned" look and help OCR
- * on faint thermal receipts. Kept gentle so faint text isn't lost. */
+/** Pre-OCR clean-up for receipts shot in dim restaurant light. Three passes,
+ *  all gentle so faint thermal print survives:
+ *
+ *   1. Grayscale + histogram-based auto-levels. The darkest ~0.5% of pixels
+ *      become true black, the lightest ~0.5% true white. A fixed contrast
+ *      multiplier (what was here before) can't pull up a photo that lives at
+ *      40-160 luminance; stretching the actual range does, every time.
+ *
+ *   2. Adaptive gamma. After stretching we aim the mean luminance at ~140
+ *      (slightly bright, where thermal print reads best). Dim photos get
+ *      gamma < 1 to lift the midtones, blown-out ones get gamma > 1 to pull
+ *      them back. Clamped to [0.5, 1.4] so we never invert detail.
+ *
+ *   3. Light unsharp mask via a separable 1-2-1 box blur. The mild edge
+ *      enhancement crisps the digits without ringing. Skipped on huge
+ *      images to keep capture-to-scan latency reasonable. */
 function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
   try {
     const img = ctx.getImageData(0, 0, w, h);
     const d = img.data;
-    const contrast = 1.35;
-    const intercept = 128 * (1 - contrast);
-    for (let i = 0; i < d.length; i += 4) {
-      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      let v = contrast * g + intercept;
-      v = v < 0 ? 0 : v > 255 ? 255 : v;
-      d[i] = d[i + 1] = d[i + 2] = v;
+    const n = w * h;
+
+    // Pass 1: grayscale + per-pixel luminance + 8-bit histogram.
+    const lum = new Uint8ClampedArray(n);
+    const hist = new Uint32Array(256);
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+      const g = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) | 0;
+      lum[j] = g;
+      hist[g]++;
+    }
+
+    // Percentile-based black/white points. Outliers (a few stray dark pixels
+    // in a shadow, glints off cutlery) shouldn't be allowed to define "true
+    // black" / "true white" — we skip the 0.5% tails.
+    const tail = Math.max(1, Math.floor(n * 0.005));
+    let acc = 0;
+    let black = 0;
+    let white = 255;
+    for (let i = 0; i < 256; i++) {
+      acc += hist[i];
+      if (acc >= tail) {
+        black = i;
+        break;
+      }
+    }
+    acc = 0;
+    for (let i = 255; i >= 0; i--) {
+      acc += hist[i];
+      if (acc >= tail) {
+        white = i;
+        break;
+      }
+    }
+    // Guarantee some usable span; otherwise the LUT collapses to a binary.
+    if (white - black < 40) {
+      black = Math.max(0, black - 20);
+      white = Math.min(255, white + 20);
+    }
+
+    // Pass 2: adaptive gamma to aim the stretched mean at ~140.
+    let sum = 0;
+    for (let i = 0; i < 256; i++) sum += i * hist[i];
+    const meanIn = sum / n;
+    const span = Math.max(1, white - black);
+    const meanStretched = Math.max(1, Math.min(254, ((meanIn - black) * 255) / span));
+    const targetMean = 140;
+    const rawGamma = Math.log(targetMean / 255) / Math.log(meanStretched / 255);
+    const gamma = Math.max(0.5, Math.min(1.4, isFinite(rawGamma) ? rawGamma : 1));
+
+    // LUT: stretch then gamma in one table.
+    const lut = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) {
+      const stretched = Math.max(0, Math.min(255, ((i - black) * 255) / span));
+      lut[i] = (255 * Math.pow(stretched / 255, gamma)) | 0;
+    }
+
+    // Apply the LUT and produce the grayscale buffer we'll sharpen.
+    const gray = new Uint8ClampedArray(n);
+    for (let j = 0; j < n; j++) gray[j] = lut[lum[j]];
+
+    // Pass 3: light unsharp mask. Skip if the image is huge — the sharpening
+    // pass is the slowest part and ~6 MP * two passes can push the capture
+    // delay past a second on mid-range phones. The level/gamma work is the
+    // big win anyway; sharpening is icing.
+    let out: Uint8ClampedArray = gray;
+    if (n <= 4_500_000) {
+      // Separable 1-2-1 box blur (horizontal then vertical), then combine.
+      const tmp = new Uint8ClampedArray(n);
+      const blurred = new Uint8ClampedArray(n);
+      for (let y = 0; y < h; y++) {
+        const row = y * w;
+        for (let x = 0; x < w; x++) {
+          const l = gray[row + Math.max(0, x - 1)];
+          const c = gray[row + x];
+          const r = gray[row + Math.min(w - 1, x + 1)];
+          tmp[row + x] = (l + 2 * c + r) >> 2;
+        }
+      }
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+          const u = tmp[Math.max(0, y - 1) * w + x];
+          const c = tmp[y * w + x];
+          const d2 = tmp[Math.min(h - 1, y + 1) * w + x];
+          blurred[y * w + x] = (u + 2 * c + d2) >> 2;
+        }
+      }
+      const amount = 0.6;
+      out = new Uint8ClampedArray(n);
+      for (let j = 0; j < n; j++) {
+        const v = gray[j] + amount * (gray[j] - blurred[j]);
+        out[j] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+    }
+
+    // Write the enhanced grayscale back into the RGB canvas.
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+      d[i] = d[i + 1] = d[i + 2] = out[j];
     }
     ctx.putImageData(img, 0, 0);
   } catch {
