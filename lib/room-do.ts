@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { isFullyShared } from "./money";
 
 export type RoomItem = {
   id: string;
@@ -114,17 +115,25 @@ export class RoomDO extends DurableObject {
         typeof data.groupSize === "number" && data.groupSize >= 2
           ? Math.min(50, Math.round(data.groupSize))
           : undefined,
-      items: data.items.map((it) => ({
-        id: uid(),
-        description: it.description.slice(0, 80),
-        priceOre: Math.max(0, Math.round(it.priceOre)),
-        category: it.category,
-        emoji: it.emoji,
-        shared: it.shared === true,
-        shareCount: typeof it.shareCount === "number" && it.shareCount > 0 ? Math.round(it.shareCount) : undefined,
-        // Shared items start claimed by the host (and each diner as they join).
-        claimedBy: it.shared === true ? [host.id] : [],
-      })),
+      items: data.items.map((it) => {
+        const shareCount =
+          typeof it.shareCount === "number" && it.shareCount > 0 ? Math.round(it.shareCount) : undefined;
+        // Only "fully shared" lines pre-claim the host. A partial share (e.g.
+        // one bottle for 2 of 4 at the table) stays open so people opt in.
+        const groupSize =
+          typeof data.groupSize === "number" && data.groupSize >= 2 ? Math.round(data.groupSize) : 1;
+        const fully = isFullyShared({ shared: it.shared === true, shareCount }, groupSize);
+        return {
+          id: uid(),
+          description: it.description.slice(0, 80),
+          priceOre: Math.max(0, Math.round(it.priceOre)),
+          category: it.category,
+          emoji: it.emoji,
+          shared: it.shared === true,
+          shareCount,
+          claimedBy: fully ? [host.id] : [],
+        };
+      }),
       people: [host],
       paidBy: [],
       doneBy: [],
@@ -151,9 +160,14 @@ export class RoomDO extends DurableObject {
     if (!state) return null;
     const person: RoomPerson = { id: uid(), name: name.trim().slice(0, 40) || "Gäst" };
     state.people.push(person);
-    // Shared items are split across the whole group, so pre-claim them for the
-    // newcomer (they can deselect to opt out of their share).
-    for (const it of state.items) if (it.shared && !it.claimedBy.includes(person.id)) it.claimedBy.push(person.id);
+    // Only pre-claim "fully shared" items (the kind everyone takes a share of
+    // by default). Partial shares — one bottle for 2 of 4, etc. — stay open
+    // so the newcomer has to opt in by tapping.
+    const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+    for (const it of state.items) {
+      if (!isFullyShared(it, groupSize)) continue;
+      if (!it.claimedBy.includes(person.id)) it.claimedBy.push(person.id);
+    }
     await this.save(state);
     return { personId: person.id, state };
   }
@@ -223,8 +237,12 @@ export class RoomDO extends DurableObject {
       }
       if (typeof patch.shared === "boolean" && patch.shared !== item.shared) {
         item.shared = patch.shared;
-        // Turning shared on pre-claims it for everyone (matches join behaviour).
-        if (patch.shared) item.claimedBy = state.people.map((p) => p.id);
+        // Turning shared on pre-claims it for everyone only when the result is
+        // a *fully* shared item; partial shares stay open so the table opts in.
+        if (patch.shared) {
+          const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+          item.claimedBy = isFullyShared(item, groupSize) ? state.people.map((p) => p.id) : [];
+        }
       }
       if (patch.shareCount === null || patch.shareCount === 0) item.shareCount = undefined;
       else if (typeof patch.shareCount === "number" && patch.shareCount > 0) item.shareCount = Math.round(patch.shareCount);
@@ -262,6 +280,10 @@ export class RoomDO extends DurableObject {
     if (!state.people.some((p) => p.id === actorId)) return state;
     const priceOre = Math.max(0, Math.round(Number(data.priceOre) || 0));
     if (!data.description?.trim() || priceOre <= 0) return state;
+    const shareCount =
+      typeof data.shareCount === "number" && data.shareCount > 0 ? Math.round(data.shareCount) : undefined;
+    const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+    const fully = isFullyShared({ shared: data.shared === true, shareCount }, groupSize);
     state.items.push({
       id: uid(),
       description: String(data.description).slice(0, 80),
@@ -269,11 +291,8 @@ export class RoomDO extends DurableObject {
       category: typeof data.category === "string" ? data.category : undefined,
       emoji: typeof data.emoji === "string" ? data.emoji : undefined,
       shared: data.shared === true,
-      shareCount:
-        typeof data.shareCount === "number" && data.shareCount > 0
-          ? Math.round(data.shareCount)
-          : undefined,
-      claimedBy: data.shared === true ? state.people.map((p) => p.id) : [],
+      shareCount,
+      claimedBy: fully ? state.people.map((p) => p.id) : [],
     });
     await this.save(state);
     return state;

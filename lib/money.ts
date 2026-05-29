@@ -48,6 +48,23 @@ export function oreToKronor(ore: number): number {
 }
 
 /**
+ * "Fully shared" = everyone at the table is expected to take a share, so the
+ * item gets pre-claimed for the host at room-creation and for each newcomer on
+ * join. A partial share (e.g. one bottle split 2 ways at a table of 4) is NOT
+ * fully shared — newcomers must opt in by tapping. shareCount is the source of
+ * truth; if it isn't set the item defaults to the head count, which is the
+ * definition of fully shared.
+ */
+export function isFullyShared(
+  item: { shared?: boolean; shareCount?: number | null },
+  groupSize: number,
+): boolean {
+  if (!item.shared) return false;
+  if (!item.shareCount || item.shareCount <= 0) return true;
+  return item.shareCount >= Math.max(1, groupSize);
+}
+
+/**
  * Split a single item's price across its sharers with exact öre accounting:
  * the base share is floored and the leftover öre are handed out one-by-one to
  * the first sharers, so the per-sharer amounts always sum back to priceOre.

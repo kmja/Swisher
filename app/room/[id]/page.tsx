@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeRoomShares, formatOre, parseAmountToOre } from "@/lib/money";
+import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -512,14 +512,25 @@ export default function RoomPage() {
       );
     }
     const mine = isMine(it);
+    // Partial shares (e.g. one bottle for 2 of 4) show up in their category
+    // section and behave like multi-copy items: an "×N" badge for the shares
+    // still up for grabs, and the row gets disabled when they're all taken.
+    const partialShare = it.shared && !isFullyShared(it, groupSize);
+    const shareCap = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
+    const sharesAvailable = partialShare ? Math.max(0, shareCap - it.claimedBy.length) : 0;
+    const sharesFull = partialShare && !mine && sharesAvailable === 0;
     return (
       <div key={it.id} className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => toggleClaim(it.id)}
-          disabled={busyItem === it.id}
+          disabled={busyItem === it.id || sharesFull}
           className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
-            mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+            mine
+              ? "bg-swish/10 ring-swish"
+              : sharesFull
+              ? "bg-gray-50 opacity-60 ring-black/5"
+              : "bg-white ring-black/5"
           }`}
         >
           <span
@@ -532,18 +543,22 @@ export default function RoomPage() {
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex min-w-0 items-center gap-2 font-medium">
               <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-              <span className="truncate">{it.description}</span>
+              <span className="min-w-0 truncate">
+                {it.description}
+                {partialShare && sharesAvailable > 0 && (
+                  <span className="ml-1 text-xs font-normal text-gray-400">×{sharesAvailable}</span>
+                )}
+              </span>
             </span>
-            {it.shared && (
+            {it.shared && !partialShare && (
               <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
+            )}
+            {partialShare && (
+              <span className="text-[11px] text-swish-dark">{tx.splitWays} {shareCap} · <Money ore={it.priceOre} /></span>
             )}
           </span>
           <Money
-            ore={
-              it.shared
-                ? Math.round(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize))
-                : it.priceOre
-            }
+            ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
             className="shrink-0 text-right text-sm font-semibold"
           />
         </button>
@@ -733,12 +748,14 @@ export default function RoomPage() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
-              {state.items.some((it) => it.shared) && (() => {
-                const sharedItems = state.items.filter((it) => it.shared);
-                // What the shared section costs *me*: my per-share contribution
-                // for each shared item I haven't opted out of.
-                const mySharedOre = state.items.reduce((acc, it) => {
-                  if (!it.shared || !personId || !it.claimedBy.includes(personId)) return acc;
+              {state.items.some((it) => isFullyShared(it, groupSize)) && (() => {
+                // The "shared by everyone" section now only covers items the
+                // whole table takes a share of by default. Partial shares (a
+                // bottle for 2 of 4, etc.) fall through to their category row
+                // below and behave like opt-in multi-copy items.
+                const sharedItems = state.items.filter((it) => isFullyShared(it, groupSize));
+                const mySharedOre = sharedItems.reduce((acc, it) => {
+                  if (!personId || !it.claimedBy.includes(personId)) return acc;
                   const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
                   return acc + Math.floor(it.priceOre / divisor);
                 }, 0);
@@ -778,7 +795,12 @@ export default function RoomPage() {
                 );
               })()}
               {CATEGORY_ORDER.map((cat) => {
-                const all = state.items.filter((it) => !it.shared && categoryFor(it.description, it.category) === cat);
+                // Anything that isn't "shared by everyone" lives in the
+                // category sections — including partial shares, which the
+                // diner can claim a share of like a multi-copy item.
+                const all = state.items.filter(
+                  (it) => !isFullyShared(it, groupSize) && categoryFor(it.description, it.category) === cat,
+                );
                 if (all.length === 0) return null;
                 // Group identical copies (same description, price and share count)
                 // so "3 × Bryggkaffe" reads as one row with a counter.

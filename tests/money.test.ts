@@ -7,6 +7,7 @@ import {
   computeRoomShares,
   sumItemsOre,
   estimateGroupSize,
+  isFullyShared,
 } from "../lib/money";
 import type { Diner, LineItem } from "../lib/types";
 
@@ -164,6 +165,25 @@ describe("estimateGroupSize", () => {
   it("clamps to 2–12", () => {
     expect(estimateGroupSize({ food: 1, drink: 0, dessert: 0, total: 1 })).toBe(2);
     expect(estimateGroupSize({ food: 20, drink: 0, dessert: 0, total: 20 })).toBe(12);
+  });
+});
+
+describe("isFullyShared", () => {
+  it("treats no shareCount as fully shared (default = whole table)", () => {
+    expect(isFullyShared({ shared: true }, 4)).toBe(true);
+    expect(isFullyShared({ shared: true, shareCount: 0 }, 4)).toBe(true);
+  });
+  it("calls shareCount ≥ groupSize fully shared", () => {
+    expect(isFullyShared({ shared: true, shareCount: 4 }, 4)).toBe(true);
+    expect(isFullyShared({ shared: true, shareCount: 5 }, 4)).toBe(true);
+  });
+  it("calls shareCount < groupSize a partial share", () => {
+    expect(isFullyShared({ shared: true, shareCount: 2 }, 4)).toBe(false);
+    expect(isFullyShared({ shared: true, shareCount: 3 }, 4)).toBe(false);
+  });
+  it("ignores items that aren't shared at all", () => {
+    expect(isFullyShared({ shared: false, shareCount: 2 }, 4)).toBe(false);
+    expect(isFullyShared({}, 4)).toBe(false);
   });
 });
 
