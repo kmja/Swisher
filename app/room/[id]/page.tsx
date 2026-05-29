@@ -7,6 +7,7 @@ import { computeRoomShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
+import QrDialog from "@/components/QrDialog";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
@@ -29,6 +30,8 @@ const R = {
     scanToJoin: "Skanna för att gå med",
     share: "Dela inbjudan",
     copied: "Kopierad!",
+    copyLink: "Kopiera länk",
+    close: "Stäng",
     youCollect: "Du samlar in",
     yourShareNote: "Din egen del – du swishar inte dig själv.",
     remainingToCollect: "Kvar att få in",
@@ -75,6 +78,8 @@ const R = {
     scanToJoin: "Scan to join",
     share: "Share invite",
     copied: "Copied!",
+    copyLink: "Copy link",
+    close: "Close",
     youCollect: "You collect",
     yourShareNote: "Your own share — you don't Swish yourself.",
     remainingToCollect: "Remaining to collect",
@@ -125,7 +130,7 @@ export default function RoomPage() {
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
@@ -266,24 +271,7 @@ export default function RoomPage() {
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
-
-  async function share() {
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Swisher", text: lang === "sv" ? "Gå med och dela notan" : "Join and split the bill", url: shareUrl });
-        return;
-      }
-    } catch {
-      /* fall through to copy */
-    }
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
-    }
-  }
+  const shareText = [state?.place, state?.date].filter(Boolean).join(" · ");
 
   const { shares, unassignedOre } = useMemo(() => {
     if (!state) return { shares: [] as Share[], unassignedOre: 0 };
@@ -444,16 +432,11 @@ export default function RoomPage() {
           </div>
           <button
             type="button"
-            onClick={share}
-            className="rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white active:bg-swish-dark"
+            onClick={() => setShareOpen(true)}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
           >
-            {copied ? t.copied : t.share}
+            {t.share}
           </button>
-        </div>
-        <div className="mt-3 flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/room/${code}/qr`} alt={t.scanToJoin} width={84} height={84} className="h-21 w-21 rounded-lg" style={{ height: 84, width: 84 }} />
-          <p className="text-sm text-gray-500">{t.scanToJoin}</p>
         </div>
       </section>
 
@@ -673,6 +656,17 @@ export default function RoomPage() {
           </section>
         </>
       )}
+      <QrDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        qrSrc={`/api/room/${code}/qr`}
+        title={state.place || "Swisher"}
+        subtitle={`${t.scanToJoin} · ${code}`}
+        shareUrl={shareUrl}
+        shareTitle={state.place || "Swisher"}
+        shareText={shareText}
+        labels={{ share: t.share, copied: t.copied, copyLink: t.copyLink, close: t.close }}
+      />
     </main>
     </FxProvider>
   );
