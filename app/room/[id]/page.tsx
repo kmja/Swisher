@@ -32,6 +32,8 @@ const R = {
     copied: "Kopierad!",
     copyLink: "Kopiera länk",
     close: "Stäng",
+    inviteText: (place: string, date: string) =>
+      `Gå med och dela notan${place ? ` från ${place}` : ""}${date ? ` · ${date}` : ""}`,
     youCollect: "Du samlar in",
     yourShareNote: "Din egen del – du swishar inte dig själv.",
     remainingToCollect: "Kvar att få in",
@@ -80,6 +82,8 @@ const R = {
     copied: "Copied!",
     copyLink: "Copy link",
     close: "Close",
+    inviteText: (place: string, date: string) =>
+      `Join and split the bill${place ? ` from ${place}` : ""}${date ? ` · ${date}` : ""}`,
     youCollect: "You collect",
     yourShareNote: "Your own share — you don't Swish yourself.",
     remainingToCollect: "Remaining to collect",
@@ -300,7 +304,7 @@ export default function RoomPage() {
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
-  const shareText = [state?.place, state?.date].filter(Boolean).join(" · ");
+  const shareText = t.inviteText(state?.place ?? "", state?.date ?? "");
 
   const { shares, unassignedOre } = useMemo(() => {
     if (!state) return { shares: [] as Share[], unassignedOre: 0 };

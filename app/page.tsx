@@ -519,7 +519,24 @@ export default function Page() {
       setOcrLoading(false);
 
       if (append) {
-        setItems((prev) => [...prev, ...mapped]);
+        // Long receipts get scanned in overlapping photos; drop items in this
+        // batch that already appeared in earlier batches with the same name and
+        // price (multiset, so a legitimate triple "3× Bryggkaffe" stays a triple).
+        setItems((prev) => {
+          const keyOf = (it: UiItem) => `${(it.description ?? "").trim().toLowerCase()}|${parseAmountToOre(it.priceInput) ?? 0}`;
+          const budget = new Map<string, number>();
+          for (const it of prev) budget.set(keyOf(it), (budget.get(keyOf(it)) ?? 0) + 1);
+          const filtered = mapped.filter((it) => {
+            const k = keyOf(it);
+            const left = budget.get(k) ?? 0;
+            if (left > 0) {
+              budget.set(k, left - 1);
+              return false;
+            }
+            return true;
+          });
+          return [...prev, ...filtered];
+        });
         return;
       }
 
@@ -1351,7 +1368,19 @@ export default function Page() {
                 )}
               </div>
             )}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {t.mealPresets.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setMealLabel(preset)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${mealLabel.trim() === preset ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200 active:bg-gray-100"}`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex gap-2">
               <input
                 value={mealLabel}
                 onChange={(e) => setMealLabel(e.target.value)}
