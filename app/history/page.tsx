@@ -6,6 +6,7 @@ import { formatNative, type Fx } from "@/lib/currency";
 import { readHistory, removeHistory, type HistoryEntry } from "@/lib/history";
 import { readLocalSplit, removeLocalSplit } from "@/lib/local-split";
 import LangToggle, { saveLang } from "@/components/LangToggle";
+import KvittLogo from "@/components/KvittLogo";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner } from "@/lib/types";
 
@@ -178,10 +179,14 @@ export default function HistoryPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-28 pt-5">
-      <header className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t.title}</h1>
-        <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
-      </header>
+      <div className="grid grid-cols-3 items-center gap-2">
+        <span />
+        <KvittLogo className="justify-self-center" />
+        <div className="justify-self-end">
+          <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
+        </div>
+      </div>
+      <h1 className="text-2xl font-bold">{t.title}</h1>
 
       {entries.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-2 text-center text-gray-500">

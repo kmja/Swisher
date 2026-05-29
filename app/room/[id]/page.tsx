@@ -9,6 +9,7 @@ import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/l
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
+import KvittLogo from "@/components/KvittLogo";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
@@ -824,12 +825,19 @@ export default function RoomPage() {
     <FxProvider value={roomFx}>
     <main className="step-enter mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
       {/* Navigation */}
-      <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
-        <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
+      <nav className="grid grid-cols-3 items-center gap-2 text-xs font-semibold">
+        <a
+          href="/"
+          className="inline-flex justify-self-start items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark"
+        >
           + {t.newReceipt}
         </a>
-        <div className="flex items-center gap-2">
-          <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
+        <KvittLogo className="justify-self-center" />
+        <div className="flex justify-self-end items-center gap-2">
+          <a
+            href="/history"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
+          >
             🕘 {t.history}
           </a>
           <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />

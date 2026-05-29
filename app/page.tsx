@@ -6,6 +6,7 @@ import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
+import KvittLogo from "@/components/KvittLogo";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -948,15 +949,21 @@ export default function Page() {
   return (
     <FxProvider value={fx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28 pt-5">
-      <div className="mb-3 flex items-center justify-between">
-        {step === "capture" ? (
-          <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
-            🕘 {t.history}
-          </a>
-        ) : (
-          <span />
-        )}
-        <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
+      <div className="mb-3 grid grid-cols-3 items-center gap-2">
+        <div className="justify-self-start">
+          {step === "capture" ? (
+            <a
+              href="/history"
+              className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
+            >
+              🕘 {t.history}
+            </a>
+          ) : null}
+        </div>
+        <KvittLogo className="justify-self-center" />
+        <div className="justify-self-end">
+          <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
+        </div>
       </div>
 
       {step !== "capture" && <Header step={step} t={t} />}
@@ -970,13 +977,7 @@ export default function Page() {
             <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
           </p>
 
-          <div
-            className={`relative mt-4 flex overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${
-              ocrLoading || scanCount !== null
-                ? "h-44 shrink-0"
-                : "min-h-0 flex-1"
-            }`}
-          >
+          <div className="relative mt-4 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="h-full w-full object-contain" />
@@ -994,12 +995,6 @@ export default function Page() {
                   <span className="absolute right-0 top-0 h-6 w-6 border-r-4 border-t-4 border-swish" />
                   <span className="absolute bottom-0 left-0 h-6 w-6 border-b-4 border-l-4 border-swish" />
                   <span className="absolute bottom-0 right-0 h-6 w-6 border-b-4 border-r-4 border-swish" />
-                </div>
-                <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-1 text-white">
-                  <span className="text-2xl">🔎</span>
-                  <span className="text-sm font-semibold drop-shadow">
-                    {t.scanPhrases[scanPhase % t.scanPhrases.length]}
-                  </span>
                 </div>
               </div>
             )}
@@ -1035,77 +1030,80 @@ export default function Page() {
                 )}
               </>
             )}
+
+            {/* While the OCR is running (and through the brief "items found"
+                tick) the setup card floats over the bottom of the viewfinder
+                instead of pushing it up — the viewport keeps its size and
+                the host can fill in name / phone / group size against the
+                live scan animation. */}
+            {(ocrLoading || scanCount !== null) && (
+              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-2.5 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/10 backdrop-blur">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
+                  </p>
+                  {ocrLoading && (
+                    <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
+                  )}
+                </div>
+                <div className="flex items-stretch gap-2">
+                  <input
+                    value={diners[0]?.name ?? ""}
+                    onChange={(e) => updateDiner(diners[0].id, e.target.value)}
+                    placeholder={t.yourName}
+                    className="min-w-0 flex-1 rounded-xl bg-gray-50 px-3 py-2.5 outline-none"
+                  />
+                  <div className="relative min-w-0 flex-1">
+                    <input
+                      value={payerPhone}
+                      onChange={(e) => {
+                        setPayerPhone(e.target.value);
+                        if (isValidPhone(e.target.value)) e.target.blur();
+                      }}
+                      inputMode="tel"
+                      placeholder={t.swishNumber}
+                      className="w-full rounded-xl bg-gray-50 px-3 py-2.5 pr-8 outline-none"
+                    />
+                    {isValidPhone(payerPhone) && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-base font-bold text-emerald-600"
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-600">{t.groupSizeLabel}</span>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      aria-label="−"
+                      onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                    >
+                      −
+                    </button>
+                    <span className="w-5 text-center text-base font-semibold tabular-nums">{groupSize || "–"}</span>
+                    <button
+                      type="button"
+                      aria-label="+"
+                      onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-swish text-xl font-bold leading-none text-white active:bg-swish-dark"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
           <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
 
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
-
-          {(ocrLoading || scanCount !== null) && (
-            <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
-                </p>
-                {ocrLoading && (
-                  <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
-                )}
-              </div>
-              <div className="flex items-stretch gap-2">
-                <input
-                  value={diners[0]?.name ?? ""}
-                  onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-                  placeholder={t.yourName}
-                  className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
-                />
-                <div className="relative min-w-0 flex-1">
-                  <input
-                    value={payerPhone}
-                    onChange={(e) => {
-                      setPayerPhone(e.target.value);
-                      // Once the number's valid, drop the keyboard — saves a tap
-                      // and signals "this looks right" without a separate "next".
-                      if (isValidPhone(e.target.value)) e.target.blur();
-                    }}
-                    inputMode="tel"
-                    placeholder={t.swishNumber}
-                    className="w-full rounded-xl bg-gray-50 px-4 py-3 pr-9 outline-none"
-                  />
-                  {isValidPhone(payerPhone) && (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
-                    >
-                      ✓
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-gray-600">{t.groupSizeLabel}</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    aria-label="−"
-                    onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
-                  <button
-                    type="button"
-                    aria-label="+"
-                    onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-swish text-2xl font-bold leading-none text-white active:bg-swish-dark"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="mt-5 space-y-2">
             {ocrLoading || scanCount !== null ? null : (
