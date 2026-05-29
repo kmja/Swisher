@@ -39,6 +39,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     priceOre?: number;
     shared?: boolean;
     shareCount?: number | null;
+    category?: string;
+    emoji?: string;
   };
   try {
     body = await req.json();
@@ -87,6 +89,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         description: String(body.description ?? ""),
         priceOre: Number(body.priceOre),
         shared: body.shared === true,
+        shareCount:
+          typeof body.shareCount === "number" && body.shareCount > 0
+            ? body.shareCount
+            : undefined,
+        category: typeof body.category === "string" ? body.category : undefined,
+        emoji: typeof body.emoji === "string" ? body.emoji : undefined,
       });
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });

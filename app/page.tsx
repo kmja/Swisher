@@ -1048,22 +1048,6 @@ export default function Page() {
         <section className="mt-6 flex flex-1 flex-col gap-6">
           <div>
             <h2 className="text-xl font-bold">{t.payerTitle}</h2>
-            <p className="text-sm text-gray-600">{t.payerHint}</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span
-                aria-hidden
-                title={t.payerHint}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-swish/10 text-lg"
-              >
-                💳
-              </span>
-              <input
-                value={diners[0]?.name ?? ""}
-                onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-                placeholder={t.yourName}
-                className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-              />
-            </div>
 
             {sepaAvailable && (
               <div className="mt-2 inline-flex overflow-hidden rounded-xl text-sm font-semibold ring-1 ring-gray-200">
@@ -1083,6 +1067,12 @@ export default function Page() {
 
             {method === "sepa" ? (
               <div className="mt-2 space-y-2">
+                <input
+                  value={diners[0]?.name ?? ""}
+                  onChange={(e) => updateDiner(diners[0].id, e.target.value)}
+                  placeholder={t.yourName}
+                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                />
                 <input
                   value={formatIban(payeeIban)}
                   onChange={(e) => setPayeeIban(normalizeIban(e.target.value))}
@@ -1114,16 +1104,24 @@ export default function Page() {
                 <p className="px-1 text-xs text-gray-400">{t.sepaSettlesEur}</p>
               </div>
             ) : (
-              <div className="mt-2">
-                <input
-                  value={payerPhone}
-                  onChange={(e) => setPayerPhone(e.target.value)}
-                  inputMode="tel"
-                  placeholder={t.swishNumber}
-                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                />
+              <div className="mt-2 space-y-2">
+                <div className="flex items-stretch gap-2">
+                  <input
+                    value={diners[0]?.name ?? ""}
+                    onChange={(e) => updateDiner(diners[0].id, e.target.value)}
+                    placeholder={t.yourName}
+                    className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                  />
+                  <input
+                    value={payerPhone}
+                    onChange={(e) => setPayerPhone(e.target.value)}
+                    inputMode="tel"
+                    placeholder={t.swishNumber}
+                    className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
+                  />
+                </div>
                 {payerPhone && !isValidPhone(payerPhone) && (
-                  <p className="mt-1 text-xs text-red-600">{t.invalidPhone}</p>
+                  <p className="px-1 text-xs text-red-600">{t.invalidPhone}</p>
                 )}
               </div>
             )}

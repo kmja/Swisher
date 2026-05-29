@@ -243,8 +243,20 @@ export class RoomDO extends DurableObject {
     return state;
   }
 
-  /** Any diner can add a line OCR missed. Shared lines are pre-claimed for all. */
-  async addItem(actorId: string, data: { description: string; priceOre: number; shared?: boolean }): Promise<RoomState | null> {
+  /** Any diner can add a line OCR missed. Shared lines are pre-claimed for all.
+   *  Optional fields let an "undo remove" call round-trip the item's category,
+   *  emoji and share-count so the restored row looks identical. */
+  async addItem(
+    actorId: string,
+    data: {
+      description: string;
+      priceOre: number;
+      shared?: boolean;
+      shareCount?: number;
+      category?: string;
+      emoji?: string;
+    },
+  ): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
     if (!state.people.some((p) => p.id === actorId)) return state;
@@ -254,7 +266,13 @@ export class RoomDO extends DurableObject {
       id: uid(),
       description: String(data.description).slice(0, 80),
       priceOre,
+      category: typeof data.category === "string" ? data.category : undefined,
+      emoji: typeof data.emoji === "string" ? data.emoji : undefined,
       shared: data.shared === true,
+      shareCount:
+        typeof data.shareCount === "number" && data.shareCount > 0
+          ? Math.round(data.shareCount)
+          : undefined,
       claimedBy: data.shared === true ? state.people.map((p) => p.id) : [],
     });
     await this.save(state);

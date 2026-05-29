@@ -47,7 +47,6 @@ export interface Strings {
   chargedLabel: string;
   totalDiff: (amt: string) => string;
   payerTitle: string;
-  payerHint: string;
   yourName: string;
   swishNumber: string;
   invalidPhone: string;
@@ -193,7 +192,6 @@ const sv: Strings = {
   totalDiff: (amt) =>
     `Summan stämmer inte – ${amt} SEK ifrån kvittots total. Kontrollera om en rad saknas eller är felläst.`,
   payerTitle: "Vem la ut för notan?",
-  payerHint: "Den första personen får pengarna via Swish.",
   yourName: "Ditt namn",
   swishNumber: "Swish-nummer (07XXXXXXXX)",
   invalidPhone: "Ange ett giltigt svenskt mobilnummer.",
@@ -329,7 +327,6 @@ const en: Strings = {
   totalDiff: (amt) =>
     `The sums don't match — ${amt} SEK from the receipt total. Check for a missing or misread row.`,
   payerTitle: "Who paid the bill?",
-  payerHint: "This person receives the money via Swish.",
   yourName: "Your name",
   swishNumber: "Swish number (07XXXXXXXX)",
   invalidPhone: "Enter a valid Swedish mobile number.",

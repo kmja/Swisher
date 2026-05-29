@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeRoomShares, formatOre, parseAmountToOre } from "@/lib/money";
@@ -79,6 +79,8 @@ const R = {
     descPh: "Beskrivning",
     pricePh: "0,00",
     removeRow: "Ta bort rad",
+    removedItem: (desc: string) => `Tog bort ${desc}`,
+    undo: "Ångra",
   },
   en: {
     loading: "Loading the room…",
@@ -140,6 +142,8 @@ const R = {
     descPh: "Description",
     pricePh: "0.00",
     removeRow: "Remove row",
+    removedItem: (desc: string) => `Removed ${desc}`,
+    undo: "Undo",
   },
 } as const;
 
@@ -167,6 +171,20 @@ export default function RoomPage() {
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
+  // Snapshot of the most-recently-removed item, shown as a transient undo toast
+  // above the sticky footer. Claims aren't restored — the addItem action only
+  // round-trips description/price/shared/shareCount/category/emoji.
+  type RemovedSnapshot = {
+    description: string;
+    priceOre: number;
+    shared: boolean;
+    shareCount?: number;
+    category?: string;
+    emoji?: string;
+  };
+  const [pendingUndo, setPendingUndo] = useState<RemovedSnapshot | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
   const t = R[lang];
   const tx = translations[lang];
@@ -341,8 +359,36 @@ export default function RoomPage() {
   function editItem(itemId: string, patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number }) {
     return postAction({ action: "edit", itemId, ...patch });
   }
-  function removeItemRow(itemId: string) {
-    return postAction({ action: "removeItem", itemId });
+  async function removeItemRow(itemId: string) {
+    const item = state?.items.find((i) => i.id === itemId);
+    if (item) {
+      setPendingUndo({
+        description: item.description,
+        priceOre: item.priceOre,
+        shared: !!item.shared,
+        shareCount: item.shareCount,
+        category: item.category,
+        emoji: item.emoji,
+      });
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      undoTimer.current = setTimeout(() => setPendingUndo(null), 6000);
+    }
+    await postAction({ action: "removeItem", itemId });
+  }
+  async function undoRemoval() {
+    if (!pendingUndo) return;
+    const snap = pendingUndo;
+    setPendingUndo(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    await postAction({
+      action: "addItem",
+      description: snap.description,
+      priceOre: snap.priceOre,
+      shared: snap.shared,
+      shareCount: snap.shareCount,
+      category: snap.category,
+      emoji: snap.emoji,
+    });
   }
   async function addItemRow() {
     const priceOre = parseAmountToOre(newPrice) ?? 0;
@@ -1139,6 +1185,20 @@ export default function RoomPage() {
           </div>
         );
       })()}
+      {pendingUndo && (
+        <div className="fixed inset-x-0 bottom-28 z-50 mx-auto max-w-md px-4">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
+            <span className="min-w-0 truncate">🗑 {t.removedItem(pendingUndo.description || t.editRow)}</span>
+            <button
+              type="button"
+              onClick={undoRemoval}
+              className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
+            >
+              {t.undo}
+            </button>
+          </div>
+        </div>
+      )}
       {receiptOpen && (
         <div
           role="dialog"
