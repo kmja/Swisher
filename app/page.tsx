@@ -876,22 +876,21 @@ export default function Page() {
         <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
       </div>
 
-      <Header step={step} t={t} />
+      {step !== "capture" && <Header step={step} t={t} />}
 
       {step === "capture" && (
-        <section className="mt-6 flex flex-1 flex-col">
+        <section className="mt-2 flex flex-1 flex-col">
           <h1 className="text-2xl font-bold">{t.title}</h1>
-          <p className="mt-1 text-sm text-gray-600">{t.intro}</p>
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
             {process.env.NEXT_PUBLIC_BUILD_ID && <>{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
             <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
           </p>
 
-          <div className="relative mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div className="relative mt-4 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" className="max-h-[46vh] w-full object-contain" />
+              <img src={imageUrl} alt="" className="h-full w-full object-contain" />
             ) : null}
             {ocrLoading && (
               <div className="absolute inset-0 overflow-hidden">
@@ -922,7 +921,7 @@ export default function Page() {
                   autoPlay
                   playsInline
                   muted
-                  className={`h-72 w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
+                  className={`h-full w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
                 />
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
@@ -1013,13 +1012,6 @@ export default function Page() {
                     </button>
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={skipToManual}
-                  className="w-full rounded-xl px-4 py-3 font-medium text-gray-600 active:bg-gray-100"
-                >
-                  {t.skipManual}
-                </button>
               </>
             )}
           </div>
