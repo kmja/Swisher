@@ -38,6 +38,24 @@ type UiItem = {
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+/** Stable sort by category (starters → mains → drinks → desserts → other, tip last). */
+function sortByCategory(arr: UiItem[]): UiItem[] {
+  const rank = (it: UiItem) =>
+    it.isTip ? 999 : CATEGORY_ORDER.indexOf(categoryFor(it.description, it.category));
+  return [...arr].sort((a, b) => rank(a) - rank(b));
+}
+
+/** Sort by the receipt's reading order (image index, then vertical position). */
+function sortByReceipt(arr: UiItem[]): UiItem[] {
+  const img = (it: UiItem) => (it.imgIndex < 0 ? Infinity : it.imgIndex);
+  return [...arr].sort((a, b) => {
+    if (a.isTip !== b.isTip) return a.isTip ? 1 : -1;
+    const ai = img(a), bi = img(b);
+    if (ai !== bi) return ai - bi;
+    return (a.y ?? Infinity) - (b.y ?? Infinity);
+  });
+}
+
 /** A sample dinner order for 8 (shared items, drinks, dessert) loaded via
  *  "/?demo=1" — handy for exercising the split flow without a real receipt. */
 const DEMO_ORDER: { d: string; o: number; c: string; s?: boolean }[] = [
@@ -182,23 +200,25 @@ export default function Page() {
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
   const [undoItem, setUndoItem] = useState<UiItem | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // How the items list is ordered. Sort is applied at scan/toggle time so rows
+  // don't reshuffle while you're editing a description.
+  const [sortMode, setSortMode] = useState<"category" | "receipt">("category");
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
   // "/?demo=1": load a sample order so the split flow can be tested end-to-end.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (new URLSearchParams(window.location.search).get("demo") == null) return;
-    setItems(
-      DEMO_ORDER.map((x) => ({
-        id: uid(),
-        description: x.d,
-        priceInput: formatOre(x.o),
-        sharers: [],
-        shared: !!x.s,
-        category: x.c,
-        imgIndex: -1,
-      })),
-    );
+    const demoItems: UiItem[] = DEMO_ORDER.map((x) => ({
+      id: uid(),
+      description: x.d,
+      priceInput: formatOre(x.o),
+      sharers: [],
+      shared: !!x.s,
+      category: x.c,
+      imgIndex: -1,
+    }));
+    setItems(sortMode === "category" ? sortByCategory(demoItems) : demoItems);
     setMealLabel("Demomiddag");
     setStep("items");
   }, []);
@@ -532,7 +552,7 @@ export default function Page() {
           isTip: true,
         });
       }
-      setItems(mapped);
+      setItems(sortMode === "category" ? sortByCategory(mapped) : mapped);
       setRemovedItems([]);
       setUndoItem(null);
       // Reset the group size for the new receipt; it's re-seeded (below) once a
@@ -1018,6 +1038,27 @@ export default function Page() {
                 {t.fxMissing(currency)}
               </p>
             ))}
+            {items.length > 1 && (
+              <div className="mt-3 flex items-center justify-end gap-2 text-xs text-gray-500">
+                <span>{t.sortBy}</span>
+                <div className="inline-flex overflow-hidden rounded-full text-xs font-semibold ring-1 ring-gray-200">
+                  {(["category", "receipt"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={sortMode === m}
+                      onClick={() => {
+                        setSortMode(m);
+                        setItems((prev) => (m === "category" ? sortByCategory(prev) : sortByReceipt(prev)));
+                      }}
+                      className={`px-3 py-1 ${sortMode === m ? "bg-swish text-white" : "bg-white text-gray-500 active:bg-gray-100"}`}
+                    >
+                      {m === "category" ? t.byCategory : t.byReceipt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-3 space-y-2">
               {items.map((it, idx) => {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
