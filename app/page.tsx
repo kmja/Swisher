@@ -636,6 +636,22 @@ export default function Page() {
         return next;
       }),
     );
+  // Identical OCR copies group into one card with an "×N" badge (mirrors the
+  // diner view). Editing the card propagates to every copy via updateGroup so
+  // they stay in lockstep; removing a copy still soft-deletes one at a time.
+  const itemGroupKey = (it: UiItem) =>
+    `${it.description.toLowerCase().trim()}|${it.priceInput}|${it.shared ? 1 : 0}|${it.shareCount ?? ""}|${it.category ?? ""}|${it.isTip ? 1 : 0}`;
+  const updateGroup = (rep: UiItem, patch: Partial<UiItem>) => {
+    const key = itemGroupKey(rep);
+    setItems((prev) =>
+      prev.map((it) => {
+        if (itemGroupKey(it) !== key) return it;
+        const next = { ...it, ...patch };
+        if ("description" in patch) next.emoji = undefined;
+        return next;
+      }),
+    );
+  };
   const addItem = () =>
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
   // Soft-delete: move to the removed list (kept out of the totals/shares), with
@@ -813,6 +829,27 @@ export default function Page() {
     () => computeShares(lineItems, namedDiners, tipOre, groupSize),
     [lineItems, namedDiners, tipOre, groupSize],
   );
+
+  // Collapse identical OCR copies into display groups. The display order is the
+  // first appearance of each group, so editing doesn't make rows jump around.
+  const itemGroups = useMemo(() => {
+    const groups: UiItem[][] = [];
+    const indexOf = new Map<string, number>();
+    for (const it of items) {
+      const key = itemGroupKey(it);
+      const i = indexOf.get(key);
+      if (i === undefined) {
+        indexOf.set(key, groups.length);
+        groups.push([it]);
+      } else {
+        groups[i].push(it);
+      }
+    }
+    return groups;
+    // itemGroupKey is referentially stable (function expression captured above);
+    // the only input that matters is `items`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   const payer = namedDiners[0];
   const normalizedPayer = normalizePhone(payerPhone) ?? "";
@@ -1010,247 +1047,6 @@ export default function Page() {
       {step === "items" && (
         <section className="mt-6 flex flex-1 flex-col gap-6">
           <div>
-            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
-            <p className="text-sm text-gray-600">{t.itemsHint}</p>
-            {ocrModel && (
-              <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
-            )}
-            {ocrModel && !ocrModel.startsWith("claude") && (
-              <p className="mt-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
-                {t.ocrFallback}
-              </p>
-            )}
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <span>{t.currencyLabel}</span>
-              <select
-                value={currency}
-                onChange={(e) => changeCurrency(e.target.value)}
-                disabled={fxChanging}
-                className="rounded-lg bg-white px-2 py-1 font-medium text-ink ring-1 ring-black/10 outline-none disabled:opacity-50"
-              >
-                {currencyOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              {fxChanging && <span className="text-gray-400">…</span>}
-            </div>
-            {isForeign && (fx ? (
-              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
-                {t.fxLine(
-                  country ? `${flagEmoji(country)} ${regionName(country, lang)}` : "🌍",
-                  currency,
-                  `${formatOre(Math.round((fxRate ?? 0) * 100))} SEK${rateDate ? `, ${rateDate}` : ""}`,
-                )}
-                {rateApprox && ` · ${t.fxApprox}`}
-              </p>
-            ) : (
-              <p className="mt-2 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700 ring-1 ring-red-200">
-                {t.fxMissing(currency)}
-              </p>
-            ))}
-            <div className="mt-3 space-y-2">
-              {items.map((it, idx) => {
-                const rowOre = parseAmountToOre(it.priceInput) ?? 0;
-                const divisor = groupSize > 0 ? groupSize : namedDiners.length;
-                const d = itemDivisorFor(it);
-                // "Low confidence" = the keyword layer couldn't categorise this
-                // line and the description is mostly non-alphabetic. Subtle tint
-                // so the host's eyes go to the rows that might need checking.
-                const letters = (it.description.match(/[A-Za-zÀ-ÿ]/g)?.length ?? 0);
-                const lowConfidence = !it.isTip && !it.shared && (
-                  categoryFor(it.description, it.category) === "other" || letters < 2
-                );
-                return (
-                <div
-                  key={it.id}
-                  className={`rounded-xl p-2 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
-                >
-                  <div className="flex items-center gap-2">
-                  <span aria-hidden className="pl-1 text-3xl leading-none">
-                    {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />}
-                  </span>
-                  <input
-                    value={it.description}
-                    onChange={(e) => updateItem(it.id, { description: e.target.value })}
-                    placeholder={t.descPlaceholder}
-                    className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                  />
-                  <div className="flex w-20 shrink-0 flex-col items-stretch">
-                    <input
-                      value={it.priceInput}
-                      onChange={(e) => updateItem(it.id, { priceInput: e.target.value })}
-                      inputMode="decimal"
-                      placeholder={t.pricePlaceholder}
-                      className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                    />
-                    {fx && rowOre > 0 && (
-                      <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
-                    )}
-                  </div>
-                  {it.imgIndex >= 0 && images[it.imgIndex] && (
-                    <button
-                      type="button"
-                      onClick={() => setZoomItem(idx)}
-                      aria-label={t.viewSource}
-                      title={t.viewSource}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center text-swish-dark/70 active:text-swish-dark"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        width="22"
-                        height="22"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.3-4.3" />
-                        <line x1="11" x2="11" y1="8" y2="14" />
-                        <line x1="8" x2="14" y1="11" y2="11" />
-                      </svg>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeItem(it.id)}
-                    aria-label={t.removeRow}
-                    className="px-1 text-gray-400 active:text-red-500"
-                  >
-                    ✕
-                  </button>
-                  </div>
-                  {!it.isTip && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-gray-600">
-                        <input
-                          type="checkbox"
-                          checked={it.shared}
-                          onChange={() => toggleShared(it.id)}
-                          className="h-6 w-6 rounded border-gray-300 accent-swish"
-                        />
-                        {t.sharedToggle}
-                      </label>
-                      {!it.shared && sharedSuggestion(it.description) && (
-                        <button
-                          type="button"
-                          onClick={() => toggleShared(it.id)}
-                          className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
-                        >
-                          {t.maybeShared}
-                        </button>
-                      )}
-                      {it.shared && (
-                        <span className="inline-flex items-center gap-1.5 text-gray-500">
-                          <span>{t.splitWays}</span>
-                          <button
-                            type="button"
-                            aria-label="−"
-                            onClick={() => setShareCount(it.id, d - 1)}
-                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                          >
-                            −
-                          </button>
-                          <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
-                          <button
-                            type="button"
-                            aria-label="+"
-                            onClick={() => setShareCount(it.id, d + 1)}
-                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                          >
-                            +
-                          </button>
-                          <span className="text-gray-400">≈ {formatOre(Math.floor(rowOre / d))} SEK</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {it.isTip && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
-                      <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
-                      {divisor >= 2 && (
-                        <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                );
-              })}
-            </div>
-            {undoItem && (
-              <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white">
-                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
-                <button type="button" onClick={() => restoreItem(undoItem.id)} className="shrink-0 font-semibold text-swish underline-offset-2">
-                  {t.undo}
-                </button>
-              </div>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
-                {t.addRow}
-              </button>
-              <button
-                type="button"
-                onClick={() => addMoreRef.current?.click()}
-                disabled={ocrLoading}
-                className="text-sm font-medium text-swish-dark disabled:opacity-50"
-              >
-                {ocrLoading ? t.addingPhoto : t.addPhoto}
-              </button>
-            </div>
-            <input ref={addMoreRef} type="file" accept="image/*" onChange={onAppendFile} className="hidden" />
-
-            <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
-              <div className="flex justify-between">
-                <span className="text-gray-600">{t.rowsSum}</span>
-                <Money ore={itemsSumOre} className="font-semibold" />
-              </div>
-              {receiptTotal !== null && (
-                <div className="mt-1 flex justify-between">
-                  <span className="text-gray-600">{t.receiptTotalLabel}</span>
-                  <Money ore={receiptTotal} className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`} />
-                </div>
-              )}
-              {tipOre > 0 && (
-                <div className="mt-1 flex justify-between">
-                  <span className="text-gray-600">{t.tip}</span>
-                  <span className="font-semibold">+<Money ore={tipOre} /></span>
-                </div>
-              )}
-              {receiptChargedOre > 0 && receiptChargedOre !== receiptTotal && (
-                <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
-                  <span className="text-gray-600">{t.chargedLabel}</span>
-                  <Money ore={receiptChargedOre} className="font-semibold" />
-                </div>
-              )}
-            </div>
-            {!totalReconciles && (
-              <p className="mt-1 text-xs text-amber-600">{t.totalDiff(formatOre(Math.abs(totalDiffOre)))}</p>
-            )}
-            {removedItems.length > 0 && (
-              <details className="mt-3 rounded-xl bg-white/60 px-4 py-2 ring-1 ring-black/5">
-                <summary className="cursor-pointer text-sm font-medium text-gray-500">{t.removedTitle(removedItems.length)}</summary>
-                <div className="mt-2 space-y-1.5">
-                  {removedItems.map((it) => (
-                    <div key={it.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description || t.rowFallback}</span>
-                      <span className="shrink-0 text-gray-400">{it.priceInput}</span>
-                      <button type="button" onClick={() => restoreItem(it.id)} className="shrink-0 font-medium text-swish-dark active:opacity-70">
-                        {t.restore}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-
-          <div>
             <h2 className="text-xl font-bold">{t.payerTitle}</h2>
             <p className="text-sm text-gray-600">{t.payerHint}</p>
             <div className="mt-2 flex items-center gap-2">
@@ -1333,12 +1129,11 @@ export default function Page() {
             )}
           </div>
 
-          <div>
-            {needsGroupSize && (
-              <div className="rounded-xl bg-swish/5 px-4 py-3 ring-1 ring-swish/20">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-gray-700">{t.sharedGroupPrompt}</span>
-                  <div className="flex items-center gap-3">
+          {needsGroupSize && (
+            <div className="rounded-xl bg-swish/5 px-4 py-3 ring-1 ring-swish/20">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-gray-700">{t.sharedGroupPrompt}</span>
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
                     aria-label="−"
@@ -1366,10 +1161,265 @@ export default function Page() {
                     </span>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+            <p className="text-sm text-gray-600">{t.itemsHint}</p>
+            {ocrModel && (
+              <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
+            )}
+            {ocrModel && !ocrModel.startsWith("claude") && (
+              <p className="mt-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
+                {t.ocrFallback}
+              </p>
+            )}
+            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <span>{t.currencyLabel}</span>
+              <select
+                value={currency}
+                onChange={(e) => changeCurrency(e.target.value)}
+                disabled={fxChanging}
+                className="rounded-lg bg-white px-2 py-1 font-medium text-ink ring-1 ring-black/10 outline-none disabled:opacity-50"
+              >
+                {currencyOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              {fxChanging && <span className="text-gray-400">…</span>}
+            </div>
+            {isForeign && (fx ? (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
+                {t.fxLine(
+                  country ? `${flagEmoji(country)} ${regionName(country, lang)}` : "🌍",
+                  currency,
+                  `${formatOre(Math.round((fxRate ?? 0) * 100))} SEK${rateDate ? `, ${rateDate}` : ""}`,
                 )}
+                {rateApprox && ` · ${t.fxApprox}`}
+              </p>
+            ) : (
+              <p className="mt-2 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700 ring-1 ring-red-200">
+                {t.fxMissing(currency)}
+              </p>
+            ))}
+            <div className="mt-3 space-y-2">
+              {itemGroups.map((copies) => {
+                const rep = copies[0];
+                const idx = items.findIndex((x) => x.id === rep.id);
+                const rowOre = parseAmountToOre(rep.priceInput) ?? 0;
+                const divisor = groupSize > 0 ? groupSize : namedDiners.length;
+                const d = itemDivisorFor(rep);
+                // "Low confidence" = the keyword layer couldn't categorise this
+                // line and the description is mostly non-alphabetic. Subtle tint
+                // so the host's eyes go to the rows that might need checking.
+                const letters = (rep.description.match(/[A-Za-zÀ-ÿ]/g)?.length ?? 0);
+                const lowConfidence = !rep.isTip && !rep.shared && (
+                  categoryFor(rep.description, rep.category) === "other" || letters < 2
+                );
+                return (
+                <div key={rep.id} className="flex items-stretch gap-2">
+                  <div
+                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span aria-hidden className="pl-1 text-3xl leading-none">
+                        {rep.isTip ? "💝" : <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />}
+                      </span>
+                      <input
+                        value={rep.description}
+                        onChange={(e) => updateGroup(rep, { description: e.target.value })}
+                        placeholder={t.descPlaceholder}
+                        className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                      />
+                      {copies.length > 1 && (
+                        <span className="shrink-0 text-sm font-semibold text-gray-400">×{copies.length}</span>
+                      )}
+                      <div className="flex w-20 shrink-0 flex-col items-stretch">
+                        <input
+                          value={rep.priceInput}
+                          onChange={(e) => updateGroup(rep, { priceInput: e.target.value })}
+                          inputMode="decimal"
+                          placeholder={t.pricePlaceholder}
+                          className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                        />
+                        {fx && rowOre > 0 && (
+                          <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
+                        )}
+                      </div>
+                      {rep.imgIndex >= 0 && images[rep.imgIndex] && (
+                        <button
+                          type="button"
+                          onClick={() => setZoomItem(idx)}
+                          aria-label={t.viewSource}
+                          title={t.viewSource}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center text-swish-dark/70 active:text-swish-dark"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            width="22"
+                            height="22"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                            <line x1="11" x2="11" y1="8" y2="14" />
+                            <line x1="8" x2="14" y1="11" y2="11" />
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeItem(rep.id)}
+                        aria-label={t.removeRow}
+                        className="px-1 text-gray-400 active:text-red-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {!rep.isTip && rep.shared && (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
+                        <span>{t.splitWays}</span>
+                        <button
+                          type="button"
+                          aria-label="−"
+                          onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          −
+                        </button>
+                        <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
+                        <button
+                          type="button"
+                          aria-label="+"
+                          onClick={() => updateGroup(rep, { shareCount: Math.min(50, d + 1) })}
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          +
+                        </button>
+                        <span className="text-gray-400">≈ {formatOre(Math.floor(rowOre / d))} SEK</span>
+                      </div>
+                    )}
+                    {!rep.isTip && !rep.shared && sharedSuggestion(rep.description) && (
+                      <div className="mt-2 pl-1 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => updateGroup(rep, { shared: true, sharers: [], shareCount: undefined })}
+                          className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
+                        >
+                          {t.maybeShared}
+                        </button>
+                      </div>
+                    )}
+                    {rep.isTip && (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
+                        <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
+                        {divisor >= 2 && (
+                          <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {!rep.isTip && (
+                    <button
+                      type="button"
+                      onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
+                      aria-pressed={rep.shared}
+                      aria-label={t.sharedToggle}
+                      title={t.sharedToggle}
+                      className={`flex w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl ring-1 transition ${
+                        rep.shared
+                          ? "bg-swish text-white ring-swish shadow-sm"
+                          : "bg-white text-gray-300 ring-gray-200 active:bg-gray-50 active:text-gray-500"
+                      }`}
+                    >
+                      <span aria-hidden className="text-2xl leading-none">🤝</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wide">{t.shareThis}</span>
+                    </button>
+                  )}
+                </div>
+                );
+              })}
+            </div>
+            {undoItem && (
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white">
+                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
+                <button type="button" onClick={() => restoreItem(undoItem.id)} className="shrink-0 font-semibold text-swish underline-offset-2">
+                  {t.undo}
+                </button>
               </div>
             )}
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
+                {t.addRow}
+              </button>
+              <button
+                type="button"
+                onClick={() => addMoreRef.current?.click()}
+                disabled={ocrLoading}
+                className="text-sm font-medium text-swish-dark disabled:opacity-50"
+              >
+                {ocrLoading ? t.addingPhoto : t.addPhoto}
+              </button>
+            </div>
+            <input ref={addMoreRef} type="file" accept="image/*" onChange={onAppendFile} className="hidden" />
+
+            <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t.rowsSum}</span>
+                <Money ore={itemsSumOre} className="font-semibold" />
+              </div>
+              {receiptTotal !== null && (
+                <div className="mt-1 flex justify-between">
+                  <span className="text-gray-600">{t.receiptTotalLabel}</span>
+                  <Money ore={receiptTotal} className={`font-semibold ${totalReconciles ? "text-green-600" : "text-amber-600"}`} />
+                </div>
+              )}
+              {tipOre > 0 && (
+                <div className="mt-1 flex justify-between">
+                  <span className="text-gray-600">{t.tip}</span>
+                  <span className="font-semibold">+<Money ore={tipOre} /></span>
+                </div>
+              )}
+              {receiptChargedOre > 0 && receiptChargedOre !== receiptTotal && (
+                <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
+                  <span className="text-gray-600">{t.chargedLabel}</span>
+                  <Money ore={receiptChargedOre} className="font-semibold" />
+                </div>
+              )}
+            </div>
+            {!totalReconciles && (
+              <p className="mt-1 text-xs text-amber-600">{t.totalDiff(formatOre(Math.abs(totalDiffOre)))}</p>
+            )}
+            {removedItems.length > 0 && (
+              <details className="mt-3 rounded-xl bg-white/60 px-4 py-2 ring-1 ring-black/5">
+                <summary className="cursor-pointer text-sm font-medium text-gray-500">{t.removedTitle(removedItems.length)}</summary>
+                <div className="mt-2 space-y-1.5">
+                  {removedItems.map((it) => (
+                    <div key={it.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-gray-400 line-through">{it.description || t.rowFallback}</span>
+                      <span className="shrink-0 text-gray-400">{it.priceInput}</span>
+                      <button type="button" onClick={() => restoreItem(it.id)} className="shrink-0 font-medium text-swish-dark active:opacity-70">
+                        {t.restore}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+
+          <div>
+            <div className="flex flex-wrap gap-1.5">
               {t.mealPresets.map((preset) => (
                 <button
                   key={preset}
