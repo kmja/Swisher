@@ -371,7 +371,7 @@ export default function RoomPage() {
   const { shares, unassignedOre } = useMemo(() => {
     if (!state) return { shares: [] as Share[], unassignedOre: 0 };
     const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
-    return computeRoomShares(state.items, diners, state.tipOre);
+    return computeRoomShares(state.items, diners, state.tipOre, state.groupSize ?? 0);
   }, [state]);
 
   const unclaimedCount = (state?.items ?? []).filter((i) => !i.shared && i.claimedBy.length === 0).length;
@@ -389,16 +389,22 @@ export default function RoomPage() {
       ? { currency: state.currency, rate: state.rate }
       : null;
 
-  // What the host still needs to collect: everyone else's shares, minus those
-  // already marked paid. Their own share isn't collected.
+  // What the host still needs to collect: everyone else's shares (minus those
+  // already paid), PLUS items that are still unassigned. The host paid the
+  // full bill, so anything they haven't claimed for themselves is still owed
+  // by someone — whether they've claimed yet or not.
   const paidSet = new Set(state.paidBy ?? []);
   const otherShares = shares.filter((s) => s.dinerId !== state.payeePersonId && s.totalOre > 0);
   const paidCount = otherShares.filter((s) => paidSet.has(s.dinerId)).length;
-  const toCollectOre = otherShares.filter((s) => !paidSet.has(s.dinerId)).reduce((a, s) => a + s.totalOre, 0);
+  const unpaidOthersOre = otherShares.filter((s) => !paidSet.has(s.dinerId)).reduce((a, s) => a + s.totalOre, 0);
+  const toCollectOre = unpaidOthersOre + unassignedOre;
   const claimedNamesFor = (dinerId: string) =>
     state.items.filter((i) => i.claimedBy.includes(dinerId)).map((i) => i.description);
 
   const peopleCount = Math.max(1, state.people.length);
+  // Group size used for share-count defaults and the +/− cap. Prefer the host's
+  // intended head count; otherwise grow with the actual people in the room.
+  const groupSize = Math.max(2, peopleCount, state.groupSize ?? 0);
   const isMine = (it: RoomState["items"][number]) => !!personId && it.claimedBy.includes(personId);
 
   // One row in the claim list: an inline editor when it's being edited, else a
@@ -406,7 +412,7 @@ export default function RoomPage() {
   // each category section.
   function claimItemRow(it: RoomState["items"][number]) {
     if (editingItemId === it.id) {
-      const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(2, peopleCount);
+      const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
       return (
         <div key={it.id} className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
           <div className="flex items-center gap-2">
@@ -448,7 +454,7 @@ export default function RoomPage() {
                 <span>{tx.splitWays}</span>
                 <button type="button" aria-label="−" onClick={() => editItem(it.id, { shareCount: Math.max(2, dv - 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">−</button>
                 <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
-                <button type="button" aria-label="+" onClick={() => editItem(it.id, { shareCount: Math.min(50, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">+</button>
+                <button type="button" aria-label="+" disabled={dv >= groupSize} onClick={() => editItem(it.id, { shareCount: Math.min(groupSize, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40">+</button>
               </span>
             )}
           </div>
@@ -483,7 +489,11 @@ export default function RoomPage() {
             )}
           </span>
           <Money
-            ore={it.shared ? Math.round(it.priceOre / peopleCount) : it.priceOre}
+            ore={
+              it.shared
+                ? Math.round(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize))
+                : it.priceOre
+            }
             className="shrink-0 text-right text-sm font-semibold"
           />
         </button>
@@ -679,7 +689,7 @@ export default function RoomPage() {
                 // for each shared item I haven't opted out of.
                 const mySharedOre = state.items.reduce((acc, it) => {
                   if (!it.shared || !personId || !it.claimedBy.includes(personId)) return acc;
-                  const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(1, peopleCount);
+                  const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
                   return acc + Math.floor(it.priceOre / divisor);
                 }, 0);
                 return (
@@ -936,7 +946,7 @@ export default function RoomPage() {
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
           const oreEach = it.shared
-            ? Math.floor(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(1, peopleCount)))
+            ? Math.floor(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize))
             : Math.floor(it.priceOre / Math.max(1, it.claimedBy.length));
           const k = `${it.description}|${oreEach}|${it.shared ? 1 : 0}`;
           const ex = cartMap.get(k);

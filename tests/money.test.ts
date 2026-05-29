@@ -131,6 +131,21 @@ describe("computeRoomShares", () => {
     expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(5000);
     expect(shares.map((s) => s.tipOre)).toEqual([1000, 1000, 1000]);
   });
+
+  it("uses the host's groupSize as the shared divisor before everyone joins", () => {
+    // Host alone in a room that was created with groupSize=4. A shared bottle
+    // shouldn't go 1-way and absorb the whole price — three of the four shares
+    // are still owed by future joiners.
+    const hostOnly: Diner[] = [{ id: "A", name: "Ada" }];
+    const { shares, unassignedOre } = computeRoomShares(
+      [{ priceOre: 12000, shared: true, claimedBy: ["A"] }],
+      hostOnly,
+      0,
+      4,
+    );
+    expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(3000);
+    expect(unassignedOre).toBe(9000);
+  });
 });
 
 describe("estimateGroupSize", () => {

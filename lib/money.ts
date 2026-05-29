@@ -157,16 +157,21 @@ export function computeRoomShares(
   items: { priceOre: number; shared?: boolean; shareCount?: number; claimedBy: string[] }[],
   people: Diner[],
   tipOre = 0,
+  /** Host-declared head count; used as the shared-item divisor when no
+   *  per-item shareCount is set. Prevents a host-only room (n=1) from
+   *  splitting "shared for 4" items 1-way. */
+  groupSize = 0,
 ): { shares: Share[]; unassignedOre: number } {
   const subtotals = new Map<string, number>();
   for (const p of people) subtotals.set(p.id, 0);
   const n = people.length;
+  const fallbackDivisor = Math.max(1, groupSize, n);
   let unassignedOre = 0;
 
   for (const item of items) {
     const claimers = item.claimedBy.filter((id) => subtotals.has(id));
     if (item.shared) {
-      const divisor = item.shareCount && item.shareCount > 0 ? item.shareCount : Math.max(1, n);
+      const divisor = item.shareCount && item.shareCount > 0 ? item.shareCount : fallbackDivisor;
       const parts = splitOre(item.priceOre, divisor);
       claimers.forEach((id, i) => {
         if (i < parts.length) subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);

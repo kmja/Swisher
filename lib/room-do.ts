@@ -41,6 +41,11 @@ export type RoomState = {
   country: string;
   /** Number of receipt photos stored separately under the "images" key. */
   imageCount: number;
+  /** Host's intended head count. Used as the fallback divisor for shared items
+   *  before everyone has joined, and as the upper bound for the share-count
+   *  stepper so the host can't accidentally split a dish more ways than the
+   *  table actually has people. */
+  groupSize?: number;
   items: RoomItem[];
   people: RoomPerson[];
   /** Person ids the host (or the person themselves) has marked as settled. */
@@ -65,6 +70,7 @@ export type RoomInit = {
   /** Receipt photos as base64 data URLs. Stored under a separate storage key so
    *  per-claim state writes stay small; fetched via the /images endpoint. */
   images?: string[];
+  groupSize?: number;
   items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
 };
 
@@ -104,6 +110,10 @@ export class RoomDO extends DurableObject {
       rate: typeof data.rate === "number" && data.rate > 0 ? data.rate : 1,
       country: (data.country ?? "").slice(0, 2).toUpperCase(),
       imageCount: Array.isArray(data.images) ? Math.min(data.images.length, 5) : 0,
+      groupSize:
+        typeof data.groupSize === "number" && data.groupSize >= 2
+          ? Math.min(50, Math.round(data.groupSize))
+          : undefined,
       items: data.items.map((it) => ({
         id: uid(),
         description: it.description.slice(0, 80),
