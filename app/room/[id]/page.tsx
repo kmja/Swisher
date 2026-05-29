@@ -461,21 +461,21 @@ export default function RoomPage() {
           type="button"
           onClick={() => toggleClaim(it.id)}
           disabled={busyItem === it.id}
-          className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+          className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
             mine ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
           }`}
         >
           <span
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
               mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
             }`}
           >
             ✓
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-medium">
-              <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-              {it.description}
+            <span className="flex min-w-0 items-center gap-2 font-medium">
+              <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+              <span className="truncate">{it.description}</span>
             </span>
             {it.shared && (
               <span className="text-[11px] text-swish-dark">{tx.sharedToggle} · <Money ore={it.priceOre} /></span>
@@ -535,20 +535,20 @@ export default function RoomPage() {
             type="button"
             onClick={tapRow}
             disabled={availableCount === 0 && mineCount === 0}
-            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
               taken ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
             }`}
           >
             <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
                 taken ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
               }`}
             >
               ✓
             </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium">
-                <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+            <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+              <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+              <span className="min-w-0 truncate">
                 {rep.description}
                 {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
               </span>
@@ -683,11 +683,11 @@ export default function RoomPage() {
                 }, 0);
                 return (
                   <details className="group space-y-2">
-                    <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-xl py-1 text-sm font-semibold text-gray-500 [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-xl py-1 text-base font-bold text-gray-700 [&::-webkit-details-marker]:hidden">
                       <span className="flex items-center gap-2">
-                        <span aria-hidden>🤝</span>
+                        <span aria-hidden className="text-2xl leading-none">🤝</span>
                         <span>
-                          {t.sharedSection} <span className="font-normal text-gray-400">({sharedItems.length})</span>
+                          {t.sharedSection} <span className="font-medium text-gray-400">({sharedItems.length})</span>
                         </span>
                       </span>
                       <span className="flex items-center gap-2">
@@ -731,8 +731,8 @@ export default function RoomPage() {
                 const othersTotal = othersGroups.reduce((acc, g) => acc + g.copies.length, 0);
                 return (
                   <div key={cat} className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
-                      <span aria-hidden>{CATEGORY_EMOJI[cat]}</span>
+                    <div className="flex items-center gap-2 text-base font-bold text-gray-700">
+                      <span aria-hidden className="text-2xl leading-none">{CATEGORY_EMOJI[cat]}</span>
                       <span>{CATEGORY_LABEL[lang][cat]}</span>
                     </div>
                     {mainGroups.map(renderClaimGroup)}
@@ -864,7 +864,7 @@ export default function RoomPage() {
 
           {/* Everyone */}
           <section>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-400">{t.peopleTitle}</h2>
+            <h2 className="mb-2 text-base font-bold text-gray-700">{t.peopleTitle}</h2>
             <div className="space-y-2">
               {shares.map((s) => {
                 const isHostRow = s.dinerId === state.payeePersonId;
