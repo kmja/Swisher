@@ -1356,14 +1356,6 @@ export default function Page() {
                 );
               })}
             </div>
-            {undoItem && (
-              <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white">
-                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
-                <button type="button" onClick={() => restoreItem(undoItem.id)} className="shrink-0 font-semibold text-swish underline-offset-2">
-                  {t.undo}
-                </button>
-              </div>
-            )}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <button type="button" onClick={addItem} className="text-sm font-medium text-swish-dark">
                 {t.addRow}
@@ -1494,6 +1486,20 @@ export default function Page() {
               </button>
             </div>
           </details>
+          {undoItem && (
+            <div className="fixed inset-x-0 bottom-24 z-50 mx-auto max-w-md px-4">
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
+                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
+                <button
+                  type="button"
+                  onClick={() => restoreItem(undoItem.id)}
+                  className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
+                >
+                  {t.undo}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
