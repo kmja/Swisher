@@ -223,6 +223,20 @@ export default function RoomPage() {
   async function toggleClaim(itemId: string) {
     if (!personId) return;
     setBusyItem(itemId);
+    // Optimistic: flip the claim locally so the tap feels instant. On error we
+    // refresh from the server, which restores the truth.
+    setState((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((it) => {
+          if (it.id !== itemId) return it;
+          const i = it.claimedBy.indexOf(personId);
+          const claimedBy = i >= 0 ? it.claimedBy.filter((id) => id !== personId) : [...it.claimedBy, personId];
+          return { ...it, claimedBy };
+        }),
+      };
+    });
     try {
       const res = await fetch(`/api/room/${code}`, {
         method: "POST",
@@ -230,6 +244,9 @@ export default function RoomPage() {
         body: JSON.stringify({ action: "claim", personId, itemId }),
       });
       if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+      else refresh();
+    } catch {
+      refresh();
     } finally {
       setBusyItem(null);
     }
@@ -237,12 +254,24 @@ export default function RoomPage() {
 
   async function togglePaid(targetId: string) {
     if (!personId) return;
-    const res = await fetch(`/api/room/${code}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "paid", personId, targetId }),
+    setState((prev) => {
+      if (!prev) return prev;
+      const paidBy = prev.paidBy ?? [];
+      const i = paidBy.indexOf(targetId);
+      const next = i >= 0 ? paidBy.filter((id) => id !== targetId) : [...paidBy, targetId];
+      return { ...prev, paidBy: next };
     });
-    if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+    try {
+      const res = await fetch(`/api/room/${code}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "paid", personId, targetId }),
+      });
+      if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+      else refresh();
+    } catch {
+      refresh();
+    }
   }
 
   async function postAction(payload: Record<string, unknown>) {
