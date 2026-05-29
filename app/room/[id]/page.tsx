@@ -791,8 +791,10 @@ export default function RoomPage() {
                           {t.sharedSection} <span className="font-medium text-gray-400">({sharedItems.length})</span>
                         </span>
                       </span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs font-medium text-gray-400">{t.yourTotal}</span>
+                      <span className="flex shrink-0 flex-col items-end leading-tight">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          {t.yourTotal}
+                        </span>
                         <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
                       </span>
                     </button>
@@ -1084,18 +1086,18 @@ export default function RoomPage() {
               disabled={empty && toCollectOre === 0}
               className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left active:bg-white/5 disabled:active:bg-transparent"
             >
-              <span className="flex min-w-0 flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">
-                  {t.remainingToCollect}
-                </span>
-                <span className="truncate text-xs text-white/70">{subtitle}</span>
-              </span>
+              <span className="min-w-0 flex-1 truncate text-xs text-white/70">{subtitle}</span>
               <span className="flex shrink-0 items-center gap-2">
-                <Money
-                  ore={toCollectOre}
-                  className="text-lg font-bold"
-                  nativeClassName="ml-1 text-[11px] font-normal text-white/60"
-                />
+                <span className="flex flex-col items-end leading-tight">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
+                    {t.remainingToCollect}
+                  </span>
+                  <Money
+                    ore={toCollectOre}
+                    className="text-lg font-bold"
+                    nativeClassName="ml-1 text-[11px] font-normal text-white/60"
+                  />
+                </span>
                 {!empty && (
                   <span
                     className={`text-2xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}

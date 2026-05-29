@@ -122,15 +122,6 @@ export default function QrDialog({
             </button>
           </div>
         )}
-        {download && (
-          <a
-            href={qrSrc}
-            download={download}
-            className="mt-3 block text-center text-xs font-medium text-gray-500 underline-offset-2 hover:underline active:opacity-70"
-          >
-            💾 {labels.save ?? "Save image"}
-          </a>
-        )}
       </div>
     </div>
   );

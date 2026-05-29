@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
@@ -118,31 +118,6 @@ function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
   }
 }
 
-/** Crop a horizontal band of the receipt centred on yFrac, so the magnifier
- *  shows the line where an item was recognised — generous enough to include a
- *  couple of neighbouring lines for context if the OCR y was slightly off. */
-function cropBand(src: string, yFrac: number): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const W = img.naturalWidth;
-      const H = img.naturalHeight;
-      const bandH = Math.max(80, Math.round(H * 0.15));
-      let top = Math.round(Math.max(0, Math.min(1, yFrac)) * H - bandH / 2);
-      top = Math.max(0, Math.min(H - bandH, top));
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = bandH;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return resolve(src);
-      ctx.drawImage(img, 0, top, W, bandH, 0, 0, W, bandH);
-      resolve(canvas.toDataURL("image/jpeg", 0.9));
-    };
-    img.onerror = () => resolve(src);
-    img.src = src;
-  });
-}
-
 /** Downscale a photo to keep the OCR upload small and fast. */
 function fileToCompressedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -222,8 +197,10 @@ export default function Page() {
   const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [zoomItem, setZoomItem] = useState<number | null>(null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [showFullReceipt, setShowFullReceipt] = useState(false);
+  // Zoom multiplier on fit-width inside the receipt dialog. 1.5× is a
+  // readable default; +/- buttons step between 1× and 4×.
+  const [zoomScale, setZoomScale] = useState(1.5);
+  const zoomScrollerRef = useRef<HTMLDivElement>(null);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -352,27 +329,55 @@ export default function Page() {
     return () => clearInterval(iv);
   }, [ocrLoading]);
 
-  // When the magnifier opens, crop the band of the source photo where the item
-  // was recognised (model-reported position, else its order within that photo).
+  // Reset zoom every time the dialog opens for a fresh item so the previous
+  // item's zoom doesn't leak in.
   useEffect(() => {
-    // Default to the full receipt: it's more forgiving of inaccurate OCR y
-    // positions than the cropped band (you can still find the line by eye).
-    setShowFullReceipt(true);
-    setCropSrc(null);
+    if (zoomItem !== null) setZoomScale(1.5);
+  }, [zoomItem]);
+
+  // Recenter the receipt on the estimated y of the active item whenever the
+  // dialog opens, zooms, or swaps items. The old code only scrolled on the
+  // img's onLoad — but the browser caches the image, so reopening the dialog
+  // on a DIFFERENT item left the scroll position stuck on the previous item.
+  // useLayoutEffect runs after layout, so clientHeight already reflects the
+  // current zoom-scaled wrapper.
+  useLayoutEffect(() => {
     if (zoomItem === null) return;
+    const scroller = zoomScrollerRef.current;
+    if (!scroller) return;
     const it = items[zoomItem];
     if (!it || it.imgIndex < 0 || !images[it.imgIndex]) return;
     const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
     const pos = Math.max(0, sameImg.indexOf(it));
-    const yFrac = it.y != null ? it.y : (pos + 0.5) / Math.max(1, sameImg.length);
-    let cancelled = false;
-    cropBand(images[it.imgIndex], yFrac).then((src) => {
-      if (!cancelled) setCropSrc(src);
-    });
-    return () => {
-      cancelled = true;
+    // Items typically sit in the middle 15-85% of a receipt; the model's `y`
+    // is a hint but is often noisy, so blend it with the deterministic
+    // positional estimate. When they agree (within 15%) we trust the model;
+    // when they don't, we fall back to position-only — that lands close to
+    // the right line even on the worst Claude readings.
+    const positional = 0.15 + 0.7 * ((pos + 0.5) / Math.max(1, sameImg.length));
+    const modelY = it.y;
+    const yFrac =
+      modelY != null && Math.abs(modelY - positional) < 0.15 ? modelY : positional;
+    const img = scroller.querySelector("img");
+    const apply = () => {
+      if (!img) return false;
+      const imgH = img.clientHeight;
+      const imgW = img.clientWidth;
+      if (imgH === 0 || imgW === 0) return false;
+      scroller.scrollTop = Math.max(
+        0,
+        Math.min(imgH - scroller.clientHeight, yFrac * imgH - scroller.clientHeight / 2),
+      );
+      scroller.scrollLeft = Math.max(0, (imgW - scroller.clientWidth) / 2);
+      return true;
     };
-  }, [zoomItem, items, images]);
+    if (apply()) return;
+    // Image not loaded yet — try again when it does.
+    if (!img) return;
+    const onLoad = () => apply();
+    img.addEventListener("load", onLoad);
+    return () => img.removeEventListener("load", onLoad);
+  }, [zoomItem, zoomScale, items, images]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -915,7 +920,13 @@ export default function Page() {
             <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
           </p>
 
-          <div className="relative mt-4 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div
+            className={`relative mt-4 flex overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${
+              ocrLoading || scanCount !== null
+                ? "h-44 shrink-0"
+                : "min-h-0 flex-1"
+            }`}
+          >
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="h-full w-full object-contain" />
@@ -998,18 +1009,28 @@ export default function Page() {
                   placeholder={t.yourName}
                   className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
                 />
-                <input
-                  value={payerPhone}
-                  onChange={(e) => {
-                    setPayerPhone(e.target.value);
-                    // Once the number's valid, drop the keyboard — saves a tap
-                    // and signals "this looks right" without a separate "next".
-                    if (isValidPhone(e.target.value)) e.target.blur();
-                  }}
-                  inputMode="tel"
-                  placeholder={t.swishNumber}
-                  className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
-                />
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    value={payerPhone}
+                    onChange={(e) => {
+                      setPayerPhone(e.target.value);
+                      // Once the number's valid, drop the keyboard — saves a tap
+                      // and signals "this looks right" without a separate "next".
+                      if (isValidPhone(e.target.value)) e.target.blur();
+                    }}
+                    inputMode="tel"
+                    placeholder={t.swishNumber}
+                    className="w-full rounded-xl bg-gray-50 px-4 py-3 pr-9 outline-none"
+                  />
+                  {isValidPhone(payerPhone) && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm text-gray-600">{t.groupSizeLabel}</span>
@@ -1140,18 +1161,26 @@ export default function Page() {
                 ) : ibanCountryLabel ? (
                   <p className="text-xs text-gray-400">{ibanCountryLabel}</p>
                 ) : null}
-                <input
-                  value={payerPhone}
-                  onChange={(e) => {
-                    setPayerPhone(e.target.value);
-                    // Once the number's valid, drop the keyboard — saves a tap
-                    // and signals "this looks right" without a separate "next".
-                    if (isValidPhone(e.target.value)) e.target.blur();
-                  }}
-                  inputMode="tel"
-                  placeholder={t.swishOptional}
-                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                />
+                <div className="relative">
+                  <input
+                    value={payerPhone}
+                    onChange={(e) => {
+                      setPayerPhone(e.target.value);
+                      if (isValidPhone(e.target.value)) e.target.blur();
+                    }}
+                    inputMode="tel"
+                    placeholder={t.swishOptional}
+                    className="w-full rounded-xl bg-white px-4 py-3 pr-9 shadow-sm ring-1 ring-black/5 outline-none"
+                  />
+                  {isValidPhone(payerPhone) && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
                 {payerPhone && !isValidPhone(payerPhone) && <p className="text-xs text-red-600">{t.invalidPhone}</p>}
                 <p className="px-1 text-xs text-gray-400">{t.sepaSettlesEur}</p>
               </div>
@@ -1164,18 +1193,26 @@ export default function Page() {
                     placeholder={t.yourName}
                     className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
                   />
-                  <input
-                    value={payerPhone}
-                    onChange={(e) => {
-                    setPayerPhone(e.target.value);
-                    // Once the number's valid, drop the keyboard — saves a tap
-                    // and signals "this looks right" without a separate "next".
-                    if (isValidPhone(e.target.value)) e.target.blur();
-                  }}
-                    inputMode="tel"
-                    placeholder={t.swishNumber}
-                    className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                  />
+                  <div className="relative min-w-0 flex-1">
+                    <input
+                      value={payerPhone}
+                      onChange={(e) => {
+                        setPayerPhone(e.target.value);
+                        if (isValidPhone(e.target.value)) e.target.blur();
+                      }}
+                      inputMode="tel"
+                      placeholder={t.swishNumber}
+                      className="w-full rounded-xl bg-white px-4 py-3 pr-9 shadow-sm ring-1 ring-black/5 outline-none"
+                    />
+                    {isValidPhone(payerPhone) && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {payerPhone && !isValidPhone(payerPhone) && (
                   <p className="px-1 text-xs text-red-600">{t.invalidPhone}</p>
@@ -1754,7 +1791,8 @@ export default function Page() {
         if (!src) return null;
         const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
         const posIdx = Math.max(0, sameImg.indexOf(it));
-        const yFrac = it.y != null ? it.y : (posIdx + 0.5) / Math.max(1, sameImg.length);
+        const positional = 0.15 + 0.7 * ((posIdx + 0.5) / Math.max(1, sameImg.length));
+        const yFrac = it.y != null && Math.abs(it.y - positional) < 0.15 ? it.y : positional;
         return (
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
@@ -1762,87 +1800,70 @@ export default function Page() {
                 <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                 {it.description || t.viewSource}
               </span>
-              <button
-                type="button"
-                onClick={() => setZoomItem(null)}
-                className="shrink-0 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
-              >
-                ✕
-              </button>
-            </div>
-            <div id="zoom-scroll" className="flex flex-1 items-start justify-center overflow-auto p-3">
-              {showFullReceipt ? (
-                <div className="relative w-[200%] max-w-none">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt=""
-                    className="block w-full rounded-lg"
-                    onLoad={(e) => {
-                      // Centre the suspected line in the viewport once loaded,
-                      // and centre horizontally (the receipt's text usually is).
-                      const scroller = document.getElementById("zoom-scroll");
-                      if (!scroller) return;
-                      const imgH = e.currentTarget.clientHeight;
-                      const imgW = e.currentTarget.clientWidth;
-                      scroller.scrollTop = Math.max(0, yFrac * imgH - scroller.clientHeight / 2);
-                      scroller.scrollLeft = Math.max(0, (imgW - scroller.clientWidth) / 2);
-                    }}
-                  />
-                  {/* Soft amber wash around the line… */}
-                  <div
-                    className="pointer-events-none absolute inset-x-0 z-10"
-                    style={{
-                      top: `calc(${yFrac * 100}% - 40px)`,
-                      height: "80px",
-                      background:
-                        "linear-gradient(to bottom, transparent 0%, rgba(251, 191, 36, 0.35) 40%, rgba(251, 191, 36, 0.45) 50%, rgba(251, 191, 36, 0.35) 60%, transparent 100%)",
-                    }}
-                  />
-                  {/* …with a bright glowing line right at the y. */}
-                  <div
-                    className="pointer-events-none absolute inset-x-0 z-10"
-                    style={{
-                      top: `calc(${yFrac * 100}% - 3px)`,
-                      height: "6px",
-                      backgroundColor: "rgb(251, 191, 36)",
-                      boxShadow: "0 0 12px 2px rgba(251, 191, 36, 0.9)",
-                    }}
-                  />
-                </div>
-              ) : cropSrc ? (
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setShowFullReceipt(true)}
-                  className="relative block w-full"
-                  aria-label={t.viewSourceFull}
+                  onClick={() => setZoomScale((z) => Math.max(1, +(z - 0.5).toFixed(1)))}
+                  disabled={zoomScale <= 1}
+                  aria-label="zoom out"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-2xl leading-none disabled:opacity-30"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={cropSrc} alt="" className="block w-full rounded-lg ring-1 ring-white/20" />
-                  {/* The crop is centred on yFrac, so the suspected line sits at the middle. */}
-                  <div
-                    className="pointer-events-none absolute inset-x-0"
-                    style={{
-                      top: "calc(50% - 3px)",
-                      height: "6px",
-                      backgroundColor: "rgb(251, 191, 36)",
-                      boxShadow: "0 0 12px 2px rgba(251, 191, 36, 0.9)",
-                    }}
-                  />
+                  −
                 </button>
-              ) : (
-                <p className="pt-10 text-sm text-white/60">…</p>
-              )}
+                <span className="w-10 text-center text-xs font-mono tabular-nums text-white/70">{zoomScale.toFixed(1)}×</span>
+                <button
+                  type="button"
+                  onClick={() => setZoomScale((z) => Math.min(4, +(z + 0.5).toFixed(1)))}
+                  disabled={zoomScale >= 4}
+                  aria-label="zoom in"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-2xl leading-none disabled:opacity-30"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomItem(null)}
+                  className="ml-1 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-            <div className="px-4 py-3 text-center">
-              <button
-                type="button"
-                onClick={() => setShowFullReceipt((v) => !v)}
-                className="text-sm font-medium text-white/80 underline"
-              >
-                {showFullReceipt ? t.viewSourceCrop : t.viewSourceFull}
-              </button>
+            <div ref={zoomScrollerRef} className="relative flex-1 overflow-auto">
+              <div className="relative max-w-none" style={{ width: `${zoomScale * 100}%` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt=""
+                  draggable={false}
+                  className="block w-full select-none rounded-lg"
+                />
+                {/* Amber wash + bright centre line at the estimated y. Both
+                   sit inside the scaled wrapper so they track with the
+                   image during scroll/zoom. */}
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10"
+                  style={{
+                    top: `calc(${yFrac * 100}% - 36px)`,
+                    height: "72px",
+                    background:
+                      "linear-gradient(to bottom, transparent 0%, rgba(251, 191, 36, 0.4) 40%, rgba(251, 191, 36, 0.55) 50%, rgba(251, 191, 36, 0.4) 60%, transparent 100%)",
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10"
+                  style={{
+                    top: `calc(${yFrac * 100}% - 3px)`,
+                    height: "6px",
+                    backgroundColor: "rgb(251, 191, 36)",
+                    boxShadow: "0 0 14px 3px rgba(251, 191, 36, 0.9)",
+                  }}
+                />
+              </div>
             </div>
+            <p className="px-4 pb-3 pt-1 text-center text-[11px] text-white/50">
+              {t.viewSourceCrop}
+            </p>
           </div>
         );
       })()}

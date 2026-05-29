@@ -235,7 +235,7 @@ const sv: Strings = {
   creatingRoom: "Bjuder in…",
 
   groupSizeLabel: "Antal som delar (valfritt)",
-  sharedGroupPrompt: "Ni har delade rätter – hur många är ni?",
+  sharedGroupPrompt: "Det ser ut som ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
   shareThis: "Dela",
   sharedLabel: "Delas",
@@ -371,7 +371,7 @@ const en: Strings = {
   creatingRoom: "Inviting…",
 
   groupSizeLabel: "People sharing (optional)",
-  sharedGroupPrompt: "You have shared items — how many are you?",
+  sharedGroupPrompt: "Looks like you have shared items — how many are you?",
   sharedToggle: "Shared",
   shareThis: "Share",
   sharedLabel: "Shared",
