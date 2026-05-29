@@ -59,7 +59,19 @@ describe("emojiFor", () => {
   });
 
   it("does not let the soda rule swallow fläsk (suffix-match regression)", () => {
-    expect(emojiFor("fläskkarré")).toBe("🥩");
+    // Pork now uses the pig emoji; the soda rule must still not steal it.
+    expect(emojiFor("fläskkarré")).toBe("🐖");
+  });
+
+  it("maps meats to animal-specific emojis", () => {
+    expect(emojiFor("lammracks")).toBe("🐑");
+    expect(emojiFor("lammkotlett")).toBe("🐑");
+    expect(emojiFor("entrecôte")).toBe("🐄");
+    expect(emojiFor("ankbröst")).toBe("🦆");
+    expect(emojiFor("kalkonfilé")).toBe("🦃");
+    expect(emojiFor("kycklingfilé")).toBe("🐔");
+    // Generic fallback still kicks in for unspecified meat words.
+    expect(emojiFor("plankstek")).toBe("🥩");
   });
 
   it("doesn't let a short keyword prefix-match a brand (Bonaqua ≠ broccoli)", () => {

@@ -12,6 +12,7 @@ import LangToggle, { saveLang } from "@/components/LangToggle";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
+import { buildSwishUri } from "@/lib/swish";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
 
@@ -65,6 +66,8 @@ const R = {
     nothingYet: "Du har inte petat i något än.",
     paid: "Betald",
     markPaid: "Markera betald",
+    cartCount: (n: number) => `${n} rad${n === 1 ? "" : "er"} klar${n === 1 ? "" : "a"}`,
+    payWithSwishAmt: (amt: string) => `Betala ${amt} SEK med Swish`,
     newReceipt: "Nytt kvitto",
     history: "Historik",
     editItems: "Rätta rader",
@@ -122,6 +125,8 @@ const R = {
     nothingYet: "You haven't tapped anything yet.",
     paid: "Paid",
     markPaid: "Mark paid",
+    cartCount: (n: number) => `${n} item${n === 1 ? "" : "s"} claimed`,
+    payWithSwishAmt: (amt: string) => `Pay ${amt} SEK with Swish`,
     newReceipt: "New receipt",
     history: "History",
     editItems: "Fix items",
@@ -545,11 +550,8 @@ export default function RoomPage() {
               <span className="truncate font-medium">
                 <span aria-hidden className="mr-1"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
                 {rep.description}
-                <span className="ml-1 text-xs font-normal text-gray-400">×{totalCount}</span>
+                {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
               </span>
-              {!taken && (
-                <span className="text-[11px] text-gray-500">{t.nLeft(availableCount)}</span>
-              )}
             </span>
             <Money
               ore={taken ? myTotalOre : rep.priceOre}
@@ -566,27 +568,26 @@ export default function RoomPage() {
           </button>
         </div>
         {taken && (
-          <div className="flex items-center gap-2 pl-12 text-xs text-gray-500">
+          <div className="flex items-center gap-3 pl-12">
             <button
               type="button"
               disabled={mineCount === 0}
               onClick={releaseOne}
               aria-label="−"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
             >
               −
             </button>
-            <span className="w-7 text-center text-base font-semibold tabular-nums text-gray-700">{mineCount}</span>
+            <span className="w-10 text-center text-2xl font-semibold tabular-nums text-gray-700">{mineCount}</span>
             <button
               type="button"
               disabled={availableCount === 0}
               onClick={claimOne}
               aria-label="+"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
             >
               +
             </button>
-            {availableCount > 0 && <span className="ml-1">{t.nLeft(availableCount)}</span>}
           </div>
         )}
       </div>
@@ -595,7 +596,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
       {/* Navigation */}
       <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
         <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
@@ -672,6 +673,7 @@ export default function RoomPage() {
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
               {state.items.some((it) => it.shared) && (() => {
+                const sharedItems = state.items.filter((it) => it.shared);
                 // What the shared section costs *me*: my per-share contribution
                 // for each shared item I haven't opted out of.
                 const mySharedOre = state.items.reduce((acc, it) => {
@@ -680,16 +682,22 @@ export default function RoomPage() {
                   return acc + Math.floor(it.priceOre / divisor);
                 }, 0);
                 return (
-                  <details className="space-y-2">
-                    <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm font-semibold text-gray-500 [&::-webkit-details-marker]:hidden">
+                  <details className="group space-y-2">
+                    <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-xl py-1 text-sm font-semibold text-gray-500 [&::-webkit-details-marker]:hidden">
                       <span className="flex items-center gap-2">
                         <span aria-hidden>🤝</span>
-                        <span>{t.sharedSection}</span>
+                        <span>
+                          {t.sharedSection} <span className="font-normal text-gray-400">({sharedItems.length})</span>
+                        </span>
                       </span>
-                      <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-400">{t.yourTotal}</span>
+                        <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
+                        <span className="ml-1 text-3xl leading-none text-gray-400 transition-transform group-open:rotate-90">›</span>
+                      </span>
                     </summary>
                     <div className="mt-2 space-y-2">
-                      {state.items.filter((it) => it.shared).map(claimItemRow)}
+                      {sharedItems.map(claimItemRow)}
                     </div>
                   </details>
                 );
@@ -905,7 +913,7 @@ export default function RoomPage() {
         </>
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
-        const iAmDone = personId && (state.doneBy ?? []).includes(personId);
+        const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
         // What I've claimed, aggregated by description so "3 × Bryggkaffe"
         // reads as one cart row.
         const cart: { description: string; count: number; oreEach: number; shared: boolean }[] = [];
@@ -922,6 +930,33 @@ export default function RoomPage() {
         }
         for (const v of cartMap.values()) cart.push(v);
         cart.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
+        const cartItemCount = cart.reduce((acc, g) => acc + g.count, 0);
+        const canSwish = !!state.payeeNumber;
+        const swishUri = canSwish
+          ? buildSwishUri({
+              payee: state.payeeNumber!,
+              amountOre: myShare.totalOre,
+              message: `${myShare.name} - ${state.message ?? ""}`.slice(0, 50),
+            })
+          : null;
+        // Pay-and-done: flip done locally, fire a keepalive POST so the action
+        // sticks even when the browser hands off to the Swish app.
+        const payAndDone = () => {
+          if (iAmDone || !personId) return;
+          setState((prev) =>
+            prev ? { ...prev, doneBy: [...(prev.doneBy ?? []), personId] } : prev,
+          );
+          try {
+            fetch(`/api/room/${code}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "done", personId }),
+              keepalive: true,
+            });
+          } catch {
+            /* navigation continues; next refresh reconciles */
+          }
+        };
         return (
           <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
             {cartOpen && (
@@ -944,24 +979,50 @@ export default function RoomPage() {
                 )}
               </div>
             )}
-            <div className="flex items-stretch">
-              <button
-                type="button"
-                onClick={() => setCartOpen((v) => !v)}
-                className="flex flex-1 items-center justify-between gap-3 px-5 py-3"
+            <button
+              type="button"
+              onClick={() => setCartOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left active:bg-white/5"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">{t.yourTotal}</span>
+                <span className="truncate text-xs text-white/70">{t.cartCount(cartItemCount)}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
+                <span className={`text-2xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
+              </span>
+            </button>
+            {canSwish && swishUri ? (
+              <a
+                href={swishUri}
+                onClick={payAndDone}
+                className={`flex items-center justify-center gap-3 border-t border-white/10 px-5 py-4 text-base font-semibold ${
+                  iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-swish text-white active:bg-swish-dark"
+                }`}
               >
-                <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
-                <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
-                <span className="text-base">{cartOpen ? "▾" : "▴"}</span>
-              </button>
+                {iAmDone ? (
+                  <span>{t.doneOn}</span>
+                ) : (
+                  <>
+                    <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-base font-black italic text-swish">
+                      S
+                    </span>
+                    <span>{t.payWithSwishAmt(formatOre(myShare.totalOre))}</span>
+                  </>
+                )}
+              </a>
+            ) : (
               <button
                 type="button"
                 onClick={toggleDone}
-                className={`shrink-0 border-l border-white/10 px-4 text-xs font-semibold ${iAmDone ? "bg-emerald-500/20 text-emerald-300" : "text-white/80 active:bg-white/10"}`}
+                className={`w-full border-t border-white/10 px-5 py-4 text-base font-semibold ${
+                  iAmDone ? "bg-emerald-500/20 text-emerald-200" : "text-white/90 active:bg-white/10"
+                }`}
               >
                 {iAmDone ? t.doneOn : t.imDone}
               </button>
-            </div>
+            )}
           </div>
         );
       })()}
