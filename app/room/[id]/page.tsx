@@ -671,15 +671,29 @@ export default function RoomPage() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
-              {state.items.some((it) => it.shared) && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
-                    <span aria-hidden>🍽️</span>
-                    <span>{t.sharedSection}</span>
-                  </div>
-                  {state.items.filter((it) => it.shared).map(claimItemRow)}
-                </div>
-              )}
+              {state.items.some((it) => it.shared) && (() => {
+                // What the shared section costs *me*: my per-share contribution
+                // for each shared item I haven't opted out of.
+                const mySharedOre = state.items.reduce((acc, it) => {
+                  if (!it.shared || !personId || !it.claimedBy.includes(personId)) return acc;
+                  const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : Math.max(1, peopleCount);
+                  return acc + Math.floor(it.priceOre / divisor);
+                }, 0);
+                return (
+                  <details className="space-y-2">
+                    <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm font-semibold text-gray-500 [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden>🤝</span>
+                        <span>{t.sharedSection}</span>
+                      </span>
+                      <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {state.items.filter((it) => it.shared).map(claimItemRow)}
+                    </div>
+                  </details>
+                );
+              })()}
               {CATEGORY_ORDER.map((cat) => {
                 const all = state.items.filter((it) => !it.shared && categoryFor(it.description, it.category) === cat);
                 if (all.length === 0) return null;
