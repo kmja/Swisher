@@ -158,6 +158,7 @@ export default function RoomPage() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptImages, setReceiptImages] = useState<string[] | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [sharedOpen, setSharedOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
@@ -490,9 +491,9 @@ export default function RoomPage() {
           type="button"
           onClick={() => setEditingItemId(it.id)}
           aria-label={t.editRow}
-          className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
+          className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
         >
-          ✏️
+          <PencilIcon />
         </button>
       </div>
     );
@@ -562,13 +563,13 @@ export default function RoomPage() {
             type="button"
             onClick={() => setEditingItemId(rep.id)}
             aria-label={t.editRow}
-            className="shrink-0 px-1.5 py-2 text-gray-300 active:text-swish-dark"
+            className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
           >
-            ✏️
+            <PencilIcon />
           </button>
         </div>
         {taken && (
-          <div className="flex items-center gap-3 pl-12">
+          <div className="flex items-center justify-center gap-3 py-1">
             <button
               type="button"
               disabled={mineCount === 0}
@@ -682,24 +683,38 @@ export default function RoomPage() {
                   return acc + Math.floor(it.priceOre / divisor);
                 }, 0);
                 return (
-                  <details className="group space-y-2">
-                    <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-xl py-1 text-base font-bold text-gray-700 [&::-webkit-details-marker]:hidden">
-                      <span className="flex items-center gap-2">
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setSharedOpen((v) => !v)}
+                      aria-expanded={sharedOpen}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl py-1 text-left text-base font-bold text-gray-700"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <ChevronRightIcon
+                          className={`shrink-0 text-gray-400 transition-transform duration-200 ease-out ${sharedOpen ? "rotate-90" : ""}`}
+                        />
                         <span aria-hidden className="text-2xl leading-none">🤝</span>
-                        <span>
+                        <span className="truncate">
                           {t.sharedSection} <span className="font-medium text-gray-400">({sharedItems.length})</span>
                         </span>
                       </span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex shrink-0 items-center gap-2">
                         <span className="text-xs font-medium text-gray-400">{t.yourTotal}</span>
                         <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
-                        <span className="ml-1 text-3xl leading-none text-gray-400 transition-transform group-open:rotate-90">›</span>
                       </span>
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                      {sharedItems.map(claimItemRow)}
+                    </button>
+                    {/* Animate height by toggling grid-template-rows between 0fr and 1fr. */}
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                        sharedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      }`}
+                    >
+                      <div className="min-h-0 overflow-hidden">
+                        <div className="space-y-2 pt-1">{sharedItems.map(claimItemRow)}</div>
+                      </div>
                     </div>
-                  </details>
+                  </div>
                 );
               })()}
               {CATEGORY_ORDER.map((cat) => {
@@ -1089,5 +1104,47 @@ function HomeLink({ label }: { label: string }) {
     <a href="/" className="rounded-xl bg-swish px-5 py-2.5 text-sm font-semibold text-white active:bg-swish-dark">
       {label}
     </a>
+  );
+}
+
+// Lucide "pencil" — flat stroked icon. Used for the per-item edit buttons.
+function PencilIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+// Lucide "chevron-right" — used for the collapsible shared section header.
+function ChevronRightIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="28"
+      height="28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
   );
 }
