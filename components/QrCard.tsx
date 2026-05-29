@@ -42,6 +42,7 @@ export default function QrCard({
   const [ibanCopied, setIbanCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [noApp, setNoApp] = useState(false);
+  const [bigOpen, setBigOpen] = useState(false);
 
   const isSepa = method === "sepa" && !!iban && typeof eurCents === "number" && eurCents > 0;
 
@@ -136,14 +137,21 @@ export default function QrCard({
             {t.qrError}
           </div>
         ) : (
-          <img
-            src={qrSrc}
-            alt={t.qrAlt(name)}
-            width={260}
-            height={260}
-            className="h-[260px] w-[260px] rounded-xl"
-            onError={() => setImgError(true)}
-          />
+          <button
+            type="button"
+            onClick={() => setBigOpen(true)}
+            aria-label={t.qrAlt(name)}
+            className="overflow-hidden rounded-xl"
+          >
+            <img
+              src={qrSrc}
+              alt={t.qrAlt(name)}
+              width={260}
+              height={260}
+              className="h-[260px] w-[260px] rounded-xl"
+              onError={() => setImgError(true)}
+            />
+          </button>
         )}
       </div>
 
@@ -202,6 +210,29 @@ export default function QrCard({
             </p>
           )}
         </>
+      )}
+      {bigOpen && !imgError && qrSrc && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setBigOpen(false)}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/80 p-4"
+        >
+          <p className="text-center text-lg font-semibold text-white">{name}</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrSrc}
+            alt={t.qrAlt(name)}
+            className="aspect-square w-full max-w-[min(80vw,80vh,520px)] rounded-2xl bg-white p-3"
+          />
+          <button
+            type="button"
+            onClick={() => setBigOpen(false)}
+            className="rounded-full bg-white/15 px-6 py-2 text-sm font-medium text-white active:bg-white/25"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );
