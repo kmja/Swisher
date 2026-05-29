@@ -1100,7 +1100,7 @@ export default function Page() {
                   className={`rounded-xl p-2 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                 >
                   <div className="flex items-center gap-2">
-                  <span aria-hidden className="pl-1 text-lg">
+                  <span aria-hidden className="pl-1 text-2xl leading-none">
                     {it.isTip ? "💝" : <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />}
                   </span>
                   <input
@@ -1507,7 +1507,7 @@ export default function Page() {
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">
-                    <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+                    <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                     {it.description || t.rowFallback}
                   </span>
                   <Money ore={priceOre} className="shrink-0 text-sm text-gray-600" />
@@ -1653,7 +1653,7 @@ export default function Page() {
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
               <span className="min-w-0 truncate text-sm font-medium">
-                <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+                <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
                 {it.description || t.viewSource}
               </span>
               <button

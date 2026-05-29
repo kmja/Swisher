@@ -80,6 +80,16 @@ describe("emojiFor", () => {
     expect(emojiFor("broccoli")).toBe("🥦");
   });
 
+  it("doesn't treat 'flaska' (bottle) as fläsk (pork)", () => {
+    // Diacritic-stripped "fläsk" looks like the prefix of "flaska" — guard
+    // against that collision so wines stay wines.
+    expect(emojiFor("Flaska Barolo 75cl")).toBe("🍷");
+    expect(emojiFor("Flaska vatten")).toBe("💧");
+    // The compound forms still resolve to pork.
+    expect(emojiFor("fläskfilé")).toBe("🐖");
+    expect(emojiFor("fläskkarré")).toBe("🐖");
+  });
+
   it("prefers a brand-aware model emoji over the category fallback", () => {
     // A wine brand the keyword rules don't know — the model's 🍷 should win
     // over the generic drink mug.

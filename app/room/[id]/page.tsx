@@ -474,7 +474,7 @@ export default function RoomPage() {
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-medium">
-              <span aria-hidden className="mr-1"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+              <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
               {it.description}
             </span>
             {it.shared && (
@@ -548,7 +548,7 @@ export default function RoomPage() {
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-medium">
-                <span aria-hidden className="mr-1"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+                <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
                 {rep.description}
                 {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
               </span>

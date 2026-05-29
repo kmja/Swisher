@@ -35,6 +35,10 @@ function makeMatcher(words: string[]): (desc: string) => boolean {
   const phrases = normed.filter((w) => w.includes(" "));
   const whole = new Set(normed.filter((w) => !w.includes(" ") && w.length <= 3));
   const affix = normed.filter((w) => !w.includes(" ") && w.length >= 4);
+  // Swedish vowels (incl. å/ä/ö, normalized to a/o here). A prefix match only
+  // counts if the next char is a consonant — so "fläsk" prefix-matches the
+  // compound "fläskfilé" (f→consonant) but NOT the homonym "flaska" (a→vowel).
+  const isVowel = (c: string) => "aeiouyåäö".includes(c);
   return (desc: string) => {
     const s = norm(desc);
     if (phrases.some((p) => s.includes(p))) return true;
@@ -46,9 +50,13 @@ function makeMatcher(words: string[]): (desc: string) => boolean {
       affix.some(
         (w) =>
           tok === w ||
-          // Compound prefix only for distinctive (≥5-char) words, so a short
-          // keyword like "böna" doesn't swallow a brand like "Bonaqua".
-          (w.length >= 5 && tok.startsWith(w)) ||
+          // Compound prefix only for distinctive (≥5-char) words, and only when
+          // a 3+ char remainder follows that starts with a consonant — so
+          // "fläsk" matches "fläskfilé" but not "flaska" (bottle).
+          (w.length >= 5 &&
+            tok.startsWith(w) &&
+            tok.length >= w.length + 3 &&
+            !isVowel(tok[w.length] ?? "")) ||
           (tok.endsWith(w) && tok.length >= w.length + 3),
       ),
     );
@@ -59,7 +67,10 @@ const isDrink = makeMatcher([
   "öl", "lager", "ipa", "ale", "stout", "pilsner", "porter", "cider", "brewing", "bryggeri",
   "vin", "rödvin", "rött vin", "vitt vin", "rosé", "blanc", "rouge", "bubbel", "champagne", "cava",
   "prosecco", "mousserande", "wine", "merlot", "cabernet", "chardonnay", "sauvignon", "riesling",
-  "pinot", "rioja", "chablis", "vouvray",
+  "pinot", "rioja", "chablis", "vouvray", "barolo", "barbaresco", "brunello", "chianti", "amarone",
+  "valpolicella", "montepulciano", "sangiovese", "nebbiolo", "tempranillo", "malbec", "syrah",
+  "shiraz", "zinfandel", "gamay", "bordeaux", "bourgogne", "burgundy", "sancerre", "garnacha",
+  "grenache", "primitivo", "viognier", "gewürztraminer", "soave", "frascati", "lambrusco",
   "cocktail", "drink", "aviation", "negroni", "spritz", "mojito", "margarita", "martini", "aperol",
   "gin", "tonic", "whisky", "whiskey", "vodka", "rom", "tequila", "sprit", "snaps", "nubbe", "shot",
   "konjak", "cognac", "kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato",
@@ -172,7 +183,14 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["öl", "lager", "ipa", "ale", "stout", "pilsner", "porter", "brewing", "bryggeri"]), "🍺"],
   [makeMatcher(["champagne", "mumm", "bubbel", "cava", "prosecco", "mousserande"]), "🍾"],
   [makeMatcher(["cocktail", "aviation", "negroni", "spritz", "mojito", "margarita", "martini", "aperol", "daiquiri", "gimlet"]), "🍸"],
-  [makeMatcher(["vin", "rödvin", "rött vin", "vitt vin", "rosé", "blanc", "rouge", "wine", "merlot", "cabernet", "chardonnay", "sauvignon", "riesling", "pinot", "rioja", "chablis", "vouvray", "glögg"]), "🍷"],
+  [makeMatcher([
+    "vin", "rödvin", "rött vin", "vitt vin", "rosé", "blanc", "rouge", "wine", "merlot", "cabernet",
+    "chardonnay", "sauvignon", "riesling", "pinot", "rioja", "chablis", "vouvray", "glögg",
+    "barolo", "barbaresco", "brunello", "chianti", "amarone", "valpolicella", "montepulciano",
+    "sangiovese", "nebbiolo", "tempranillo", "malbec", "syrah", "shiraz", "zinfandel", "gamay",
+    "bordeaux", "bourgogne", "burgundy", "sancerre", "garnacha", "grenache", "primitivo",
+    "viognier", "gewürztraminer", "soave", "frascati", "lambrusco",
+  ]), "🍷"],
   [makeMatcher(["whisky", "whiskey", "vodka", "rom", "tequila", "sprit", "snaps", "nubbe", "shot", "konjak", "cognac", "gin"]), "🥃"],
   [makeMatcher(["kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato", "cortado"]), "☕"],
   [makeMatcher(["te", "tea", "chai"]), "🍵"],
