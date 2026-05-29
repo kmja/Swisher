@@ -793,7 +793,11 @@ export default function Page() {
         /* storage unavailable */
       }
       addHistory({ id: data.id, place: mealLabel.trim(), date: eventDate, role: "host" });
-      router.push(`/room/${data.id}`);
+      // Replace, not push: the items/setup step shouldn't be reachable via the
+      // back button once a room exists (it'd risk spawning a second room and
+      // orphaning the first). Going back from the room goes outside the app;
+      // "New receipt" in the room nav is the way to start fresh.
+      router.replace(`/room/${data.id}`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
       setCreatingRoom(false);
