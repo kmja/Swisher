@@ -367,7 +367,9 @@ export default function Page() {
   // When the magnifier opens, crop the band of the source photo where the item
   // was recognised (model-reported position, else its order within that photo).
   useEffect(() => {
-    setShowFullReceipt(false);
+    // Default to the full receipt: it's more forgiving of inaccurate OCR y
+    // positions than the cropped band (you can still find the line by eye).
+    setShowFullReceipt(true);
     setCropSrc(null);
     if (zoomItem === null) return;
     const it = items[zoomItem];
@@ -1679,21 +1681,34 @@ export default function Page() {
                     alt=""
                     className="block w-full rounded-lg"
                     onLoad={(e) => {
-                      // Centre the suspected line in the viewport once loaded.
+                      // Centre the suspected line in the viewport once loaded,
+                      // and centre horizontally (the receipt's text usually is).
                       const scroller = document.getElementById("zoom-scroll");
                       if (!scroller) return;
-                      const target = yFrac * e.currentTarget.clientHeight - scroller.clientHeight / 2;
-                      scroller.scrollTop = Math.max(0, target);
+                      const imgH = e.currentTarget.clientHeight;
+                      const imgW = e.currentTarget.clientWidth;
+                      scroller.scrollTop = Math.max(0, yFrac * imgH - scroller.clientHeight / 2);
+                      scroller.scrollLeft = Math.max(0, (imgW - scroller.clientWidth) / 2);
                     }}
                   />
+                  {/* Soft amber wash around the line… */}
                   <div
-                    className="pointer-events-none absolute inset-x-0"
+                    className="pointer-events-none absolute inset-x-0 z-10"
                     style={{
-                      top: `calc(${yFrac * 100}% - 10px)`,
-                      height: "20px",
-                      background: "rgba(251, 191, 36, 0.18)",
-                      borderTop: "2px solid rgba(251, 191, 36, 0.95)",
-                      borderBottom: "2px solid rgba(251, 191, 36, 0.95)",
+                      top: `calc(${yFrac * 100}% - 40px)`,
+                      height: "80px",
+                      background:
+                        "linear-gradient(to bottom, transparent 0%, rgba(251, 191, 36, 0.35) 40%, rgba(251, 191, 36, 0.45) 50%, rgba(251, 191, 36, 0.35) 60%, transparent 100%)",
+                    }}
+                  />
+                  {/* …with a bright glowing line right at the y. */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0 z-10"
+                    style={{
+                      top: `calc(${yFrac * 100}% - 3px)`,
+                      height: "6px",
+                      backgroundColor: "rgb(251, 191, 36)",
+                      boxShadow: "0 0 12px 2px rgba(251, 191, 36, 0.9)",
                     }}
                   />
                 </div>
@@ -1701,11 +1716,21 @@ export default function Page() {
                 <button
                   type="button"
                   onClick={() => setShowFullReceipt(true)}
-                  className="w-full"
+                  className="relative block w-full"
                   aria-label={t.viewSourceFull}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={cropSrc} alt="" className="w-full rounded-lg ring-1 ring-white/20" />
+                  <img src={cropSrc} alt="" className="block w-full rounded-lg ring-1 ring-white/20" />
+                  {/* The crop is centred on yFrac, so the suspected line sits at the middle. */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0"
+                    style={{
+                      top: "calc(50% - 3px)",
+                      height: "6px",
+                      backgroundColor: "rgb(251, 191, 36)",
+                      boxShadow: "0 0 12px 2px rgba(251, 191, 36, 0.9)",
+                    }}
+                  />
                 </button>
               ) : (
                 <p className="pt-10 text-sm text-white/60">…</p>
