@@ -703,45 +703,41 @@ export default function RoomPage() {
     const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
     const anyQuickEdit = editingDesc || editingPrice;
     return (
-      <div key={it.id} className="flex items-center gap-1">
-        {/* The row stays a single big tap target for claim, but we switch from
-            <button> to <div role="button"> so the <input> children that take
-            over on long-press are valid HTML and don't bubble clicks back into
-            a claim toggle. */}
-        <div
-          role="button"
-          tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
-          aria-pressed={mine}
-          aria-disabled={anyQuickEdit || sharesFull}
-          onClick={() => {
-            if (anyQuickEdit || sharesFull || busyItem === it.id) return;
+      <div
+        key={it.id}
+        role="button"
+        tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
+        aria-pressed={mine}
+        aria-disabled={anyQuickEdit || sharesFull}
+        onClick={() => {
+          if (anyQuickEdit || sharesFull || busyItem === it.id) return;
+          toggleClaim(it.id);
+        }}
+        onKeyDown={(e) => {
+          if (anyQuickEdit) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
             toggleClaim(it.id);
-          }}
-          onKeyDown={(e) => {
-            if (anyQuickEdit) return;
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggleClaim(it.id);
-            }
-          }}
-          className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
-            mine
-              ? "bg-swish/10 ring-swish"
-              : sharesFull
-              ? "bg-gray-50 opacity-60 ring-black/5"
-              : "bg-white ring-black/5"
-          } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
+          }
+        }}
+        className={`flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
+          mine
+            ? "bg-swish/10 ring-swish"
+            : sharesFull
+            ? "bg-gray-50 opacity-60 ring-black/5"
+            : "bg-white ring-black/5"
+        } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
+      >
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+            mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+          }`}
         >
-          <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-              mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
-            }`}
-          >
-            ✓
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex min-w-0 items-center gap-2 font-medium">
-              <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+          ✓
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="flex min-w-0 items-center gap-2 font-medium">
+            <span aria-hidden className="shrink-0 text-2xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
               {editingDesc ? (
                 <input
                   autoFocus
@@ -820,12 +816,11 @@ export default function RoomPage() {
               />
             </span>
           )}
-        </div>
         <button
           type="button"
-          onClick={() => openEdit(it)}
+          onClick={(e) => { e.stopPropagation(); openEdit(it); }}
           aria-label={t.editRow}
-          className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
+          className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
         >
           <PencilIcon />
         </button>
