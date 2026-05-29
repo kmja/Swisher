@@ -202,6 +202,23 @@ export default function RoomPage() {
     }
   }, [searchParams]);
 
+  // Trap iOS' edge-swipe-back (and the system back button) so a live room
+  // can't be accidentally navigated away from — leaving via the Kvitt UI
+  // ("Nytt kvitto" / "Historik") still works because those are <a> links
+  // that fully navigate, which unmounts this page and detaches the
+  // listener. Pattern: push a sentinel entry on mount, re-push it on every
+  // popstate. The handler runs *after* the browser has popped, so the
+  // re-push lands the user right back where they were.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.history.pushState({ kvittTrap: true }, "");
+    const onPopState = () => {
+      window.history.pushState({ kvittTrap: true }, "");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   useEffect(() => {
     try {
       const l = localStorage.getItem("swisher-lang");
