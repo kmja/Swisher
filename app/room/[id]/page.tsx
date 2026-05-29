@@ -82,6 +82,8 @@ const R = {
     removeRow: "Ta bort rad",
     removedItem: (desc: string) => `Tog bort ${desc}`,
     undo: "Ångra",
+    save: "Spara",
+    cancel: "Avbryt",
   },
   en: {
     loading: "Loading the room…",
@@ -145,6 +147,8 @@ const R = {
     removeRow: "Remove row",
     removedItem: (desc: string) => `Removed ${desc}`,
     undo: "Undo",
+    save: "Save",
+    cancel: "Cancel",
   },
 } as const;
 
@@ -170,6 +174,15 @@ export default function RoomPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [sharedOpen, setSharedOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  // Buffered edits while the pencil-driven editor is open. Save flushes the
+  // draft to the server in one editItem call; Cancel just discards.
+  type EditDraft = {
+    description: string;
+    priceInput: string;
+    shared: boolean;
+    shareCount: number | undefined;
+  };
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
@@ -430,6 +443,31 @@ export default function RoomPage() {
   function editItem(itemId: string, patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number }) {
     return postAction({ action: "edit", itemId, ...patch });
   }
+  function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
+    setEditingItemId(it.id);
+    setEditDraft({
+      description: it.description,
+      priceInput: formatOre(it.priceOre),
+      shared: !!it.shared,
+      shareCount: it.shareCount,
+    });
+  }
+  function cancelEdit() {
+    setEditingItemId(null);
+    setEditDraft(null);
+  }
+  async function saveEdit(itemId: string) {
+    if (!editDraft) return cancelEdit();
+    const desc = editDraft.description.trim();
+    const priceOre = parseAmountToOre(editDraft.priceInput);
+    const patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number } = {};
+    if (desc) patch.description = desc;
+    if (priceOre != null) patch.priceOre = priceOre;
+    patch.shared = editDraft.shared;
+    if (editDraft.shared) patch.shareCount = editDraft.shareCount;
+    await editItem(itemId, patch);
+    cancelEdit();
+  }
   async function removeItemRow(itemId: string) {
     const item = state?.items.find((i) => i.id === itemId);
     if (item) {
@@ -532,52 +570,122 @@ export default function RoomPage() {
   // tappable claim row with a pencil to edit. Reused for the shared group and
   // each category section.
   function claimItemRow(it: RoomState["items"][number]) {
-    if (editingItemId === it.id) {
-      const dv = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
+    if (editingItemId === it.id && editDraft) {
+      // Match the host-setup edit row: icon · description · price ·
+      // remove-X all on the card top, share stepper inline when shared,
+      // vertical share toggle on the right, and a Save / Cancel pair below.
+      const dv = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
+      const draftOre = parseAmountToOre(editDraft.priceInput) ?? 0;
       return (
-        <div key={it.id} className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
-          <div className="flex items-center gap-2">
-            <input
-              defaultValue={it.description}
-              onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && editItem(it.id, { description: e.target.value })}
-              placeholder={t.descPh}
-              className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-            />
-            <input
-              defaultValue={formatOre(it.priceOre)}
-              onBlur={(e) => {
-                const o = parseAmountToOre(e.target.value);
-                if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
-              }}
-              inputMode="decimal"
-              placeholder={t.pricePh}
-              className="w-20 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-            />
-            <button type="button" onClick={() => removeItemRow(it.id)} aria-label={t.removeRow} className="px-1 text-gray-400 active:text-red-500">
-              ✕
-            </button>
-            <button type="button" onClick={() => setEditingItemId(null)} aria-label={t.doneEditing} className="px-1 text-lg text-swish-dark">
-              ✓
+        <div key={it.id} className="space-y-2">
+          <div className="flex items-stretch gap-2">
+            <div
+              className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${
+                editDraft.shared ? "bg-swish/5 ring-swish/40" : "bg-white ring-swish/40"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span aria-hidden className="pl-1 text-3xl leading-none">
+                  <ItemEmoji description={editDraft.description} hint={it.category} modelEmoji={it.emoji} />
+                </span>
+                <input
+                  value={editDraft.description}
+                  onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+                  placeholder={t.descPh}
+                  className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+                />
+                <input
+                  value={editDraft.priceInput}
+                  onChange={(e) => setEditDraft({ ...editDraft, priceInput: e.target.value })}
+                  inputMode="decimal"
+                  placeholder={t.pricePh}
+                  className="w-20 shrink-0 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => { removeItemRow(it.id); cancelEdit(); }}
+                  aria-label={t.removeRow}
+                  className="px-1 text-gray-400 active:text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+              {editDraft.shared && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
+                  <span>{tx.splitWays}</span>
+                  <button
+                    type="button"
+                    aria-label="−"
+                    onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                  >
+                    −
+                  </button>
+                  <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
+                  <button
+                    type="button"
+                    aria-label="+"
+                    disabled={dv >= groupSize}
+                    onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                  <span className="text-gray-400">≈ {formatOre(Math.floor(draftOre / dv))} SEK</span>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              onClick={() =>
+                setEditDraft({
+                  ...editDraft,
+                  shared: !editDraft.shared,
+                  shareCount: editDraft.shared ? undefined : editDraft.shareCount,
+                })
+              }
+              aria-checked={editDraft.shared}
+              aria-label={tx.sharedToggle}
+              title={tx.sharedToggle}
+              className="flex w-14 shrink-0 flex-col items-center justify-center gap-1.5"
+            >
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-wide ${
+                  editDraft.shared ? "text-swish-dark" : "text-gray-500"
+                }`}
+              >
+                {tx.sharedLabel}
+              </span>
+              <span
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  editDraft.shared ? "bg-swish" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
+                    editDraft.shared ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
             </button>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 pl-1 text-sm text-gray-500">
-            <label className="inline-flex cursor-pointer items-center gap-1.5">
-              <input
-                type="checkbox"
-                checked={!!it.shared}
-                onChange={() => editItem(it.id, { shared: !it.shared })}
-                className="h-6 w-6 rounded border-gray-300 accent-swish"
-              />
-              {tx.sharedToggle}
-            </label>
-            {it.shared && (
-              <span className="inline-flex items-center gap-1.5">
-                <span>{tx.splitWays}</span>
-                <button type="button" aria-label="−" onClick={() => editItem(it.id, { shareCount: Math.max(2, dv - 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200">−</button>
-                <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{dv}</span>
-                <button type="button" aria-label="+" disabled={dv >= groupSize} onClick={() => editItem(it.id, { shareCount: Math.min(groupSize, dv + 1) })} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40">+</button>
-              </span>
-            )}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 active:bg-gray-100"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={() => saveEdit(it.id)}
+              className="rounded-xl bg-swish px-4 py-2 text-sm font-semibold text-white active:bg-swish-dark"
+            >
+              {t.save}
+            </button>
           </div>
         </div>
       );
@@ -715,7 +823,7 @@ export default function RoomPage() {
         </div>
         <button
           type="button"
-          onClick={() => setEditingItemId(it.id)}
+          onClick={() => openEdit(it)}
           aria-label={t.editRow}
           className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
         >
@@ -787,7 +895,7 @@ export default function RoomPage() {
           </button>
           <button
             type="button"
-            onClick={() => setEditingItemId(rep.id)}
+            onClick={() => openEdit(rep)}
             aria-label={t.editRow}
             className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
           >
