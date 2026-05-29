@@ -1,8 +1,9 @@
-export type Category = "food" | "drink" | "dessert" | "other";
+export type Category = "starter" | "food" | "drink" | "dessert" | "other";
 
-export const CATEGORY_ORDER: Category[] = ["food", "drink", "dessert", "other"];
+export const CATEGORY_ORDER: Category[] = ["starter", "food", "drink", "dessert", "other"];
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
+  starter: "🥗",
   food: "🍽️",
   drink: "🍺",
   dessert: "🍰",
@@ -10,12 +11,12 @@ export const CATEGORY_EMOJI: Record<Category, string> = {
 };
 
 export const CATEGORY_LABEL: Record<"sv" | "en", Record<Category, string>> = {
-  sv: { food: "Mat", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" },
-  en: { food: "Food", drink: "Drinks", dessert: "Dessert", other: "Other" },
+  sv: { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" },
+  en: { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", other: "Other" },
 };
 
 export function normalizeCategory(v: unknown): Category {
-  return v === "food" || v === "drink" || v === "dessert" || v === "other" ? v : "other";
+  return v === "starter" || v === "food" || v === "drink" || v === "dessert" || v === "other" ? v : "other";
 }
 
 // Strip diacritics so "läsk"/"lask", "smörgås"/"smorgas", "entrecôte"/"entrecote"
@@ -85,7 +86,7 @@ const isFood = makeMatcher([
   "tacos", "taco", "nachos", "sushi", "nigiri", "maki", "poke", "ramen", "nudlar", "ris", "risotto",
   "pommes", "fries", "potatis", "bröd", "ost", "mozzarella", "prosciutto", "salami", "skinka",
   "chark", "broccoli", "sparris", "grönsak", "kantarell", "kantareller", "svamp", "rotselleri",
-  "selleri", "förrätt", "varmrätt", "huvudrätt", "tallrik", "meny",
+  "selleri", "varmrätt", "huvudrätt", "tallrik", "meny",
   "hummer", "kräfta", "kräftor", "löjrom", "matjessill", "matjes", "skagen", "räkmacka",
   "köttbullar", "wallenbergare", "oxbringa", "oxrygg", "oxkind", "lamm", "isterband", "kalops",
   "raggmunk", "råraka", "janssons", "pyttipanna", "kroppkakor", "rotmos", "kåldolmar", "kålpudding",
@@ -94,10 +95,19 @@ const isFood = makeMatcher([
   "spring roll", "vårrulle", "pad thai", "curry", "tikka masala", "ceviche", "biryani",
 ]);
 
+const isStarter = makeMatcher([
+  "förrätt", "starter", "appetizer", "antipasti", "antipasto", "tapas", "meze", "mezze",
+  "amuse", "bruschetta", "carpaccio", "tartare", "vitello tonnato", "räkcocktail",
+  "toast skagen", "skagentoast", "löjromstoast",
+  "charkbricka", "ostbricka", "delikatessbricka", "skaldjursplateau", "skaldjursplatå",
+  "delningsbricka",
+]);
+
 /** Keyword fallback (Swedish + English) when the model gives no category. */
 function guessCategory(description: string): Category {
   if (isDrink(description)) return "drink";
   if (isDessert(description)) return "dessert";
+  if (isStarter(description)) return "starter";
   if (isFood(description)) return "food";
   return "other";
 }

@@ -1,5 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { emojiFor, sharedSuggestion } from "../lib/categories";
+import { categoryFor, emojiFor, sharedSuggestion } from "../lib/categories";
+
+describe("categoryFor — starter vs main", () => {
+  it("classifies obvious starters", () => {
+    expect(categoryFor("Förrätt")).toBe("starter");
+    expect(categoryFor("Antipasti misto")).toBe("starter");
+    expect(categoryFor("Tapas")).toBe("starter");
+    expect(categoryFor("Bruschetta al pomodoro")).toBe("starter");
+    expect(categoryFor("Carpaccio")).toBe("starter");
+    expect(categoryFor("Toast Skagen")).toBe("starter");
+    expect(categoryFor("Charkbricka")).toBe("starter");
+  });
+  it("keeps mains as food", () => {
+    expect(categoryFor("Entrecôte 250g")).toBe("food");
+    expect(categoryFor("Räkpasta")).toBe("food");
+    expect(categoryFor("Vegetarisk lasagne")).toBe("food");
+    expect(categoryFor("Varmrätt")).toBe("food");
+  });
+  it("respects the model's explicit category", () => {
+    expect(categoryFor("Soppa", "starter")).toBe("starter");
+    expect(categoryFor("Soppa", "food")).toBe("food");
+  });
+});
 
 describe("sharedSuggestion", () => {
   it("auto-marks near-certain shared lines", () => {

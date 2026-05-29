@@ -41,10 +41,10 @@ const uid = () =>
 /** A sample dinner order for 8 (shared items, drinks, dessert) loaded via
  *  "/?demo=1" — handy for exercising the split flow without a real receipt. */
 const DEMO_ORDER: { d: string; o: number; c: string; s?: boolean }[] = [
-  { d: "Bröd & smör", o: 6500, c: "food", s: true },
-  { d: "Charkbricka", o: 24500, c: "food", s: true },
-  { d: "Skaldjursplateau", o: 89000, c: "food", s: true },
-  { d: "Oliver", o: 7900, c: "food", s: true },
+  { d: "Bröd & smör", o: 6500, c: "starter", s: true },
+  { d: "Charkbricka", o: 24500, c: "starter", s: true },
+  { d: "Skaldjursplateau", o: 89000, c: "starter", s: true },
+  { d: "Oliver", o: 7900, c: "starter", s: true },
   { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
   { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
   { d: "Entrecôte 250g", o: 32900, c: "food" },

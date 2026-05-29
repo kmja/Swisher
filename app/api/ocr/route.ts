@@ -20,7 +20,7 @@ const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const PROMPT = `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"food"|"drink"|"dessert"|"other","emoji":string,"y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"starter"|"food"|"drink"|"dessert"|"other","emoji":string,"y":number}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -40,7 +40,7 @@ Rules:
 - Read every price digit by digit and keep the digit count right — thermal receipts are faint and dropping a trailing zero (reading 1180 as 118, or 590 as 59) is a common mistake. Check each price carefully.
 - For a multi-unit line, quantity × per-unit price should equal the line total — a quick sanity check on your own reading. Read the printed grand total ("Tot Kvitto", "Totalt", "Summa", or the amount after "SEK") carefully and accurately, but do NOT adjust item prices to make them add up to it — report exactly what each line shows, even if the lines don't sum to the printed total.
 - "shared": true ONLY when a line is clearly meant for the whole table to split. Strong shared cues: a wine/drink that is a whole bottle or carafe ("Flaska", "Btl", "75cl", "70cl", "0,75l", "karaff", "tillbringare", "pitcher"); a sharing platter or board ("plateau", "charkbricka", "ostbricka", "antipasti", "meze", "tapas", "mixed grill", "skaldjursplatå"); a side or starter clearly for the table ("att dela", "to share", "för bordet", "för 2", "bröd & smör", "oliver"). Individual servings are NOT shared: a beer, a glass ("glas") of wine, a coffee, a single main, or one person's dish is false even when the size is large ("stor"). When genuinely unsure, use false.
-- "category": "drink" for any beverage, "dessert" for sweets/desserts, "food" for any other dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
+- "category": "drink" for any beverage, "dessert" for sweets/desserts after the meal, "starter" for an appetiser ("Förrätt", antipasti/tapas/meze, bruschetta, carpaccio, tartare, "räkcocktail", "toast skagen", a sharing platter/board served at the start), "food" for any main dish, "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
 - "total" = the itemised bill — the "Total", "Totalt", "Summa", or "Att betala" line, i.e. the sum of the ordered items. "moms" = VAT amount if printed, else null. "dricks" = tip if a tip line is printed, else null.
