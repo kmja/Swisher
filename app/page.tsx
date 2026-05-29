@@ -1000,7 +1000,12 @@ export default function Page() {
                 />
                 <input
                   value={payerPhone}
-                  onChange={(e) => setPayerPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPayerPhone(e.target.value);
+                    // Once the number's valid, drop the keyboard — saves a tap
+                    // and signals "this looks right" without a separate "next".
+                    if (isValidPhone(e.target.value)) e.target.blur();
+                  }}
                   inputMode="tel"
                   placeholder={t.swishNumber}
                   className="min-w-0 flex-1 rounded-xl bg-gray-50 px-4 py-3 outline-none"
@@ -1137,7 +1142,12 @@ export default function Page() {
                 ) : null}
                 <input
                   value={payerPhone}
-                  onChange={(e) => setPayerPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPayerPhone(e.target.value);
+                    // Once the number's valid, drop the keyboard — saves a tap
+                    // and signals "this looks right" without a separate "next".
+                    if (isValidPhone(e.target.value)) e.target.blur();
+                  }}
                   inputMode="tel"
                   placeholder={t.swishOptional}
                   className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
@@ -1156,7 +1166,12 @@ export default function Page() {
                   />
                   <input
                     value={payerPhone}
-                    onChange={(e) => setPayerPhone(e.target.value)}
+                    onChange={(e) => {
+                    setPayerPhone(e.target.value);
+                    // Once the number's valid, drop the keyboard — saves a tap
+                    // and signals "this looks right" without a separate "next".
+                    if (isValidPhone(e.target.value)) e.target.blur();
+                  }}
                     inputMode="tel"
                     placeholder={t.swishNumber}
                     className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
@@ -1379,7 +1394,9 @@ export default function Page() {
                       title={t.sharedToggle}
                       className="flex w-14 shrink-0 flex-col items-center justify-center gap-1.5"
                     >
-                      <span aria-hidden className="text-xl leading-none">🤝</span>
+                      <span className={`text-[11px] font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                        {t.sharedLabel}
+                      </span>
                       <span
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                           rep.shared ? "bg-swish" : "bg-gray-300"

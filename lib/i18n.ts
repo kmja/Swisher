@@ -96,6 +96,8 @@ export interface Strings {
   sharedGroupPrompt: string;
   sharedToggle: string;
   shareThis: string;
+  /** Short single-word label for the share toggle (fits next to a switch). */
+  sharedLabel: string;
   sharedSplit: (n: number, amt: string) => string;
   splitWays: string;
   maybeShared: string;
@@ -236,6 +238,7 @@ const sv: Strings = {
   sharedGroupPrompt: "Ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
   shareThis: "Dela",
+  sharedLabel: "Delas",
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} SEK/pers`,
   splitWays: "Dela på",
   maybeShared: "Delas?",
@@ -371,6 +374,7 @@ const en: Strings = {
   sharedGroupPrompt: "You have shared items — how many are you?",
   sharedToggle: "Shared",
   shareThis: "Share",
+  sharedLabel: "Shared",
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} SEK each`,
   splitWays: "Split",
   maybeShared: "Shared?",

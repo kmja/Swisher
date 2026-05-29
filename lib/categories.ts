@@ -170,6 +170,24 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
   cannoli: ["cannoli", "cannolo"],
   mochi: ["mochi"],
   lasagne: ["lasagne", "lasagna"],
+  waterbottle: [
+    "flaska vatten", "vattenflaska", "mineralvatten", "kolsyrat vatten",
+    "loka", "ramlösa", "vichy", "perrier", "evian", "san pellegrino", "bonaqua",
+  ],
+  waterglass: ["glas vatten", "vattenglas", "kranvatten", "isvatten"],
+  watercarafe: [
+    "karaff vatten", "tillbringare vatten", "vattenkaraff", "kanna vatten",
+    "vatten karaff", "vatten tillbringare",
+  ],
+  winecarafe: [
+    "karaff vin", "karaff rödvin", "karaff vitt vin", "karaff rosé",
+    "vinkaraff", "wine carafe", "vin karaff",
+  ],
+  beerpitcher: [
+    "tillbringare öl", "kanna öl", "stop öl", "pitcher öl", "öl tillbringare",
+    "öl kanna", "60cl öl", "70cl öl", "stop", "öl stop",
+  ],
+  sangria: ["sangria", "karaff sangria", "kanna sangria", "tillbringare sangria"],
 };
 
 const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
@@ -195,7 +213,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["whisky", "whiskey", "vodka", "rom", "tequila", "sprit", "snaps", "nubbe", "shot", "konjak", "cognac", "gin"]), "🥃"],
   [makeMatcher(["kaffe", "coffee", "espresso", "latte", "cappuccino", "americano", "macchiato", "cortado"]), "☕"],
   [makeMatcher(["te", "tea", "chai"]), "🍵"],
-  [makeMatcher(["läsk", "soda", "softdrink", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "trocadero", "pommac", "champis", "zingo", "loka", "ramlösa", "bonaqua", "tonic"]), "🥤"],
+  [makeMatcher(["läsk", "soda", "softdrink", "cola", "fanta", "sprite", "pepsi", "festis", "julmust", "must", "trocadero", "pommac", "champis", "zingo", "tonic"]), "🥤"],
   [makeMatcher(["cider", "kopparberg", "rekorderlig", "somersby", "briska"]), "🍏"],
   [makeMatcher(["energidryck", "red bull", "redbull", "nocco"]), "⚡"],
   [makeMatcher(["juice", "apelsinjuice", "äppeljuice", "smoothie", "saft"]), "🧃"],

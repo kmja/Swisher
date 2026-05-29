@@ -61,6 +61,21 @@ describe("emojiFor", () => {
     expect(emojiFor("Lasagna bolognese")).toBe("ci:lasagne");
   });
 
+  it("picks the right water container instead of the generic droplet", () => {
+    expect(emojiFor("Flaska vatten")).toBe("ci:waterbottle");
+    expect(emojiFor("Loka Citron 50cl")).toBe("ci:waterbottle");
+    expect(emojiFor("Glas vatten")).toBe("ci:waterglass");
+    expect(emojiFor("Karaff vatten")).toBe("ci:watercarafe");
+    expect(emojiFor("Tillbringare vatten")).toBe("ci:watercarafe");
+  });
+
+  it("specialises pitchers/carafes by drink", () => {
+    expect(emojiFor("Karaff rödvin")).toBe("ci:winecarafe");
+    expect(emojiFor("Tillbringare öl")).toBe("ci:beerpitcher");
+    expect(emojiFor("Karaff sangria")).toBe("ci:sangria");
+    expect(emojiFor("Sangria")).toBe("ci:sangria");
+  });
+
   it("does not let the soda rule swallow fläsk (suffix-match regression)", () => {
     // Pork now uses the pig emoji; the soda rule must still not steal it.
     expect(emojiFor("fläskkarré")).toBe("🐖");
@@ -79,7 +94,9 @@ describe("emojiFor", () => {
 
   it("doesn't let a short keyword prefix-match a brand (Bonaqua ≠ broccoli)", () => {
     expect(emojiFor("Bonaqua")).not.toBe("🥦");
-    expect(emojiFor("S Softdrink nr 2 Bonaqua Glassf")).toBe("🥤");
+    // Bonaqua is a water brand — it now lands on the water-bottle icon, not
+    // the generic soft-drink mug it used to share.
+    expect(emojiFor("S Softdrink nr 2 Bonaqua Glassf")).toBe("ci:waterbottle");
     expect(emojiFor("broccoli")).toBe("🥦");
   });
 
@@ -87,7 +104,9 @@ describe("emojiFor", () => {
     // Diacritic-stripped "fläsk" looks like the prefix of "flaska" — guard
     // against that collision so wines stay wines.
     expect(emojiFor("Flaska Barolo 75cl")).toBe("🍷");
-    expect(emojiFor("Flaska vatten")).toBe("💧");
+    // "Flaska vatten" used to fall through to 💧; now it lands on its
+    // specialised water-bottle icon.
+    expect(emojiFor("Flaska vatten")).toBe("ci:waterbottle");
     // The compound forms still resolve to pork.
     expect(emojiFor("fläskfilé")).toBe("🐖");
     expect(emojiFor("fläskkarré")).toBe("🐖");

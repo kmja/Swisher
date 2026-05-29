@@ -577,6 +577,129 @@ function Cannoli() {
   );
 }
 
+function WaterBottle() {
+  return (
+    <>
+      {/* cap */}
+      <rect x="9.6" y="2.6" width="4.8" height="2.4" rx="0.6" fill="#3F8EE8" />
+      <rect x="9.6" y="2.6" width="4.8" height="0.6" rx="0.3" fill="#5DA2EE" />
+      {/* neck */}
+      <rect x="10.2" y="5" width="3.6" height="2.2" fill="#E8F4FF" />
+      {/* body outline */}
+      <path d="M7 9 q 0 -1.8 1.5 -2 q 0.5 -0.5 0.5 -1 h 6 q 0 0.5 0.5 1 q 1.5 0.2 1.5 2 v 11.5 a 1.4 1.4 0 0 1 -1.4 1.4 h -7.2 a 1.4 1.4 0 0 1 -1.4 -1.4 z" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.45" />
+      {/* water fill */}
+      <path d="M7 11.5 v 9 a 1.4 1.4 0 0 0 1.4 1.4 h 7.2 a 1.4 1.4 0 0 0 1.4 -1.4 v -9 z" fill="#7FB8F0" />
+      {/* highlight */}
+      <rect x="8.4" y="9.5" width="0.8" height="11" rx="0.4" fill="#FFFFFF" opacity="0.55" />
+      {/* label band */}
+      <rect x="7" y="14" width="10" height="3" fill="#FFFFFF" opacity="0.7" />
+    </>
+  );
+}
+
+function WaterGlass() {
+  return (
+    <>
+      {/* glass body — tumbler shape */}
+      <path d="M6.4 4.6 h 11.2 l -1 16.4 a 1.1 1.1 0 0 1 -1.1 1 h -7 a 1.1 1.1 0 0 1 -1.1 -1 z" fill="#F1F8FF" stroke="#B7D6F2" strokeWidth="0.5" />
+      {/* water */}
+      <path d="M7.4 8.5 h 9.2 l -0.85 12.5 a 1.1 1.1 0 0 1 -1.1 1 h -5.3 a 1.1 1.1 0 0 1 -1.1 -1 z" fill="#7FB8F0" />
+      {/* rim highlight */}
+      <ellipse cx="12" cy="5" rx="5.4" ry="0.7" fill="#FFFFFF" opacity="0.7" />
+      {/* side highlight */}
+      <rect x="8.2" y="6.4" width="0.9" height="13" rx="0.45" fill="#FFFFFF" opacity="0.55" />
+      {/* ice cube */}
+      <rect x="11" y="9.6" width="3.2" height="3" rx="0.5" transform="rotate(-8 12.6 11)" fill="#FFFFFF" opacity="0.6" />
+    </>
+  );
+}
+
+function WaterCarafe() {
+  return (
+    <>
+      {/* spout neck */}
+      <path d="M9.5 2.8 h 5 v 1 a 0.6 0.6 0 0 1 -0.6 0.6 h -3.8 a 0.6 0.6 0 0 1 -0.6 -0.6 z" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.4" />
+      <rect x="10.2" y="4.4" width="3.6" height="3.2" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.4" />
+      {/* bulbous body */}
+      <path d="M10.2 7.6 q -4.2 1.6 -4.2 7 v 6 a 1.5 1.5 0 0 0 1.5 1.5 h 9 a 1.5 1.5 0 0 0 1.5 -1.5 v -6 q 0 -5.4 -4.2 -7 z" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.45" />
+      {/* water */}
+      <path d="M6 12 v 8.6 a 1.5 1.5 0 0 0 1.5 1.5 h 9 a 1.5 1.5 0 0 0 1.5 -1.5 v -8.6 z" fill="#7FB8F0" />
+      {/* highlight */}
+      <rect x="7.5" y="10" width="0.9" height="11" rx="0.45" fill="#FFFFFF" opacity="0.55" />
+      {/* surface ripple */}
+      <ellipse cx="12" cy="12" rx="5.4" ry="0.55" fill="#FFFFFF" opacity="0.45" />
+    </>
+  );
+}
+
+function WineCarafe() {
+  return (
+    <>
+      {/* opening */}
+      <path d="M10 2.6 h 4 v 1.1 a 0.5 0.5 0 0 1 -0.5 0.5 h -3 a 0.5 0.5 0 0 1 -0.5 -0.5 z" fill="#7A2330" />
+      {/* neck */}
+      <rect x="10.5" y="4.2" width="3" height="3.6" fill="#7A2330" />
+      {/* decanter body — wide bulb */}
+      <path d="M10.5 7.6 q -5 2.5 -5 8 a 5.5 5.5 0 0 0 5.5 5.5 h 2 a 5.5 5.5 0 0 0 5.5 -5.5 q 0 -5.5 -5 -8 z" fill="#5B141E" />
+      {/* highlight on glass */}
+      <ellipse cx="9.2" cy="15" rx="0.9" ry="3.4" fill="#A52C36" opacity="0.7" />
+      {/* glass rim */}
+      <path d="M10 2.6 h 4" stroke="#36080F" strokeWidth="0.4" />
+      {/* surface */}
+      <ellipse cx="12" cy="9.6" rx="2.6" ry="0.5" fill="#7A2330" />
+    </>
+  );
+}
+
+function BeerPitcher() {
+  return (
+    <>
+      {/* handle */}
+      <path d="M17.2 9 q 3.6 1.1 3.6 4.5 q 0 3.4 -3.6 4.5" fill="none" stroke="#D49934" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M17.2 10.4 q 2.4 0.9 2.4 3.1 q 0 2.2 -2.4 3.1" fill="none" stroke="#F5C868" strokeWidth="0.6" strokeLinecap="round" />
+      {/* body */}
+      <path d="M5.5 7.5 v 13 a 1.5 1.5 0 0 0 1.5 1.5 h 9 a 1.5 1.5 0 0 0 1.5 -1.5 v -13 z" fill="#F0B948" stroke="#C68A24" strokeWidth="0.4" />
+      {/* glass highlight */}
+      <rect x="7" y="9" width="0.9" height="11" rx="0.45" fill="#FFFFFF" opacity="0.5" />
+      {/* spout lip */}
+      <path d="M5.5 7.5 q -0.8 -0.6 -0.2 -1.6 q 1 0.4 1.2 1.6" fill="#F0B948" stroke="#C68A24" strokeWidth="0.35" />
+      {/* foam */}
+      <path d="M5.5 7.5 q 0.6 -1.5 2 -1.5 q 0.8 -1 2 -0.3 q 0.6 -1 2 -0.3 q 0.6 -1 2 -0.3 q 0.7 -1 2 0 q 1 -0.3 2 1 q 0 1.4 0 1.4 z" fill="#FCFCF7" stroke="#E2DDC9" strokeWidth="0.35" />
+      <circle cx="7.4" cy="6.2" r="0.6" fill="#FFFFFF" />
+      <circle cx="10.2" cy="5.6" r="0.6" fill="#FFFFFF" />
+      <circle cx="13.6" cy="5.6" r="0.6" fill="#FFFFFF" />
+      <circle cx="16" cy="6.2" r="0.6" fill="#FFFFFF" />
+    </>
+  );
+}
+
+function Sangria() {
+  return (
+    <>
+      {/* neck/spout */}
+      <path d="M10.2 2.6 h 3.6 v 1.6 q 0 0.8 -0.8 1 q 0 0.8 0.4 1.4 l -3 -0.2 q 0.4 -0.6 0.4 -1.2 q -0.6 -0.2 -0.6 -1 z" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.35" />
+      {/* body */}
+      <path d="M9 7 q -4 2 -4 7 v 6 a 1.5 1.5 0 0 0 1.5 1.5 h 11 a 1.5 1.5 0 0 0 1.5 -1.5 v -6 q 0 -5 -4 -7 z" fill="#E8F4FF" stroke="#B7D6F2" strokeWidth="0.45" />
+      {/* sangria liquid */}
+      <path d="M5 14.5 v 6 a 1.5 1.5 0 0 0 1.5 1.5 h 11 a 1.5 1.5 0 0 0 1.5 -1.5 v -6 z" fill="#A8334F" />
+      {/* surface */}
+      <ellipse cx="12" cy="14.5" rx="6.5" ry="0.6" fill="#7E1E36" />
+      {/* glass highlight */}
+      <rect x="6.4" y="12.5" width="0.9" height="8.5" rx="0.45" fill="#FFFFFF" opacity="0.45" />
+      {/* orange slice (floating) */}
+      <circle cx="9" cy="16.5" r="1.2" fill="#FF9740" />
+      <circle cx="9" cy="16.5" r="0.85" fill="#FFC479" />
+      <path d="M9 15.65 v 1.7 M 8.15 16.5 h 1.7" stroke="#FF9740" strokeWidth="0.25" />
+      {/* lemon slice */}
+      <circle cx="13.4" cy="18.2" r="1.1" fill="#FFE25C" />
+      <circle cx="13.4" cy="18.2" r="0.8" fill="#FFEEA0" />
+      <path d="M13.4 17.4 v 1.6 M 12.6 18.2 h 1.6" stroke="#E5C12F" strokeWidth="0.22" />
+      {/* berry */}
+      <circle cx="15.5" cy="16.5" r="0.6" fill="#5C0E27" />
+    </>
+  );
+}
+
 function Lasagne() {
   return (
     <>
@@ -656,6 +779,12 @@ const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   cannoli: { label: "Cannoli", Body: Cannoli },
   mochi: { label: "Mochi", Body: Mochi },
   lasagne: { label: "Lasagne", Body: Lasagne },
+  waterbottle: { label: "Vattenflaska", Body: WaterBottle },
+  waterglass: { label: "Glas vatten", Body: WaterGlass },
+  watercarafe: { label: "Karaff vatten", Body: WaterCarafe },
+  winecarafe: { label: "Karaff vin", Body: WineCarafe },
+  beerpitcher: { label: "Tillbringare öl", Body: BeerPitcher },
+  sangria: { label: "Sangria", Body: Sangria },
 };
 
 export type IconEntry = { label: string; Icon: () => ReactElement };
