@@ -49,6 +49,17 @@ textarea {
   animation: pop-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Undo-toast countdown bar: scales from full width to zero over 6 seconds so
+   the user can see how much time they have left to tap Ångra. */
+@keyframes undo-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.undo-countdown {
+  transform-origin: left;
+  animation: undo-countdown 6s linear forwards;
+}
+
 /* Each capture/items/assign/result section fades + lifts in when the user
    moves between steps, so the page feels like one continuous flow instead of
    a hard cut. */

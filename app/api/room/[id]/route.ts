@@ -41,6 +41,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     shareCount?: number | null;
     category?: string;
     emoji?: string;
+    /** editPayee patch */
+    number?: string;
   };
   try {
     body = await req.json();
@@ -81,6 +83,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     case "removeItem": {
       const state = await stub.removeItem(String(body.personId ?? ""), String(body.itemId ?? ""));
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
+    case "editPayee": {
+      const state = await stub.editPayee(String(body.personId ?? ""), {
+        name: typeof body.name === "string" ? body.name : undefined,
+        number: typeof body.number === "string" ? body.number : undefined,
+      });
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });
     }

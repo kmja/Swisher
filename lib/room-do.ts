@@ -251,6 +251,30 @@ export class RoomDO extends DurableObject {
     return state;
   }
 
+  /** Only the host can change their displayed name or Swish number — the
+   *  payment messages and QRs the diners scan are pinned to those. */
+  async editPayee(
+    actorId: string,
+    patch: { name?: string; number?: string },
+  ): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (actorId !== state.payeePersonId) return state;
+    if (typeof patch.name === "string") {
+      const next = patch.name.trim().slice(0, 40);
+      if (next) {
+        state.payeeName = next;
+        const host = state.people.find((p) => p.id === state.payeePersonId);
+        if (host) host.name = next;
+      }
+    }
+    if (typeof patch.number === "string") {
+      state.payeeNumber = patch.number.slice(0, 20);
+    }
+    await this.save(state);
+    return state;
+  }
+
   /** Any diner can drop a line OCR invented or that doesn't belong. */
   async removeItem(actorId: string, itemId: string): Promise<RoomState | null> {
     const state = await this.load();

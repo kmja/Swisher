@@ -14,6 +14,8 @@ export interface Strings {
   scanning: string;
   scanPhrases: string[];
   itemsFound: (n: number) => string;
+  /** Soft intro for the host setup card overlaid on the live scan. */
+  inTheMeantime: string;
   readReceipt: string;
   chooseOther: string;
   photoOrChoose: string;
@@ -163,6 +165,7 @@ const sv: Strings = {
   scanning: "Skannar kvittot…",
   scanPhrases: ["Läser av rader…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
   itemsFound: (n) => `${n} rader tillagda`,
+  inTheMeantime: "Under tiden…",
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
   photoOrChoose: "Fota eller välj bild",
@@ -300,6 +303,7 @@ const en: Strings = {
   scanning: "Scanning receipt…",
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],
   itemsFound: (n) => `${n} items added`,
+  inTheMeantime: "In the meantime…",
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",
   photoOrChoose: "Take or choose a photo",

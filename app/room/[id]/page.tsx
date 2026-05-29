@@ -169,6 +169,9 @@ export default function RoomPage() {
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [payeeEditing, setPayeeEditing] = useState(false);
+  const [payeeNameDraft, setPayeeNameDraft] = useState("");
+  const [payeeNumberDraft, setPayeeNumberDraft] = useState("");
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptImages, setReceiptImages] = useState<string[] | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -205,6 +208,21 @@ export default function RoomPage() {
   // still there for "full" edits (shared, split count, delete); this is the
   // shortcut for the most common fixes (the OCR's typo, the wrong digit).
   const [quickEdit, setQuickEdit] = useState<{ itemId: string; field: "description" | "price" } | null>(null);
+  const quickEditInputRef = useRef<HTMLInputElement | null>(null);
+  // autoFocus alone doesn't bring up the mobile keyboard reliably — iOS needs
+  // a focus() call that's chained from a user activation. requestAnimationFrame
+  // keeps us in that window: state flips → React mounts the input → rAF fires
+  // before paint → we focus + select the input so the keyboard pops up.
+  useEffect(() => {
+    if (!quickEdit) return;
+    const id = requestAnimationFrame(() => {
+      const input = quickEditInputRef.current;
+      if (!input) return;
+      input.focus();
+      try { input.select(); } catch { /* select() can throw on some types */ }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [quickEdit]);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
@@ -442,6 +460,19 @@ export default function RoomPage() {
 
   function editItem(itemId: string, patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number }) {
     return postAction({ action: "edit", itemId, ...patch });
+  }
+  function openPayeeEdit() {
+    setPayeeNameDraft(state?.payeeName ?? "");
+    setPayeeNumberDraft(state?.payeeNumber ?? "");
+    setPayeeEditing(true);
+  }
+  async function savePayeeEdit() {
+    if (!state) return;
+    const name = payeeNameDraft.trim();
+    const number = payeeNumberDraft.trim();
+    setPayeeEditing(false);
+    if (name === state.payeeName && number === state.payeeNumber) return;
+    await postAction({ action: "editPayee", name, number });
   }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
     setEditingItemId(it.id);
@@ -740,7 +771,7 @@ export default function RoomPage() {
             <span aria-hidden className="shrink-0 text-2xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
               {editingDesc ? (
                 <input
-                  autoFocus
+                  ref={quickEditInputRef}
                   defaultValue={it.description}
                   placeholder={t.descPh}
                   onClick={(e) => e.stopPropagation()}
@@ -783,7 +814,7 @@ export default function RoomPage() {
           </span>
           {editingPrice ? (
             <input
-              autoFocus
+              ref={quickEditInputRef}
               defaultValue={formatOre(it.priceOre)}
               inputMode="decimal"
               placeholder={t.pricePh}
@@ -953,6 +984,63 @@ export default function RoomPage() {
           <div className="min-w-0">
             <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
             <p className="text-sm text-gray-500">{[state.date, code].filter(Boolean).join(" · ")}</p>
+            {/* Host info — read-only for guests, tap-to-edit for the host
+                themselves. The Swish QR and payment messages all key off
+                payeeName/payeeNumber, so this is the single source of truth
+                and any edit needs to propagate via the editPayee action. */}
+            {payeeEditing && isPayee ? (
+              <div className="mt-1 flex items-center gap-1.5">
+                <input
+                  value={payeeNameDraft}
+                  onChange={(e) => setPayeeNameDraft(e.target.value)}
+                  placeholder={tx.yourName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    else if (e.key === "Escape") setPayeeEditing(false);
+                  }}
+                  className="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 text-sm outline-none ring-1 ring-swish/40"
+                />
+                <input
+                  value={payeeNumberDraft}
+                  onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                  inputMode="tel"
+                  placeholder={tx.swishNumber}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    else if (e.key === "Escape") setPayeeEditing(false);
+                  }}
+                  className="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 text-sm outline-none ring-1 ring-swish/40"
+                />
+                <button
+                  type="button"
+                  onClick={savePayeeEdit}
+                  aria-label={t.save}
+                  className="shrink-0 rounded-lg bg-swish px-2 py-1 text-sm font-semibold text-white active:bg-swish-dark"
+                >
+                  ✓
+                </button>
+              </div>
+            ) : (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                <span aria-hidden>👤</span>
+                <span className="truncate">
+                  {state.payeeName}
+                  {state.payeeNumber && (
+                    <span className="text-gray-400"> · {state.payeeNumber}</span>
+                  )}
+                </span>
+                {isPayee && (
+                  <button
+                    type="button"
+                    onClick={openPayeeEdit}
+                    aria-label={t.editRow}
+                    className="-my-1 shrink-0 p-1 text-gray-300 active:text-swish-dark"
+                  >
+                    <PencilIcon />
+                  </button>
+                )}
+              </p>
+            )}
             {roomFx && (
               <p className="mt-0.5 text-xs text-gray-400">
                 {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
@@ -1472,15 +1560,20 @@ export default function RoomPage() {
       })()}
       {pendingUndo && (
         <div className="fixed inset-x-0 bottom-28 z-50 mx-auto max-w-md px-4">
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
-            <span className="min-w-0 truncate">🗑 {t.removedItem(pendingUndo.description || t.editRow)}</span>
-            <button
-              type="button"
-              onClick={undoRemoval}
-              className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
-            >
-              {t.undo}
-            </button>
+          {/* key on description so the countdown restarts when the user removes
+              another item before the previous toast expires. */}
+          <div key={pendingUndo.description} className="relative overflow-hidden rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">🗑 {t.removedItem(pendingUndo.description || t.editRow)}</span>
+              <button
+                type="button"
+                onClick={undoRemoval}
+                className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
+              >
+                {t.undo}
+              </button>
+            </div>
+            <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-swish/70" />
           </div>
         </div>
       )}

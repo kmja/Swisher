@@ -265,6 +265,10 @@ export default function Page() {
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   const [scanPhase, setScanPhase] = useState(0);
+  // True between OCR-complete and host-info-complete: the scan overlay keeps
+  // its setup card up so the host can finish typing their name & phone
+  // before the app advances to the items step.
+  const [scanReady, setScanReady] = useState(false);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -429,6 +433,19 @@ export default function Page() {
     const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
     return () => clearInterval(iv);
   }, [ocrLoading]);
+
+  // Once OCR finishes (scanReady), advance to the items step only when the
+  // host has a name AND a valid phone — they fill those right on the scan
+  // overlay, so a host still mid-typing isn't kicked off the screen.
+  useEffect(() => {
+    if (!scanReady) return;
+    const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
+    const hasPhone = isValidPhone(payerPhone);
+    if (hasName && hasPhone) {
+      setScanReady(false);
+      setStep("items");
+    }
+  }, [scanReady, diners, payerPhone]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -638,7 +655,9 @@ export default function Page() {
       // Tick a counter through the found rows, then move on.
       const n = mapped.length;
       if (n === 0) {
-        setStep("items");
+        // Skip the tick but still hand off to the "host info ready?" gate
+        // before advancing — same effect via setScanReady.
+        setScanReady(true);
         return;
       }
       setScanCount(0);
@@ -651,7 +670,10 @@ export default function Page() {
           clearInterval(iv);
           setTimeout(() => {
             setScanCount(null);
-            setStep("items");
+            // Hand off to the useEffect below: it advances to "items" only
+            // once the host has typed a name and a valid phone, so a host
+            // mid-typing isn't yanked off this screen.
+            setScanReady(true);
           }, 500);
         }
       }, delay);
@@ -1050,12 +1072,11 @@ export default function Page() {
               </>
             )}
 
-            {/* While the OCR is running (and through the brief "items found"
-                tick) the setup card floats over the bottom of the viewfinder
-                instead of pushing it up — the viewport keeps its size and
-                the host can fill in name / phone / group size against the
-                live scan animation. */}
-            {(ocrLoading || scanCount !== null) && (
+            {/* The setup card floats over the bottom of the viewfinder so the
+                viewport keeps its size. It stays up while OCR runs AND while
+                we're holding for the host's name + valid phone (scanReady),
+                so a host still mid-typing isn't kicked off the screen. */}
+            {(ocrLoading || scanCount !== null || scanReady) && (
               <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-2.5 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -1064,6 +1085,10 @@ export default function Page() {
                   {ocrLoading && (
                     <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
                   )}
+                </div>
+                <div className="-mt-0.5">
+                  <p className="text-[11px] text-gray-500">{t.inTheMeantime}</p>
+                  <p className="text-sm font-bold text-ink">{t.payerTitle}</p>
                 </div>
                 <div className="flex items-stretch gap-2">
                   <input
@@ -1181,149 +1206,6 @@ export default function Page() {
 
       {step === "items" && (
         <section key="items" className="step-enter mt-6 flex flex-1 flex-col gap-6">
-          <div>
-            <h2 className="text-xl font-bold">{t.payerTitle}</h2>
-
-            {sepaAvailable && (
-              <div className="mt-2 inline-flex overflow-hidden rounded-xl text-sm font-semibold ring-1 ring-gray-200">
-                {(["swish", "sepa"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    aria-pressed={method === m}
-                    onClick={() => setPayMethod(m)}
-                    className={`px-4 py-2 ${method === m ? "bg-swish text-white" : "bg-white text-gray-500 active:bg-gray-100"}`}
-                  >
-                    {m === "swish" ? t.payMethodSwish : t.payMethodSepa}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {method === "sepa" ? (
-              <div className="mt-2 space-y-2">
-                <input
-                  value={diners[0]?.name ?? ""}
-                  onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-                  placeholder={t.yourName}
-                  className="w-full rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                />
-                <input
-                  value={formatIban(payeeIban)}
-                  onChange={(e) => setPayeeIban(normalizeIban(e.target.value))}
-                  placeholder={t.ibanPlaceholder}
-                  autoCapitalize="characters"
-                  autoComplete="on"
-                  name="iban"
-                  spellCheck={false}
-                  className="w-full rounded-xl bg-white px-4 py-3 font-mono uppercase tracking-wide shadow-sm ring-1 ring-black/5 outline-none"
-                />
-                {ibanValid ? (
-                  <p className="text-xs text-emerald-600">
-                    ✓ {ibanCountryLabel}
-                    {ibanBankName(payeeIban) && <span className="text-gray-500"> · {ibanBankName(payeeIban)}</span>}
-                  </p>
-                ) : payeeIban.length >= 15 ? (
-                  <p className="text-xs text-red-600">{t.ibanInvalid}</p>
-                ) : ibanCountryLabel ? (
-                  <p className="text-xs text-gray-400">{ibanCountryLabel}</p>
-                ) : null}
-                <div className="relative">
-                  <input
-                    value={payerPhone}
-                    onChange={(e) => {
-                      setPayerPhone(e.target.value);
-                      if (isValidPhone(e.target.value)) e.target.blur();
-                    }}
-                    inputMode="tel"
-                    placeholder={t.swishOptional}
-                    className="w-full rounded-xl bg-white px-4 py-3 pr-9 shadow-sm ring-1 ring-black/5 outline-none"
-                  />
-                  {isValidPhone(payerPhone) && (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
-                    >
-                      ✓
-                    </span>
-                  )}
-                </div>
-                {payerPhone && !isValidPhone(payerPhone) && <p className="text-xs text-red-600">{t.invalidPhone}</p>}
-                <p className="px-1 text-xs text-gray-400">{t.sepaSettlesEur}</p>
-              </div>
-            ) : (
-              <div className="mt-2 space-y-2">
-                <div className="flex items-stretch gap-2">
-                  <input
-                    value={diners[0]?.name ?? ""}
-                    onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-                    placeholder={t.yourName}
-                    className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5 outline-none"
-                  />
-                  <div className="relative min-w-0 flex-1">
-                    <input
-                      value={payerPhone}
-                      onChange={(e) => {
-                        setPayerPhone(e.target.value);
-                        if (isValidPhone(e.target.value)) e.target.blur();
-                      }}
-                      inputMode="tel"
-                      placeholder={t.swishNumber}
-                      className="w-full rounded-xl bg-white px-4 py-3 pr-9 shadow-sm ring-1 ring-black/5 outline-none"
-                    />
-                    {isValidPhone(payerPhone) && (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
-                      >
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {payerPhone && !isValidPhone(payerPhone) && (
-                  <p className="px-1 text-xs text-red-600">{t.invalidPhone}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {needsGroupSize && (
-            <div className="rounded-xl bg-swish/5 px-4 py-3 ring-1 ring-swish/20">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium text-gray-700">{t.sharedGroupPrompt}</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    aria-label="−"
-                    onClick={() => setGroupSize(Math.max(2, groupSize - 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xl font-bold text-gray-600 active:bg-gray-200"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
-                  <button
-                    type="button"
-                    aria-label="+"
-                    onClick={() => setGroupSize(Math.min(50, Math.max(2, groupSize + 1)))}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-swish text-xl font-bold text-white active:bg-swish-dark"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              {groupSize > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1 text-xl">
-                  {Array.from({ length: Math.min(groupSize, 20) }).map((_, i) => (
-                    <span key={i} className="pop-in" aria-hidden>
-                      🧍
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           <div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1637,15 +1519,20 @@ export default function Page() {
           </details>
           {undoItem && (
             <div className="fixed inset-x-0 bottom-24 z-50 mx-auto max-w-md px-4">
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
-                <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
-                <button
-                  type="button"
-                  onClick={() => restoreItem(undoItem.id)}
-                  className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
-                >
-                  {t.undo}
-                </button>
+              {/* key on the id so the countdown bar restarts whenever a NEW
+                  item is removed while a previous toast is still up. */}
+              <div key={undoItem.id} className="relative overflow-hidden rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
+                  <button
+                    type="button"
+                    onClick={() => restoreItem(undoItem.id)}
+                    className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
+                  >
+                    {t.undo}
+                  </button>
+                </div>
+                <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-swish/70" />
               </div>
             </div>
           )}
