@@ -39,6 +39,8 @@ export type RoomState = {
   rate: number;
   /** ISO 3166-1 alpha-2 country the receipt was issued in, for the header flag. */
   country: string;
+  /** Number of receipt photos stored separately under the "images" key. */
+  imageCount: number;
   items: RoomItem[];
   people: RoomPerson[];
   /** Person ids the host (or the person themselves) has marked as settled. */
@@ -58,6 +60,9 @@ export type RoomInit = {
   currency?: string;
   rate?: number;
   country?: string;
+  /** Receipt photos as base64 data URLs. Stored under a separate storage key so
+   *  per-claim state writes stay small; fetched via the /images endpoint. */
+  images?: string[];
   items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
 };
 
@@ -96,6 +101,7 @@ export class RoomDO extends DurableObject {
       currency: (data.currency ?? "SEK").slice(0, 3).toUpperCase() || "SEK",
       rate: typeof data.rate === "number" && data.rate > 0 ? data.rate : 1,
       country: (data.country ?? "").slice(0, 2).toUpperCase(),
+      imageCount: Array.isArray(data.images) ? Math.min(data.images.length, 5) : 0,
       items: data.items.map((it) => ({
         id: uid(),
         description: it.description.slice(0, 80),
@@ -111,11 +117,20 @@ export class RoomDO extends DurableObject {
       paidBy: [],
     };
     await this.save(state);
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      await this.ctx.storage.put("images", data.images.slice(0, 5));
+    }
     return state;
   }
 
   async getState(): Promise<RoomState | null> {
     return this.load();
+  }
+
+  /** Receipt photos, served via the /images endpoint (kept out of state for speed). */
+  async getImages(): Promise<string[]> {
+    const v = await this.ctx.storage.get<string[]>("images");
+    return Array.isArray(v) ? v : [];
   }
 
   async join(name: string): Promise<{ personId: string; state: RoomState } | null> {

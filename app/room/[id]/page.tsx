@@ -34,6 +34,8 @@ const R = {
     close: "Stäng",
     inviteText: (place: string, date: string) =>
       `Gå med och dela notan${place ? ` från ${place}` : ""}${date ? ` · ${date}` : ""}`,
+    showReceipt: "Kvitto",
+    receiptLoading: "Hämtar kvittot…",
     youCollect: "Du samlar in",
     yourShareNote: "Din egen del – du swishar inte dig själv.",
     remainingToCollect: "Kvar att få in",
@@ -84,6 +86,8 @@ const R = {
     close: "Close",
     inviteText: (place: string, date: string) =>
       `Join and split the bill${place ? ` from ${place}` : ""}${date ? ` · ${date}` : ""}`,
+    showReceipt: "Receipt",
+    receiptLoading: "Fetching the receipt…",
     youCollect: "You collect",
     yourShareNote: "Your own share — you don't Swish yourself.",
     remainingToCollect: "Remaining to collect",
@@ -135,6 +139,8 @@ export default function RoomPage() {
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptImages, setReceiptImages] = useState<string[] | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
@@ -306,6 +312,22 @@ export default function RoomPage() {
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
   const shareText = t.inviteText(state?.place ?? "", state?.date ?? "");
 
+  async function openReceipt() {
+    setReceiptOpen(true);
+    if (receiptImages !== null) return;
+    try {
+      const res = await fetch(`/api/room/${code}/images`, { cache: "force-cache" });
+      if (res.ok) {
+        const data = (await res.json()) as { images: string[] };
+        setReceiptImages(data.images ?? []);
+      } else {
+        setReceiptImages([]);
+      }
+    } catch {
+      setReceiptImages([]);
+    }
+  }
+
   const { shares, unassignedOre } = useMemo(() => {
     if (!state) return { shares: [] as Share[], unassignedOre: 0 };
     const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
@@ -463,13 +485,25 @@ export default function RoomPage() {
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
-          >
-            {t.share}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {state.imageCount > 0 && (
+              <button
+                type="button"
+                onClick={openReceipt}
+                aria-label={t.showReceipt}
+                className="rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
+              >
+                🧾
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+            >
+              {t.share}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -701,6 +735,39 @@ export default function RoomPage() {
           <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
           <span className="text-base">↓</span>
         </button>
+      )}
+      {receiptOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReceiptOpen(false)}
+          className="fixed inset-0 z-50 flex flex-col bg-black/90"
+        >
+          <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
+            <span className="text-sm font-medium">{t.showReceipt}</span>
+            <button
+              type="button"
+              onClick={() => setReceiptOpen(false)}
+              className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium active:bg-white/25"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 pb-6" onClick={(e) => e.stopPropagation()}>
+            {receiptImages === null ? (
+              <p className="pt-10 text-center text-sm text-white/60">{t.receiptLoading}</p>
+            ) : receiptImages.length === 0 ? (
+              <p className="pt-10 text-center text-sm text-white/60">—</p>
+            ) : (
+              <div className="space-y-3">
+                {receiptImages.map((src, i) => (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img key={i} src={src} alt={`${t.showReceipt} ${i + 1}`} className="w-full rounded-lg" />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       <QrDialog
         open={shareOpen}

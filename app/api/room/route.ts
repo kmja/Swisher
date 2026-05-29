@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     country?: string;
     method?: string;
     payeeIban?: string;
+    images?: string[];
     items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown }[];
   };
   try {
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
     currency: typeof body.currency === "string" ? body.currency : "SEK",
     rate: typeof body.rate === "number" && body.rate > 0 ? body.rate : 1,
     country: typeof body.country === "string" ? body.country : "",
+    images: Array.isArray(body.images) ? body.images.filter((s) => typeof s === "string").slice(0, 5) : undefined,
     items,
   });
 

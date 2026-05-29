@@ -766,6 +766,7 @@ export default function Page() {
           currency,
           rate: fxRate ?? 1,
           country: country ?? "",
+          images: images.slice(0, 5),
           items: foodItems.map((it) => ({
             description: it.description.trim() || t.rowFallback,
             priceOre: parseAmountToOre(it.priceInput) ?? 0,
