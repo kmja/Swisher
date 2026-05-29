@@ -269,6 +269,12 @@ export default function Page() {
   // its setup card up so the host can finish typing their name & phone
   // before the app advances to the items step.
   const [scanReady, setScanReady] = useState(false);
+  // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
+  // form in front of the host before they've even seen the scan animation.
+  const [scanCardVisible, setScanCardVisible] = useState(false);
+  // Stagger the items list's pop-in for a moment after we hand off to the
+  // items step — feels like the rows are being generated rather than dumped.
+  const [itemsJustEntered, setItemsJustEntered] = useState(false);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -433,6 +439,27 @@ export default function Page() {
     const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
     return () => clearInterval(iv);
   }, [ocrLoading]);
+
+  // Show the setup card 1 s into the scan (just long enough for the user to
+  // register "okay it's scanning"). Cleared when the host actually leaves
+  // the capture step.
+  useEffect(() => {
+    if (!ocrLoading) {
+      setScanCardVisible(false);
+      return;
+    }
+    const id = setTimeout(() => setScanCardVisible(true), 1000);
+    return () => clearTimeout(id);
+  }, [ocrLoading]);
+
+  // Pop-in flag is true for a couple of seconds after we enter the items
+  // step. Edits afterwards don't re-animate the list.
+  useEffect(() => {
+    if (step !== "items") return;
+    setItemsJustEntered(true);
+    const id = setTimeout(() => setItemsJustEntered(false), 1500);
+    return () => clearTimeout(id);
+  }, [step]);
 
   // Once OCR finishes (scanReady), advance to the items step only when the
   // host has a name AND a valid phone — they fill those right on the scan
@@ -1072,12 +1099,14 @@ export default function Page() {
               </>
             )}
 
-            {/* The setup card floats over the bottom of the viewfinder so the
-                viewport keeps its size. It stays up while OCR runs AND while
-                we're holding for the host's name + valid phone (scanReady),
-                so a host still mid-typing isn't kicked off the screen. */}
-            {(ocrLoading || scanCount !== null || scanReady) && (
-              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-2.5 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/10 backdrop-blur">
+            {/* Setup card floats over the centre of the viewfinder so the
+                viewport keeps its size. After a 1 s warm-up the card rises
+                from below into a vertically-centred resting frame; it then
+                stays up while OCR runs AND while we're holding for the
+                host's name + valid phone (scanReady), so a host still
+                mid-typing isn't kicked off the screen. */}
+            {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && (
+              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 top-1/2 z-20 space-y-2.5 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
@@ -1262,7 +1291,7 @@ export default function Page() {
               </p>
             ))}
             <div className="mt-3 space-y-2">
-              {itemGroups.map((copies) => {
+              {itemGroups.map((copies, gIdx) => {
                 const rep = copies[0];
                 const rowOre = parseAmountToOre(rep.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
@@ -1275,7 +1304,11 @@ export default function Page() {
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
                 return (
-                <div key={rep.id} className="flex items-stretch gap-2">
+                <div
+                  key={rep.id}
+                  className={`flex items-stretch gap-2 ${itemsJustEntered ? "item-pop-in" : ""}`}
+                  style={itemsJustEntered ? { animationDelay: `${Math.min(gIdx, 12) * 55}ms` } : undefined}
+                >
                   <div
                     className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >
