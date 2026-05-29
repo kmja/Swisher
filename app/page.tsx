@@ -775,7 +775,12 @@ export default function Page() {
             // Shared items split across the whole room (pre-claimed for everyone),
             // rather than becoming separate claimable slots.
             shared: it.shared,
-            shareCount: it.shareCount,
+            // Freeze the group size onto each shared item so the room uses it as
+            // the divisor — otherwise the room falls back to "current people in
+            // the room", which is just the host (→ 2) until others join.
+            shareCount: it.shareCount && it.shareCount > 0
+              ? it.shareCount
+              : it.shared && groupSize > 0 ? groupSize : undefined,
           })),
         }),
       });
