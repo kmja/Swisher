@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Swisher — dela kvittot",
+  title: "Kvitt — dela kvittot",
   description: "Photograph a receipt, assign items, and generate a locked Swish QR for each person.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Swisher", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Kvitt", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

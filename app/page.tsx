@@ -13,6 +13,7 @@ import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
+import LangToggle from "@/components/LangToggle";
 import type { Diner, LineItem } from "@/lib/types";
 
 type Step = "capture" | "items" | "assign" | "result";
@@ -1697,24 +1698,6 @@ export default function Page() {
       />
     </main>
     </FxProvider>
-  );
-}
-
-function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
-  return (
-    <div className="inline-flex overflow-hidden rounded-full bg-white text-xs font-semibold ring-1 ring-gray-200">
-      {(["sv", "en"] as Lang[]).map((l) => (
-        <button
-          key={l}
-          type="button"
-          aria-pressed={lang === l}
-          onClick={() => onChange(l)}
-          className={`px-3 py-1.5 ${lang === l ? "bg-swish text-white" : "text-gray-500 active:bg-gray-100"}`}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
   );
 }
 

@@ -8,6 +8,7 @@ import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
+import LangToggle, { saveLang } from "@/components/LangToggle";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
@@ -491,20 +492,23 @@ export default function RoomPage() {
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
       {/* Navigation */}
-      <nav className="flex items-center justify-between text-xs font-semibold">
+      <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
         <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
           + {t.newReceipt}
         </a>
-        <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
-          🕘 {t.history}
-        </a>
+        <div className="flex items-center gap-2">
+          <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
+            🕘 {t.history}
+          </a>
+          <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
+        </div>
       </nav>
 
       {/* Share / invite */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-lg font-bold">{state.place || "Swisher"}</p>
+            <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
             <p className="text-sm text-gray-500">{[state.date, code].filter(Boolean).join(" · ")}</p>
             {roomFx && (
               <p className="mt-0.5 text-xs text-gray-400">
@@ -815,12 +819,12 @@ export default function RoomPage() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         qrSrc={`/api/room/${code}/qr`}
-        title={state.place || "Swisher"}
+        title={state.place || "Kvitt"}
         subtitle={`${t.scanToJoin} · ${code}`}
         shareUrl={shareUrl}
-        shareTitle={state.place || "Swisher"}
+        shareTitle={state.place || "Kvitt"}
         shareText={shareText}
-        download={`swisher-${code}.png`}
+        download={`kvitt-${code}.png`}
         labels={{ share: t.share, copied: t.copied, copyLink: t.copyLink, close: t.close, save: t.saveQr }}
       />
     </main>

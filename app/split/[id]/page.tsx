@@ -8,6 +8,7 @@ import { formatOre, parseAmountToOre } from "@/lib/money";
 import { formatNative, flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { translations } from "@/lib/i18n";
 import { readLocalSplit, saveLocalSplit, toggleLocalPaid, type LocalSplit } from "@/lib/local-split";
+import LangToggle, { saveLang } from "@/components/LangToggle";
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
@@ -130,17 +131,20 @@ export default function SplitPage() {
   return (
     <FxProvider value={fx}>
       <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
-        <nav className="flex items-center justify-between text-xs font-semibold">
+        <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
           <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
             + {t.newReceipt}
           </a>
-          <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
-            🕘 {t.history}
-          </a>
+          <div className="flex items-center gap-2">
+            <a href="/history" className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100">
+              🕘 {t.history}
+            </a>
+            <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
+          </div>
         </nav>
 
         <header className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-          <p className="truncate text-lg font-bold">{split.place || "Swisher"}</p>
+          <p className="truncate text-lg font-bold">{split.place || "Kvitt"}</p>
           <p className="text-sm text-gray-500">{split.date}</p>
           {fx && (
             <p className="mt-0.5 text-xs text-gray-400">

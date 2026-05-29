@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Swisher – dela kvittot",
-    short_name: "Swisher",
+    name: "Kvitt – dela kvittot",
+    short_name: "Kvitt",
     description: "Split a restaurant receipt and generate a locked Swish QR per person.",
     start_url: "/",
     display: "standalone",
