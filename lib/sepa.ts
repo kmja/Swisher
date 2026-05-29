@@ -28,6 +28,33 @@ export function isValidIban(input: string): boolean {
   return remainder === 1;
 }
 
+/**
+ * Best-effort bank name for an IBAN, derived offline from the IBAN's own bank
+ * identifier. NL only for now — every Dutch IBAN encodes the bank as a 4-letter
+ * code at positions 5–8, which is small enough to map by hand. DE/FR/ES would
+ * need much larger lookup tables; left for later.
+ */
+const NL_BANKS: Record<string, string> = {
+  ABNA: "ABN AMRO",
+  ASNB: "ASN Bank",
+  BUNQ: "bunq",
+  INGB: "ING",
+  KNAB: "Knab",
+  RABO: "Rabobank",
+  REVO: "Revolut",
+  SNSB: "SNS Bank",
+  TRIO: "Triodos",
+};
+
+export function ibanBankName(iban: string): string | null {
+  const normalized = normalizeIban(iban);
+  if (!isValidIban(normalized)) return null;
+  if (normalized.startsWith("NL")) {
+    return NL_BANKS[normalized.slice(4, 8)] ?? null;
+  }
+  return null;
+}
+
 /** Strip characters outside the EPC-safe set and collapse whitespace. */
 function clean(text: string, max: number): string {
   return (text || "")

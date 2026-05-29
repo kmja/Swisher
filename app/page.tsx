@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
-import { isValidIban, normalizeIban, formatIban } from "@/lib/sepa";
+import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -129,16 +129,16 @@ function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
   }
 }
 
-/** Crop a horizontal band (~30% tall) of the receipt centred on yFrac, so the
- * magnifier shows just the line where an item was recognised. */
+/** Crop a horizontal band of the receipt centred on yFrac, so the magnifier
+ *  shows the line where an item was recognised — generous enough to include a
+ *  couple of neighbouring lines for context if the OCR y was slightly off. */
 function cropBand(src: string, yFrac: number): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const W = img.naturalWidth;
       const H = img.naturalHeight;
-      // Tight band around the line itself (~1–2 lines), not a big slice.
-      const bandH = Math.max(48, Math.round(H * 0.085));
+      const bandH = Math.max(80, Math.round(H * 0.15));
       let top = Math.round(Math.max(0, Math.min(1, yFrac)) * H - bandH / 2);
       top = Math.max(0, Math.min(H - bandH, top));
       const canvas = document.createElement("canvas");
@@ -1093,10 +1093,17 @@ export default function Page() {
                 const rowOre = parseAmountToOre(it.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
                 const d = itemDivisorFor(it);
+                // "Low confidence" = the keyword layer couldn't categorise this
+                // line and the description is mostly non-alphabetic. Subtle tint
+                // so the host's eyes go to the rows that might need checking.
+                const letters = (it.description.match(/[A-Za-zÀ-ÿ]/g)?.length ?? 0);
+                const lowConfidence = !it.isTip && !it.shared && (
+                  categoryFor(it.description, it.category) === "other" || letters < 2
+                );
                 return (
                 <div
                   key={it.id}
-                  className={`rounded-xl p-2 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
+                  className={`rounded-xl p-2 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                 >
                   <div className="flex items-center gap-2">
                   <span aria-hidden className="pl-1 text-lg">
@@ -1312,7 +1319,10 @@ export default function Page() {
                   className="w-full rounded-xl bg-white px-4 py-3 font-mono uppercase tracking-wide shadow-sm ring-1 ring-black/5 outline-none"
                 />
                 {ibanValid ? (
-                  <p className="text-xs text-emerald-600">✓ {ibanCountryLabel}</p>
+                  <p className="text-xs text-emerald-600">
+                    ✓ {ibanCountryLabel}
+                    {ibanBankName(payeeIban) && <span className="text-gray-500"> · {ibanBankName(payeeIban)}</span>}
+                  </p>
                 ) : payeeIban.length >= 15 ? (
                   <p className="text-xs text-red-600">{t.ibanInvalid}</p>
                 ) : ibanCountryLabel ? (
@@ -1642,6 +1652,9 @@ export default function Page() {
         const it = items[zoomItem];
         const src = it && it.imgIndex >= 0 ? images[it.imgIndex] : null;
         if (!src) return null;
+        const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
+        const posIdx = Math.max(0, sameImg.indexOf(it));
+        const yFrac = it.y != null ? it.y : (posIdx + 0.5) / Math.max(1, sameImg.length);
         return (
           <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
             <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
@@ -1657,13 +1670,43 @@ export default function Page() {
                 ✕
               </button>
             </div>
-            <div className="flex flex-1 items-start justify-center overflow-auto p-3">
+            <div id="zoom-scroll" className="flex flex-1 items-start justify-center overflow-auto p-3">
               {showFullReceipt ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt="" className="w-[200%] max-w-none rounded-lg" />
+                <div className="relative w-[200%] max-w-none">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt=""
+                    className="block w-full rounded-lg"
+                    onLoad={(e) => {
+                      // Centre the suspected line in the viewport once loaded.
+                      const scroller = document.getElementById("zoom-scroll");
+                      if (!scroller) return;
+                      const target = yFrac * e.currentTarget.clientHeight - scroller.clientHeight / 2;
+                      scroller.scrollTop = Math.max(0, target);
+                    }}
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-x-0"
+                    style={{
+                      top: `calc(${yFrac * 100}% - 10px)`,
+                      height: "20px",
+                      background: "rgba(251, 191, 36, 0.18)",
+                      borderTop: "2px solid rgba(251, 191, 36, 0.95)",
+                      borderBottom: "2px solid rgba(251, 191, 36, 0.95)",
+                    }}
+                  />
+                </div>
               ) : cropSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={cropSrc} alt="" className="w-full rounded-lg ring-1 ring-white/20" />
+                <button
+                  type="button"
+                  onClick={() => setShowFullReceipt(true)}
+                  className="w-full"
+                  aria-label={t.viewSourceFull}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cropSrc} alt="" className="w-full rounded-lg ring-1 ring-white/20" />
+                </button>
               ) : (
                 <p className="pt-10 text-sm text-white/60">…</p>
               )}

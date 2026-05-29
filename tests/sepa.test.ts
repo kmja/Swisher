@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { isValidIban, normalizeIban, formatIban, buildEpcPayload } from "../lib/sepa";
+import { isValidIban, normalizeIban, formatIban, buildEpcPayload, ibanBankName } from "../lib/sepa";
+
+describe("ibanBankName", () => {
+  it("identifies a Dutch bank from a valid IBAN", () => {
+    expect(ibanBankName("NL91 ABNA 0417 1643 00")).toBe("ABN AMRO");
+  });
+  it("returns null for unsupported countries and invalid IBANs", () => {
+    // DE has too many banks for a hand-built table, so it's unsupported.
+    expect(ibanBankName("DE89 3704 0044 0532 0130 00")).toBeNull();
+    expect(ibanBankName("NL00 ABNA 0000 0000 00")).toBeNull(); // bad checksum
+    expect(ibanBankName("not an iban")).toBeNull();
+  });
+});
 
 describe("isValidIban", () => {
   it("accepts valid IBANs (any spacing/case)", () => {
