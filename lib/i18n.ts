@@ -42,6 +42,8 @@ export interface Strings {
   viewSource: string;
   viewSourceFull: string;
   viewSourceCrop: string;
+  /** Short label for the "open the receipt photo overlay" button. */
+  showReceipt: string;
   rowsSum: string;
   receiptTotalLabel: string;
   chargedLabel: string;
@@ -188,6 +190,7 @@ const sv: Strings = {
   viewSource: "Visa på kvittot",
   viewSourceFull: "Visa hela kvittot",
   viewSourceCrop: "Visa bara raden",
+  showReceipt: "Kvitto",
   rowsSum: "Summa rader",
   receiptTotalLabel: "Kvittots total",
   chargedLabel: "Betalat (kort)",
@@ -324,6 +327,7 @@ const en: Strings = {
   viewSource: "Show on receipt",
   viewSourceFull: "Show full receipt",
   viewSourceCrop: "Show just this line",
+  showReceipt: "Receipt",
   rowsSum: "Items total",
   receiptTotalLabel: "Receipt total",
   chargedLabel: "Charged (card)",

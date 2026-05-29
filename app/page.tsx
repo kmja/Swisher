@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
@@ -196,11 +196,7 @@ export default function Page() {
   const [country, setCountry] = useState<string | null>(null);
   const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
-  const [zoomItem, setZoomItem] = useState<number | null>(null);
-  // Zoom multiplier on fit-width inside the receipt dialog. 1.5× is a
-  // readable default; +/- buttons step between 1× and 4×.
-  const [zoomScale, setZoomScale] = useState(1.5);
-  const zoomScrollerRef = useRef<HTMLDivElement>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -328,56 +324,6 @@ export default function Page() {
     const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
     return () => clearInterval(iv);
   }, [ocrLoading]);
-
-  // Reset zoom every time the dialog opens for a fresh item so the previous
-  // item's zoom doesn't leak in.
-  useEffect(() => {
-    if (zoomItem !== null) setZoomScale(1.5);
-  }, [zoomItem]);
-
-  // Recenter the receipt on the estimated y of the active item whenever the
-  // dialog opens, zooms, or swaps items. The old code only scrolled on the
-  // img's onLoad — but the browser caches the image, so reopening the dialog
-  // on a DIFFERENT item left the scroll position stuck on the previous item.
-  // useLayoutEffect runs after layout, so clientHeight already reflects the
-  // current zoom-scaled wrapper.
-  useLayoutEffect(() => {
-    if (zoomItem === null) return;
-    const scroller = zoomScrollerRef.current;
-    if (!scroller) return;
-    const it = items[zoomItem];
-    if (!it || it.imgIndex < 0 || !images[it.imgIndex]) return;
-    const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
-    const pos = Math.max(0, sameImg.indexOf(it));
-    // Items typically sit in the middle 15-85% of a receipt; the model's `y`
-    // is a hint but is often noisy, so blend it with the deterministic
-    // positional estimate. When they agree (within 15%) we trust the model;
-    // when they don't, we fall back to position-only — that lands close to
-    // the right line even on the worst Claude readings.
-    const positional = 0.15 + 0.7 * ((pos + 0.5) / Math.max(1, sameImg.length));
-    const modelY = it.y;
-    const yFrac =
-      modelY != null && Math.abs(modelY - positional) < 0.15 ? modelY : positional;
-    const img = scroller.querySelector("img");
-    const apply = () => {
-      if (!img) return false;
-      const imgH = img.clientHeight;
-      const imgW = img.clientWidth;
-      if (imgH === 0 || imgW === 0) return false;
-      scroller.scrollTop = Math.max(
-        0,
-        Math.min(imgH - scroller.clientHeight, yFrac * imgH - scroller.clientHeight / 2),
-      );
-      scroller.scrollLeft = Math.max(0, (imgW - scroller.clientWidth) / 2);
-      return true;
-    };
-    if (apply()) return;
-    // Image not loaded yet — try again when it does.
-    if (!img) return;
-    const onLoad = () => apply();
-    img.addEventListener("load", onLoad);
-    return () => img.removeEventListener("load", onLoad);
-  }, [zoomItem, zoomScale, items, images]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -1258,8 +1204,22 @@ export default function Page() {
           )}
 
           <div>
-            <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
-            <p className="text-sm text-gray-600">{t.itemsHint}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+                <p className="text-sm text-gray-600">{t.itemsHint}</p>
+              </div>
+              {images.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setReceiptOpen(true)}
+                  aria-label={t.showReceipt}
+                  className="shrink-0 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+                >
+                  🧾 {t.showReceipt}
+                </button>
+              )}
+            </div>
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
             )}
@@ -1301,7 +1261,6 @@ export default function Page() {
             <div className="mt-3 space-y-2">
               {itemGroups.map((copies) => {
                 const rep = copies[0];
-                const idx = items.findIndex((x) => x.id === rep.id);
                 const rowOre = parseAmountToOre(rep.priceInput) ?? 0;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
                 const d = itemDivisorFor(rep);
@@ -1342,33 +1301,6 @@ export default function Page() {
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
                       </div>
-                      {rep.imgIndex >= 0 && images[rep.imgIndex] && (
-                        <button
-                          type="button"
-                          onClick={() => setZoomItem(idx)}
-                          aria-label={t.viewSource}
-                          title={t.viewSource}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center text-swish-dark/70 active:text-swish-dark"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            width="22"
-                            height="22"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden
-                          >
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.3-4.3" />
-                            <line x1="11" x2="11" y1="8" y2="14" />
-                            <line x1="8" x2="14" y1="11" y2="11" />
-                          </svg>
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={() => removeItem(rep.id)}
@@ -1784,89 +1716,41 @@ export default function Page() {
         </section>
       )}
 
-      {(() => {
-        if (zoomItem === null) return null;
-        const it = items[zoomItem];
-        const src = it && it.imgIndex >= 0 ? images[it.imgIndex] : null;
-        if (!src) return null;
-        const sameImg = items.filter((x) => x.imgIndex === it.imgIndex);
-        const posIdx = Math.max(0, sameImg.indexOf(it));
-        const positional = 0.15 + 0.7 * ((posIdx + 0.5) / Math.max(1, sameImg.length));
-        const yFrac = it.y != null && Math.abs(it.y - positional) < 0.15 ? it.y : positional;
-        return (
-          <div className="fixed inset-0 z-50 flex flex-col bg-black/90">
-            <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
-              <span className="min-w-0 truncate text-sm font-medium">
-                <span aria-hidden className="mr-1.5 inline-block align-[-0.1em] text-3xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-                {it.description || t.viewSource}
-              </span>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setZoomScale((z) => Math.max(1, +(z - 0.5).toFixed(1)))}
-                  disabled={zoomScale <= 1}
-                  aria-label="zoom out"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-2xl leading-none disabled:opacity-30"
-                >
-                  −
-                </button>
-                <span className="w-10 text-center text-xs font-mono tabular-nums text-white/70">{zoomScale.toFixed(1)}×</span>
-                <button
-                  type="button"
-                  onClick={() => setZoomScale((z) => Math.min(4, +(z + 0.5).toFixed(1)))}
-                  disabled={zoomScale >= 4}
-                  aria-label="zoom in"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-2xl leading-none disabled:opacity-30"
-                >
-                  +
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoomItem(null)}
-                  className="ml-1 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            <div ref={zoomScrollerRef} className="relative flex-1 overflow-auto">
-              <div className="relative max-w-none" style={{ width: `${zoomScale * 100}%` }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt=""
-                  draggable={false}
-                  className="block w-full select-none rounded-lg"
-                />
-                {/* Amber wash + bright centre line at the estimated y. Both
-                   sit inside the scaled wrapper so they track with the
-                   image during scroll/zoom. */}
-                <div
-                  className="pointer-events-none absolute inset-x-0 z-10"
-                  style={{
-                    top: `calc(${yFrac * 100}% - 36px)`,
-                    height: "72px",
-                    background:
-                      "linear-gradient(to bottom, transparent 0%, rgba(251, 191, 36, 0.4) 40%, rgba(251, 191, 36, 0.55) 50%, rgba(251, 191, 36, 0.4) 60%, transparent 100%)",
-                  }}
-                />
-                <div
-                  className="pointer-events-none absolute inset-x-0 z-10"
-                  style={{
-                    top: `calc(${yFrac * 100}% - 3px)`,
-                    height: "6px",
-                    backgroundColor: "rgb(251, 191, 36)",
-                    boxShadow: "0 0 14px 3px rgba(251, 191, 36, 0.9)",
-                  }}
-                />
-              </div>
-            </div>
-            <p className="px-4 pb-3 pt-1 text-center text-[11px] text-white/50">
-              {t.viewSourceCrop}
-            </p>
+      {receiptOpen && images.length > 0 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReceiptOpen(false)}
+          className="fixed inset-0 z-50 flex flex-col bg-black/90"
+        >
+          <div className="flex items-center justify-between gap-2 px-4 py-3 text-white">
+            <span className="text-sm font-medium">{t.showReceipt}</span>
+            <button
+              type="button"
+              onClick={() => setReceiptOpen(false)}
+              className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium active:bg-white/25"
+            >
+              ✕
+            </button>
           </div>
-        );
-      })()}
+          <div
+            className="flex-1 overflow-y-auto px-3 pb-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-3">
+              {images.map((src, i) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={i}
+                  src={src}
+                  alt={`${t.showReceipt} ${i + 1}`}
+                  className="w-full rounded-lg"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer
         step={step}
