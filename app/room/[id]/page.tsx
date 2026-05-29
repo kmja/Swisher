@@ -591,18 +591,20 @@ export default function RoomPage() {
                 )}
               </section>
             ) : myShare.totalOre > 0 ? (
-              <QrCard
-                name={t.yourTotal}
-                method={state.method === "sepa" ? "sepa" : "swish"}
-                amountOre={myShare.totalOre}
-                swishPayee={state.payeeNumber || undefined}
-                iban={state.method === "sepa" ? state.payeeIban : undefined}
-                payeeName={state.payeeName}
-                eurCents={state.method === "sepa" && state.rate > 0 ? Math.round(myShare.totalOre / state.rate) : undefined}
-                message={`${myShare.name} - ${state.message}`.slice(0, 50)}
-                t={tx}
-                primaryPay
-              />
+              <div id="pay-qr">
+                <QrCard
+                  name={t.yourTotal}
+                  method={state.method === "sepa" ? "sepa" : "swish"}
+                  amountOre={myShare.totalOre}
+                  swishPayee={state.payeeNumber || undefined}
+                  iban={state.method === "sepa" ? state.payeeIban : undefined}
+                  payeeName={state.payeeName}
+                  eurCents={state.method === "sepa" && state.rate > 0 ? Math.round(myShare.totalOre / state.rate) : undefined}
+                  message={`${myShare.name} - ${state.message}`.slice(0, 50)}
+                  t={tx}
+                  primaryPay
+                />
+              </div>
             ) : (
               <p className="text-sm text-gray-500">{t.nothingYet}</p>
             )
@@ -655,6 +657,17 @@ export default function RoomPage() {
             )}
           </section>
         </>
+      )}
+      {!isPayee && myShare && myShare.totalOre > 0 && (
+        <button
+          type="button"
+          onClick={() => document.getElementById("pay-qr")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 bg-ink/95 px-5 py-3 text-white shadow-lg backdrop-blur"
+        >
+          <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
+          <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
+          <span className="text-base">↓</span>
+        </button>
       )}
       <QrDialog
         open={shareOpen}
