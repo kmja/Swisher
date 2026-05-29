@@ -974,7 +974,26 @@ export default function Page() {
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
             {process.env.NEXT_PUBLIC_BUILD_ID && <>{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
-            <a href="/debug/icons" className="underline">icons</a> · <a href="/?demo=1" className="underline">demo</a>
+            <a href="/debug/icons" className="underline">icons</a> ·{" "}
+            <a href="/?demo=1" className="underline">demo</a> ·{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof window === "undefined") return;
+                if (!window.confirm("Reset all local Kvitt data?")) return;
+                // Every key we write is "swisher-" prefixed (host name/phone,
+                // language, room memberships, local splits, history) — sweep
+                // them all and reload so the app rehydrates first-run.
+                for (const k of Object.keys(window.localStorage)) {
+                  if (k.startsWith("swisher-")) window.localStorage.removeItem(k);
+                }
+                window.location.href = "/";
+              }}
+              className="underline"
+            >
+              reset
+            </a>
           </p>
 
           <div className="relative mt-4 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
