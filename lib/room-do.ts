@@ -45,6 +45,8 @@ export type RoomState = {
   people: RoomPerson[];
   /** Person ids the host (or the person themselves) has marked as settled. */
   paidBy: string[];
+  /** Person ids who've ticked "I'm done claiming" — a social signal, not auth. */
+  doneBy?: string[];
 };
 
 export type RoomInit = {
@@ -115,6 +117,7 @@ export class RoomDO extends DurableObject {
       })),
       people: [host],
       paidBy: [],
+      doneBy: [],
     };
     await this.save(state);
     if (Array.isArray(data.images) && data.images.length > 0) {
@@ -176,6 +179,20 @@ export class RoomDO extends DurableObject {
       else state.paidBy.push(targetId);
       await this.save(state);
     }
+    return state;
+  }
+
+  /** A person marks themselves as done claiming items — a social signal so the
+   *  host knows everyone's checked, nothing more. */
+  async toggleDone(personId: string): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    if (!state.doneBy) state.doneBy = [];
+    if (!state.people.some((p) => p.id === personId)) return state;
+    const idx = state.doneBy.indexOf(personId);
+    if (idx >= 0) state.doneBy.splice(idx, 1);
+    else state.doneBy.push(personId);
+    await this.save(state);
     return state;
   }
 

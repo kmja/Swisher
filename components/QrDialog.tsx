@@ -11,11 +11,14 @@ type Props = {
   shareUrl?: string;
   shareTitle?: string;
   shareText?: string;
+  /** When set, show a small "save image" link with this filename. */
+  download?: string;
   labels: {
     share: string;
     copied: string;
     copyLink: string;
     close: string;
+    save?: string;
   };
 };
 
@@ -32,6 +35,7 @@ export default function QrDialog({
   shareUrl,
   shareTitle,
   shareText,
+  download,
   labels,
 }: Props) {
   const [copied, setCopied] = useState(false);
@@ -117,6 +121,15 @@ export default function QrDialog({
               {copied ? labels.copied : labels.copyLink}
             </button>
           </div>
+        )}
+        {download && (
+          <a
+            href={qrSrc}
+            download={download}
+            className="mt-3 block text-center text-xs font-medium text-gray-500 underline-offset-2 hover:underline active:opacity-70"
+          >
+            💾 {labels.save ?? "Save image"}
+          </a>
         )}
       </div>
     </div>

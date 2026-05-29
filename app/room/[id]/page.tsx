@@ -36,6 +36,9 @@ const R = {
       `Gå med och dela notan${place ? ` från ${place}` : ""}${date ? ` · ${date}` : ""}`,
     showReceipt: "Kvitto",
     receiptLoading: "Hämtar kvittot…",
+    saveQr: "Spara QR-koden",
+    imDone: "Jag är klar",
+    doneOn: "✓ Klar",
     youCollect: "Du samlar in",
     yourShareNote: "Din egen del – du swishar inte dig själv.",
     remainingToCollect: "Kvar att få in",
@@ -88,6 +91,9 @@ const R = {
       `Join and split the bill${place ? ` from ${place}` : ""}${date ? ` · ${date}` : ""}`,
     showReceipt: "Receipt",
     receiptLoading: "Fetching the receipt…",
+    saveQr: "Save the QR code",
+    imDone: "I'm done",
+    doneOn: "✓ Done",
     youCollect: "You collect",
     yourShareNote: "Your own share — you don't Swish yourself.",
     remainingToCollect: "Remaining to collect",
@@ -259,6 +265,28 @@ export default function RoomPage() {
       refresh();
     } finally {
       setBusyItem(null);
+    }
+  }
+
+  async function toggleDone() {
+    if (!personId) return;
+    setState((prev) => {
+      if (!prev) return prev;
+      const doneBy = prev.doneBy ?? [];
+      const i = doneBy.indexOf(personId);
+      const next = i >= 0 ? doneBy.filter((id) => id !== personId) : [...doneBy, personId];
+      return { ...prev, doneBy: next };
+    });
+    try {
+      const res = await fetch(`/api/room/${code}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "done", personId }),
+      });
+      if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+      else refresh();
+    } catch {
+      refresh();
     }
   }
 
@@ -687,6 +715,7 @@ export default function RoomPage() {
                 // The host (collector) or the person themselves can settle a share.
                 const canToggle = !isHostRow && s.totalOre > 0 && (isPayee || s.dinerId === personId);
                 const claimed = claimedNamesFor(s.dinerId);
+                const isDone = !isHostRow && (state.doneBy ?? []).includes(s.dinerId);
                 return (
                   <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
@@ -697,6 +726,7 @@ export default function RoomPage() {
                         {nameById.get(s.dinerId)}
                         {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
                         {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
+                        {isDone && <span className="ml-1.5 text-xs text-emerald-600">{t.doneOn}</span>}
                       </span>
                       {claimed.length > 0 && <span className="truncate text-[11px] text-gray-400">{claimed.join(", ")}</span>}
                     </span>
@@ -725,17 +755,29 @@ export default function RoomPage() {
           </section>
         </>
       )}
-      {!isPayee && myShare && myShare.totalOre > 0 && (
-        <button
-          type="button"
-          onClick={() => document.getElementById("pay-qr")?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 bg-ink/95 px-5 py-3 text-white shadow-lg backdrop-blur"
-        >
-          <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
-          <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
-          <span className="text-base">↓</span>
-        </button>
-      )}
+      {!isPayee && myShare && myShare.totalOre > 0 && (() => {
+        const iAmDone = personId && (state.doneBy ?? []).includes(personId);
+        return (
+          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-stretch border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
+            <button
+              type="button"
+              onClick={() => document.getElementById("pay-qr")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              className="flex flex-1 items-center justify-between gap-3 px-5 py-3"
+            >
+              <span className="text-xs uppercase tracking-wide text-white/60">{t.yourTotal}</span>
+              <Money ore={myShare.totalOre} className="text-base font-bold" nativeClassName="ml-1 text-xs font-normal text-white/60" />
+              <span className="text-base">↓</span>
+            </button>
+            <button
+              type="button"
+              onClick={toggleDone}
+              className={`shrink-0 border-l border-white/10 px-4 text-xs font-semibold ${iAmDone ? "bg-emerald-500/20 text-emerald-300" : "text-white/80 active:bg-white/10"}`}
+            >
+              {iAmDone ? t.doneOn : t.imDone}
+            </button>
+          </div>
+        );
+      })()}
       {receiptOpen && (
         <div
           role="dialog"
@@ -778,7 +820,8 @@ export default function RoomPage() {
         shareUrl={shareUrl}
         shareTitle={state.place || "Swisher"}
         shareText={shareText}
-        labels={{ share: t.share, copied: t.copied, copyLink: t.copyLink, close: t.close }}
+        download={`swisher-${code}.png`}
+        labels={{ share: t.share, copied: t.copied, copyLink: t.copyLink, close: t.close, save: t.saveQr }}
       />
     </main>
     </FxProvider>

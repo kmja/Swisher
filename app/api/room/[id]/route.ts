@@ -62,6 +62,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });
     }
+    case "done": {
+      const state = await stub.toggleDone(String(body.personId ?? ""));
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
     case "edit": {
       const patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number | null } = {};
       if (typeof body.description === "string") patch.description = body.description;
