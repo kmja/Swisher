@@ -226,6 +226,82 @@ export default function RoomPage() {
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
+
+  // Swipe-left-to-remove on claim rows. Pure DOM transforms during the drag
+  // (no React re-renders for smoothness); React only re-renders on commit
+  // when removeItemRow runs and the row's actual data is gone.
+  const swipeRef = useRef<{
+    el: HTMLDivElement;
+    startX: number;
+    startY: number;
+    armed: boolean;
+    itemId: string;
+  } | null>(null);
+  const onSwipeStart = useCallback((e: React.PointerEvent<HTMLDivElement>, itemId: string) => {
+    swipeRef.current = {
+      el: e.currentTarget,
+      startX: e.clientX,
+      startY: e.clientY,
+      armed: false,
+      itemId,
+    };
+  }, []);
+  const onSwipeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (!s) return;
+    const dx = e.clientX - s.startX;
+    const dy = e.clientY - s.startY;
+    if (!s.armed) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        // Vertical-dominant → it's a scroll. Abandon.
+        swipeRef.current = null;
+        return;
+      }
+      s.armed = true;
+      try { s.el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      // Cancel any concurrent long-press detection while swiping.
+      if (lpTimer.current) {
+        clearTimeout(lpTimer.current);
+        lpTimer.current = null;
+      }
+    }
+    // Rubber-band the right direction so users feel the asymmetry.
+    const offset = dx < 0 ? dx : dx * 0.25;
+    s.el.style.transform = `translateX(${offset}px)`;
+    s.el.style.transition = "";
+  }, []);
+  const onSwipeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (!s || !s.armed) {
+      swipeRef.current = null;
+      return;
+    }
+    const dx = e.clientX - s.startX;
+    const threshold = -110;
+    const el = s.el;
+    const itemId = s.itemId;
+    if (dx < threshold) {
+      // Commit: slide the row off-screen, fade, then drop it from state.
+      el.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
+      el.style.transform = "translateX(-120%)";
+      el.style.opacity = "0";
+      window.setTimeout(() => removeItemRow(itemId), 180);
+    } else {
+      // Spring back to neutral.
+      el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+      el.style.transform = "translateX(0)";
+    }
+    swipeRef.current = null;
+  }, []);
+  const onSwipeCancel = useCallback(() => {
+    const s = swipeRef.current;
+    if (s?.armed) {
+      s.el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+      s.el.style.transform = "translateX(0)";
+    }
+    swipeRef.current = null;
+  }, []);
   const cancelLongPress = useCallback(() => {
     if (lpTimer.current) {
       clearTimeout(lpTimer.current);
@@ -734,31 +810,46 @@ export default function RoomPage() {
     const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
     const anyQuickEdit = editingDesc || editingPrice;
     return (
-      <div
-        key={it.id}
-        role="button"
-        tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
-        aria-pressed={mine}
-        aria-disabled={anyQuickEdit || sharesFull}
-        onClick={() => {
-          if (anyQuickEdit || sharesFull || busyItem === it.id) return;
-          toggleClaim(it.id);
-        }}
-        onKeyDown={(e) => {
-          if (anyQuickEdit) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
+      <div key={it.id} className="relative overflow-hidden rounded-2xl">
+        {/* Red "remove" layer revealed as the user swipes the row leftward. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 flex items-center justify-end rounded-2xl bg-red-500 pr-5 text-white"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          </svg>
+        </div>
+        <div
+          role="button"
+          tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
+          aria-pressed={mine}
+          aria-disabled={anyQuickEdit || sharesFull}
+          onPointerDown={(e) => { if (!anyQuickEdit) onSwipeStart(e, it.id); }}
+          onPointerMove={onSwipeMove}
+          onPointerUp={onSwipeEnd}
+          onPointerCancel={onSwipeCancel}
+          onClick={() => {
+            if (anyQuickEdit || sharesFull || busyItem === it.id) return;
             toggleClaim(it.id);
-          }
-        }}
-        className={`flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-          mine
-            ? "bg-swish/10 ring-swish"
-            : sharesFull
-            ? "bg-gray-50 opacity-60 ring-black/5"
-            : "bg-white ring-black/5"
-        } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
-      >
+          }}
+          onKeyDown={(e) => {
+            if (anyQuickEdit) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleClaim(it.id);
+            }
+          }}
+          className={`relative flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
+            mine
+              ? "bg-swish/10 ring-swish"
+              : sharesFull
+              ? "bg-gray-50 opacity-60 ring-black/5"
+              : "bg-white ring-black/5"
+          } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
+        >
         <span
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
             mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
@@ -855,6 +946,7 @@ export default function RoomPage() {
         >
           <PencilIcon />
         </button>
+        </div>
       </div>
     );
   }
@@ -990,27 +1082,43 @@ export default function RoomPage() {
                 and any edit needs to propagate via the editPayee action. */}
             {payeeEditing && isPayee ? (
               <div className="mt-1 flex items-center gap-1.5">
-                <input
-                  value={payeeNameDraft}
-                  onChange={(e) => setPayeeNameDraft(e.target.value)}
-                  placeholder={tx.yourName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") e.currentTarget.blur();
-                    else if (e.key === "Escape") setPayeeEditing(false);
-                  }}
-                  className="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 text-sm outline-none ring-1 ring-swish/40"
-                />
-                <input
-                  value={payeeNumberDraft}
-                  onChange={(e) => setPayeeNumberDraft(e.target.value)}
-                  inputMode="tel"
-                  placeholder={tx.swishNumber}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") e.currentTarget.blur();
-                    else if (e.key === "Escape") setPayeeEditing(false);
-                  }}
-                  className="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 text-sm outline-none ring-1 ring-swish/40"
-                />
+                <div className="relative min-w-0 flex-1">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-gray-400">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                    </svg>
+                  </span>
+                  <input
+                    value={payeeNameDraft}
+                    onChange={(e) => setPayeeNameDraft(e.target.value)}
+                    placeholder={tx.yourName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      else if (e.key === "Escape") setPayeeEditing(false);
+                    }}
+                    className="w-full rounded-lg bg-gray-50 py-1 pl-7 pr-2 text-sm outline-none ring-1 ring-swish/40"
+                  />
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-gray-400">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                      <path d="M12 18h.01" />
+                    </svg>
+                  </span>
+                  <input
+                    value={payeeNumberDraft}
+                    onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                    inputMode="tel"
+                    placeholder={tx.swishNumber}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      else if (e.key === "Escape") setPayeeEditing(false);
+                    }}
+                    className="w-full rounded-lg bg-gray-50 py-1 pl-7 pr-2 text-sm outline-none ring-1 ring-swish/40"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={savePayeeEdit}
