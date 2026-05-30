@@ -252,8 +252,12 @@ export default function RoomPage() {
     const dx = e.clientX - s.startX;
     const dy = e.clientY - s.startY;
     if (!s.armed) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      if (Math.abs(dy) > Math.abs(dx)) {
+      // Need a clear horizontal intent before we hijack the gesture: at
+      // least 6 px of total movement AND dx larger than dy by a healthy
+      // margin so vertical jitter on a scroll attempt doesn't accidentally
+      // arm a swipe.
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (Math.abs(dy) > Math.abs(dx) * 0.8) {
         // Vertical-dominant → it's a scroll. Abandon.
         swipeRef.current = null;
         return;
@@ -831,7 +835,7 @@ export default function RoomPage() {
               toggleClaim(it.id);
             }
           }}
-          className={`relative flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
+          className={`relative flex min-w-0 cursor-pointer touch-pan-y select-none items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
             mine
               // Opaque colours so the red swipe-reveal layer behind the row
               // doesn't bleed through. `bg-swish/10` over the page bg used to
