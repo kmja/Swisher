@@ -58,13 +58,33 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
  *  pulse (grows on add, dips on remove), and any new chip pops in from
  *  scale 0 → 1. Driven imperatively via element.animate() so it runs
  *  exactly once per change and leaves no CSS class to replay. */
+// Per-index variation tables so the cluster reads as a crew of distinct
+// people, not stamped clones. Sizes cycle 48/50/52/54/56 px — the
+// smallest still shows half itself past the next chip's overlap, so the
+// stack stays legible at any count. Tints / lifts / rotations are all
+// indexed off the same i so a given slot is always the same "person".
+const CHIP_SIZES = [56, 48, 54, 50, 56, 52, 48, 54, 50, 56];
+// Use inline background colours instead of Tailwind opacity utilities so
+// the values survive the JIT — dynamic class strings like "bg-swish/N"
+// aren't always picked up when they live in a const array.
+const CHIP_TINTS = [
+  "rgba(238, 92, 154, 0.16)",
+  "rgba(238, 92, 154, 0.30)",
+  "rgba(238, 92, 154, 0.20)",
+  "rgba(238, 92, 154, 0.36)",
+  "rgba(238, 92, 154, 0.18)",
+  "rgba(238, 92, 154, 0.28)",
+  "rgba(238, 92, 154, 0.22)",
+  "rgba(238, 92, 154, 0.34)",
+  "rgba(238, 92, 154, 0.15)",
+  "rgba(238, 92, 154, 0.26)",
+];
+const CHIP_LIFTS = [0, -3, 2, -1, 3, -2, 1, -3, 2, -1];
+const CHIP_ROTATIONS = [-3, 2, 0, -2, 3, -1, 0, -3, 1, 2];
+
 function GroupVisual({ count }: { count: number }) {
   const visible = Math.max(0, Math.min(count, 10));
   const overflow = Math.max(0, count - visible);
-  // ~50 % horizontal overlap on h-14 (56 px) chips — every chip's left
-  // half stays visible behind the next one, so the stack reads as a
-  // neat avatar pile, not a smear. The leftmost chip is on top (z-index
-  // decreases L→R) so the same "front of the line" reads at any count.
   const clusterRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const prevCount = useRef(count);
@@ -87,11 +107,17 @@ function GroupVisual({ count }: { count: number }) {
       for (let i = prev; i < Math.min(count, 10); i++) {
         const el = chipRefs.current[i];
         if (!el?.animate) continue;
+        // Pop in to the chip's RESTING transform so it settles into its
+        // rotated / lifted spot instead of snapping there at the end of
+        // the scale animation.
+        const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
+        const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
+        const settled = `translateY(${lift}px) rotate(${rot}deg)`;
         el.animate(
           [
-            { transform: "scale(0)", opacity: 0 },
-            { transform: "scale(1.16)", opacity: 1, offset: 0.7 },
-            { transform: "scale(1)", opacity: 1 },
+            { transform: `${settled} scale(0)`, opacity: 0 },
+            { transform: `${settled} scale(1.16)`, opacity: 1, offset: 0.7 },
+            { transform: `${settled} scale(1)`, opacity: 1 },
           ],
           { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
         );
@@ -100,23 +126,40 @@ function GroupVisual({ count }: { count: number }) {
   }, [count]);
   return (
     <div aria-hidden className="flex items-center">
-      <div ref={clusterRef} className="flex items-center -space-x-7">
-        {Array.from({ length: visible }).map((_, i) => (
-          <span
-            key={i}
-            ref={(el) => { chipRefs.current[i] = el; }}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-swish/20 text-swish-dark ring-[3px] ring-white"
-            style={{ zIndex: visible - i }}
-          >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="3.5" />
-              <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-            </svg>
-          </span>
-        ))}
+      {/* Fixed 24 px overlap (≈ half the smallest chip). The 3 px white
+          ring is what keeps the stack tidy — even at this overlap each
+          chip reads as its own silhouette against its neighbour. */}
+      <div ref={clusterRef} className="flex items-center">
+        {Array.from({ length: visible }).map((_, i) => {
+          const size = CHIP_SIZES[i % CHIP_SIZES.length];
+          const tint = CHIP_TINTS[i % CHIP_TINTS.length];
+          const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
+          const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
+          const iconSize = Math.round(size * 0.5);
+          return (
+            <span
+              key={i}
+              ref={(el) => { chipRefs.current[i] = el; }}
+              className="flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                marginLeft: i === 0 ? 0 : -24,
+                background: tint,
+                transform: `translateY(${lift}px) rotate(${rot}deg)`,
+                zIndex: visible - i,
+              }}
+            >
+              <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+              </svg>
+            </span>
+          );
+        })}
       </div>
       {overflow > 0 && (
-        <span className="ml-2 text-base font-semibold text-gray-500">+{overflow}</span>
+        <span className="ml-3 text-base font-semibold text-gray-500">+{overflow}</span>
       )}
     </div>
   );
