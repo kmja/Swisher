@@ -32,6 +32,21 @@ textarea {
 .scanline {
   animation: scan-sweep 1.15s ease-in-out infinite;
 }
+
+/* Subtle scanner sweep on the LIVE viewfinder — a pinkish horizontal
+   line that travels top → bottom on a slow loop so the camera feed
+   reads like a real document scanner is at work, not just a video
+   preview. Lower opacity + slower cadence than the OCR sweep so it
+   stays out of the host's way. */
+@keyframes vf-scan {
+  0%   { top: 0; opacity: 0; }
+  12%  { opacity: 0.65; }
+  88%  { opacity: 0.65; }
+  100% { top: 100%; opacity: 0; }
+}
+.vf-scan {
+  animation: vf-scan 3.4s ease-in-out infinite;
+}
 @keyframes scan-pulse {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.9; }

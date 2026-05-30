@@ -1330,6 +1330,14 @@ export default function Page() {
                     className={`h-full w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
                   />
                 )}
+                {/* Subtle scanner sweep: a pink horizontal beam travels
+                    top → bottom on a slow loop while the live camera is
+                    on, so the viewfinder reads like a real document
+                    scanner. Sits behind the corner brackets / instruction
+                    card via natural DOM order. */}
+                {cameraActive && !ocrLoading && (
+                  <div className="vf-scan pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-swish/70 to-transparent shadow-[0_0_18px_4px_rgba(238,92,154,0.32)]" />
+                )}
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
                     <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
