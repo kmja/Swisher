@@ -2240,20 +2240,19 @@ export default function Page() {
 }
 
 function Header({ step, t }: { step: Step; t: Strings }) {
-  const order: { key: Step; label: string }[] = [
-    { key: "capture", label: t.steps.capture },
-    { key: "items", label: t.steps.items },
-    { key: "assign", label: t.steps.assign },
-    { key: "result", label: t.steps.pay },
-  ];
-  const activeIndex = order.findIndex((s) => s.key === step);
+  // Three host-facing pills: Scan → Verify → Share. The internal step
+  // machine still has "assign" between items and result for the local
+  // (no-room) split path; both fold into the same "share" pill so the
+  // host's wizard never grows or shrinks under them.
+  const labels = [t.steps.scan, t.steps.verify, t.steps.share];
+  const activeIndex = step === "capture" ? 0 : step === "items" ? 1 : 2;
   return (
     <header className="flex items-center gap-2">
-      {order.map((s, i) => (
-        <div key={s.key} className="flex flex-1 flex-col items-center gap-1">
+      {labels.map((label, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center gap-1">
           <div className={`h-1.5 w-full rounded-full ${i <= activeIndex ? "bg-swish" : "bg-gray-200"}`} />
           <span className={`text-[11px] ${i === activeIndex ? "font-semibold text-swish-dark" : "text-gray-400"}`}>
-            {s.label}
+            {label}
           </span>
         </div>
       ))}

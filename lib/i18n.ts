@@ -2,7 +2,12 @@ export type Lang = "sv" | "en";
 
 export interface Strings {
   /** Label shown on the language toggle for the *other* language. */
-  steps: { capture: string; items: string; assign: string; pay: string };
+  /** Three high-level steps the host moves through: photograph the
+   *  receipt, verify the OCR'd items, then share the room link. The
+   *  internal step machine has an extra "assign" stage for the local
+   *  (no-room) split path; the wizard collapses that into "share" so
+   *  the host always sees the same three-pill progress. */
+  steps: { scan: string; verify: string; share: string };
 
   // capture
   title: string;
@@ -181,7 +186,7 @@ export interface Strings {
 }
 
 const sv: Strings = {
-  steps: { capture: "Foto", items: "Rätter", assign: "Fördela", pay: "Betala" },
+  steps: { scan: "Skanna", verify: "Verifiera", share: "Dela" },
 
   title: "Dela kvittot",
   intro: "Skanna kvittot, peta i vem som åt vad, och få en låst Swish-QR per person.",
@@ -332,7 +337,7 @@ const sv: Strings = {
 };
 
 const en: Strings = {
-  steps: { capture: "Photo", items: "Items", assign: "Assign", pay: "Pay" },
+  steps: { scan: "Scan", verify: "Verify", share: "Share" },
 
   title: "Split the receipt",
   intro: "Scan the receipt, tap who ate what, and get a locked Swish QR per person.",
