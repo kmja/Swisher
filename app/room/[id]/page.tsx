@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
@@ -226,6 +226,42 @@ export default function RoomPage() {
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
+
+  // FLIP layout animation: when a row is removed and its neighbours shift up
+  // (or down — if undo restores an item), animate the movement instead of
+  // snapping. Track each row's viewport-relative top after every render, then
+  // on the NEXT render compare against the stored value and apply an inverse
+  // translate that we transition back to 0. The rows are tagged with
+  // data-item-id so querySelector can find them.
+  const rowPositionsRef = useRef<Map<string, number>>(new Map());
+  useLayoutEffect(() => {
+    if (!state) return;
+    const next = new Map<string, number>();
+    for (const item of state.items) {
+      const el = document.querySelector(`[data-item-id="${item.id}"]`);
+      if (el instanceof HTMLElement) next.set(item.id, el.getBoundingClientRect().top);
+    }
+    for (const [id, newTop] of next) {
+      const oldTop = rowPositionsRef.current.get(id);
+      if (oldTop == null) continue; // first appearance — no animation
+      const dy = oldTop - newTop;
+      if (Math.abs(dy) < 1) continue; // didn't move
+      const el = document.querySelector(`[data-item-id="${id}"]`);
+      if (!(el instanceof HTMLElement)) continue;
+      // Skip rows that are mid-swipe (transform is being driven by the
+      // pointer handlers) so we don't clobber their slide-out.
+      if (el.style.transform && el.style.transform.includes("translateX")) continue;
+      // First / Last / Invert / Play.
+      el.style.transition = "none";
+      el.style.transform = `translateY(${dy}px)`;
+      // Force a reflow so the browser commits the snapped-back position
+      // before we start the play transition.
+      void el.getBoundingClientRect();
+      el.style.transition = "transform 260ms cubic-bezier(0.32, 0.72, 0.36, 1)";
+      el.style.transform = "translateY(0)";
+    }
+    rowPositionsRef.current = next;
+  });
 
   // Swipe-left-to-remove on claim rows. Pure DOM transforms during the drag
   // (no React re-renders for smoothness); React only re-renders on commit
@@ -600,6 +636,11 @@ export default function RoomPage() {
       if (undoTimer.current) clearTimeout(undoTimer.current);
       undoTimer.current = setTimeout(() => setPendingUndo(null), 6000);
     }
+    // Optimistic: drop the row from local state immediately so the FLIP
+    // layout effect can animate the neighbours into the gap right away
+    // instead of waiting for the server round-trip. postAction will
+    // overwrite with the server's truth when it returns.
+    setState((prev) => (prev ? { ...prev, items: prev.items.filter((i) => i.id !== itemId) } : prev));
     await postAction({ action: "removeItem", itemId });
   }
   async function undoRemoval() {
@@ -823,6 +864,7 @@ export default function RoomPage() {
     return (
       <div
           key={it.id}
+          data-item-id={it.id}
           role="button"
           tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
           aria-pressed={mine}
