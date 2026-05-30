@@ -1255,10 +1255,10 @@ export default function Page() {
         </div>
       </header>
 
-      {step !== "capture" && <Header step={step} t={t} />}
+      <Header step={step} t={t} />
 
       {step === "capture" && (
-        <section key="capture" className="flex flex-1 flex-col">
+        <section key="capture" className="mt-3 flex flex-1 flex-col">
           {/* Debug strip stays so we can read version / wipe state, but the
               "Dela kvittot" heading is gone — the viewfinder is the actual
               focal point of this step and the page header already signals
@@ -1370,7 +1370,7 @@ export default function Page() {
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`absolute right-4 top-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
+                    className={`absolute bottom-4 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
                   >
                     {torchOn ? "🔦" : "💡"}
                   </button>
