@@ -300,6 +300,12 @@ export default function Page() {
     setItems(sortByCategory(demoItems));
     setMealLabel("Demomiddag");
     setStep("items");
+    // Pre-fill the host so the demo can run all the way through to room
+    // creation without the user having to type a name + Swish number. Only
+    // fills when the fields are still empty — won't clobber a real host
+    // who happens to also append ?demo=1.
+    setDiners((prev) => (prev[0]?.name?.trim() ? prev : [{ ...prev[0], name: "Demo Värd" }, ...prev.slice(1)]));
+    setPayerPhone((prev) => (prev ? prev : "0701234567"));
   }, []);
   const [images, setImages] = useState<string[]>([]);
   // Foreign-currency context: amounts are always stored in SEK öre; these drive
