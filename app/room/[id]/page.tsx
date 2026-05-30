@@ -1135,26 +1135,31 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
-      {/* Navigation */}
-      <nav className="grid grid-cols-3 items-center gap-2 text-xs font-semibold">
-        <a
-          href="/"
-          className="inline-flex justify-self-start items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark"
-        >
-          + {t.newReceipt}
-        </a>
-        <KvittLogo className="justify-self-center" />
-        <div className="flex justify-self-end items-center gap-2">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
+      {/* Sticky nav. Solid backdrop-blur background + bottom border so the
+          header reads as a fixed surface above the scrolling content. The
+          KvittLogo drops out on the room page — three buttons in 28 rem
+          want every pixel — but it still appears on the home + history
+          pages. */}
+      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-[#f5f5f7]/90 px-4 py-3 backdrop-blur">
+        <nav className="flex items-center justify-between gap-2 text-sm font-semibold">
           <a
-            href="/history"
-            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-full bg-swish px-4 py-2 text-white shadow-sm active:bg-swish-dark"
           >
-            🕘 {t.history}
+            + {t.newReceipt}
           </a>
-          <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
-        </div>
-      </nav>
+          <div className="flex items-center gap-2">
+            <a
+              href="/history"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+            >
+              🕘 {t.history}
+            </a>
+            <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
+          </div>
+        </nav>
+      </header>
 
       {/* Share / invite — restacked so the title gets the full width, the
           room code drops out (it lives in the share dialog anyway), and the
@@ -1397,7 +1402,11 @@ export default function RoomPage() {
                         sharedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                       }`}
                     >
-                      <div className="min-h-0 overflow-hidden">
+                      {/* -mx-2 + px-2 gives the row shadows / ring 8 px of
+                          breathing room on each side so overflow-hidden
+                          doesn't clip them. The rows themselves stay the
+                          same width as siblings outside the collapser. */}
+                      <div className="-mx-2 min-h-0 overflow-hidden px-2">
                         <div className="space-y-2 pt-1">{sharedItems.map(claimItemRow)}</div>
                       </div>
                     </div>

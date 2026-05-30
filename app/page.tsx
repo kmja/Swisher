@@ -1139,23 +1139,25 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <FxProvider value={fx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28 pt-5">
-      <div className="mb-3 grid grid-cols-3 items-center gap-2">
-        <div className="justify-self-start">
-          {step === "capture" ? (
-            <a
-              href="/history"
-              className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
-            >
-              🕘 {t.history}
-            </a>
-          ) : null}
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28">
+      <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-200/70 bg-[#f5f5f7]/90 px-4 py-3 backdrop-blur">
+        <div className="grid grid-cols-3 items-center gap-2">
+          <div className="justify-self-start">
+            {step === "capture" ? (
+              <a
+                href="/history"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+              >
+                🕘 {t.history}
+              </a>
+            ) : null}
+          </div>
+          <KvittLogo className="justify-self-center" />
+          <div className="justify-self-end">
+            <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
+          </div>
         </div>
-        <KvittLogo className="justify-self-center" />
-        <div className="justify-self-end">
-          <LangToggle lang={lang} onChange={(l) => applyLang(l, lang)} />
-        </div>
-      </div>
+      </header>
 
       {step !== "capture" && <Header step={step} t={t} />}
 
