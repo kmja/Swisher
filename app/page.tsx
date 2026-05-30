@@ -1568,18 +1568,18 @@ export default function Page() {
             <div className="fixed inset-x-0 bottom-24 z-50 mx-auto max-w-md px-4">
               {/* key on the id so the countdown bar restarts whenever a NEW
                   item is removed while a previous toast is still up. */}
-              <div key={undoItem.id} className="relative overflow-hidden rounded-xl bg-ink px-3 py-2.5 text-sm text-white shadow-lg">
+              <div key={undoItem.id} className="relative overflow-hidden rounded-xl bg-red-600 px-3 py-2.5 text-sm text-white shadow-lg ring-1 ring-red-700/40">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate">🗑 {t.removedItem(undoItem.description || t.rowFallback)}</span>
                   <button
                     type="button"
                     onClick={() => restoreItem(undoItem.id)}
-                    className="shrink-0 rounded-lg bg-swish px-3 py-1 font-semibold text-white active:bg-swish-dark"
+                    className="shrink-0 rounded-lg bg-white px-3 py-1 font-semibold text-red-700 active:bg-red-50"
                   >
                     {t.undo}
                   </button>
                 </div>
-                <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-swish/70" />
+                <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80" />
               </div>
             </div>
           )}
