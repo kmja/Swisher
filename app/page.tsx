@@ -1190,7 +1190,7 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <FxProvider value={fx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28">
+    <main className={`mx-auto flex min-h-dvh max-w-md flex-col px-4 ${step === "capture" ? "pb-4" : "pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="justify-self-start">
@@ -1515,7 +1515,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={capturePhoto}
-                        className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                        className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
                       >
                         {t.scanCta}
                       </button>
@@ -1525,7 +1525,7 @@ export default function Page() {
                         <button
                           type="button"
                           onClick={finishCapture}
-                          className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                          className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
                         >
                           {t.readReceipt}
                         </button>
