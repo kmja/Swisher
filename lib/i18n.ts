@@ -10,6 +10,13 @@ export interface Strings {
   tapToPhoto: string;
   scanCta: string;
   scanGuide: string;
+  /** Start a panorama-style multi-frame scan that gets stitched client-side. */
+  panoramaCta: string;
+  /** Caption while the panorama scan is running. */
+  panoramaGuide: string;
+  /** Stop button label during a panorama scan. n = frames captured so far. */
+  panoramaStop: (n: number) => string;
+  panoramaStitching: string;
   reading: string;
   scanning: string;
   scanPhrases: string[];
@@ -161,6 +168,10 @@ const sv: Strings = {
   tapToPhoto: "Tryck för att skanna kvittot",
   scanCta: "Skanna kvitto",
   scanGuide: "Få plats med hela kvittot i ramen",
+  panoramaCta: "🧵 Långt kvitto",
+  panoramaGuide: "Börja högst upp och dra kameran ner längs kvittot",
+  panoramaStop: (n) => `⏹ Stopp · ${n} bild${n === 1 ? "" : "er"}`,
+  panoramaStitching: "Syr ihop kvittot…",
   reading: "Läser av…",
   scanning: "Skannar kvittot…",
   scanPhrases: ["Läser av rader…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
@@ -299,6 +310,10 @@ const en: Strings = {
   tapToPhoto: "Tap to scan the receipt",
   scanCta: "Scan receipt",
   scanGuide: "Fit the whole receipt in the frame",
+  panoramaCta: "🧵 Long receipt",
+  panoramaGuide: "Start at the top, then pan the camera down the receipt",
+  panoramaStop: (n) => `⏹ Stop · ${n} frame${n === 1 ? "" : "s"}`,
+  panoramaStitching: "Stitching receipt…",
   reading: "Reading…",
   scanning: "Scanning receipt…",
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],

@@ -564,6 +564,70 @@ export default function Page() {
     runOcr(dataUrl); // scan automatically
   }
 
+  // Panorama capture: while panoramaActive, grab a frame from the live
+  // <video> every ~320 ms and stash the raw dataURL. On stop, hand them off
+  // to lib/stitch and run OCR on the resulting tall image. Frames are NOT
+  // enhanced here — the stitcher composites the raw frames and we let the
+  // existing per-image enhancement pass run during the final OCR upload.
+  const [panoramaActive, setPanoramaActive] = useState(false);
+  const [panoramaFrames, setPanoramaFrames] = useState(0);
+  const panoramaFramesRef = useRef<string[]>([]);
+  const panoramaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  function capturePanoramaFrame(): string | null {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return null;
+    // Keep frames at native resolution — receipts benefit from every pixel
+    // and the stitch composite caps total canvas height anyway.
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  }
+  function startPanorama() {
+    if (panoramaActive) return;
+    panoramaFramesRef.current = [];
+    setPanoramaFrames(0);
+    setPanoramaActive(true);
+    setOcrError(null);
+    panoramaTimerRef.current = setInterval(() => {
+      const f = capturePanoramaFrame();
+      if (!f) return;
+      panoramaFramesRef.current.push(f);
+      setPanoramaFrames(panoramaFramesRef.current.length);
+      // Hard cap so a slow scan can't OOM the phone.
+      if (panoramaFramesRef.current.length >= 30) stopPanorama();
+    }, 320);
+  }
+  async function stopPanorama() {
+    if (panoramaTimerRef.current) clearInterval(panoramaTimerRef.current);
+    panoramaTimerRef.current = null;
+    setPanoramaActive(false);
+    const frames = panoramaFramesRef.current;
+    panoramaFramesRef.current = [];
+    setPanoramaFrames(0);
+    if (frames.length === 0) return;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    setCameraActive(false);
+    try {
+      if (frames.length === 1) {
+        setImageUrl(frames[0]);
+        await runOcr(frames[0]);
+      } else {
+        setOcrLoading(true);
+        const { dataUrl } = await stitchVertically(frames);
+        setOcrLoading(false);
+        setImageUrl(dataUrl);
+        await runOcr(dataUrl);
+      }
+    } catch (err) {
+      setOcrLoading(false);
+      setOcrError(err instanceof Error ? err.message : "Stitch failed");
+    }
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1079,13 +1143,35 @@ export default function Page() {
                 />
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
-                    <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
-                    <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-white/90" />
-                    <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
-                    <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
+                    <span
+                      className={`absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 ${
+                        panoramaActive ? "border-swish" : "border-white/90"
+                      }`}
+                    />
+                    <span
+                      className={`absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 ${
+                        panoramaActive ? "border-swish" : "border-white/90"
+                      }`}
+                    />
+                    <span
+                      className={`absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 ${
+                        panoramaActive ? "border-swish" : "border-white/90"
+                      }`}
+                    />
+                    <span
+                      className={`absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 ${
+                        panoramaActive ? "border-swish" : "border-white/90"
+                      }`}
+                    />
                     <span className="absolute inset-x-0 bottom-1 text-center text-xs font-medium text-white/90 drop-shadow">
-                      {t.scanGuide}
+                      {panoramaActive ? t.panoramaGuide : t.scanGuide}
                     </span>
+                    {panoramaActive && (
+                      <span className="absolute left-1/2 top-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
+                        <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-white" aria-hidden />
+                        REC · {panoramaFrames}
+                      </span>
+                    )}
                   </div>
                 )}
                 {!cameraActive && (
@@ -1223,16 +1309,33 @@ export default function Page() {
                       </button>
                     </div>
                   </>
+                ) : panoramaActive ? (
+                  <button
+                    type="button"
+                    onClick={stopPanorama}
+                    className="w-full rounded-xl bg-red-600 px-4 py-3.5 font-semibold text-white shadow-lg active:bg-red-700"
+                  >
+                    {t.panoramaStop(panoramaFrames)}
+                  </button>
                 ) : (
                   <>
                     {cameraActive && (
-                      <button
-                        type="button"
-                        onClick={capturePhoto}
-                        className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
-                      >
-                        {t.scanCta}
-                      </button>
+                      <div className="grid grid-cols-[2fr_1fr] gap-2">
+                        <button
+                          type="button"
+                          onClick={capturePhoto}
+                          className="rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                        >
+                          {t.scanCta}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={startPanorama}
+                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                        >
+                          {t.panoramaCta}
+                        </button>
+                      </div>
                     )}
                     <button
                       type="button"
