@@ -1068,7 +1068,7 @@ export default function RoomPage() {
             type="button"
             onClick={tapRow}
             disabled={availableCount === 0 && mineCount === 0}
-            className={`relative flex min-w-0 w-full items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
+            className={`relative flex min-w-0 w-full items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
               taken ? "bg-[#f4e6ee] ring-swish" : "bg-white ring-black/5"
             }`}
           >
@@ -1080,7 +1080,7 @@ export default function RoomPage() {
               ✓
             </span>
             <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
-              <span aria-hidden className="inline-flex w-9 shrink-0 items-center justify-center text-3xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+              <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
               <span className="min-w-0 truncate">
                 {rep.description}
                 {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
