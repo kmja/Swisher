@@ -230,6 +230,13 @@ export default function RoomPage() {
   // Swipe-left-to-remove on claim rows. Pure DOM transforms during the drag
   // (no React re-renders for smoothness); React only re-renders on commit
   // when removeItemRow runs and the row's actual data is gone.
+  //
+  // These handlers are intentionally NOT wrapped in useCallback. They close
+  // over `state` (read inside removeItemRow) and `setState` from the latest
+  // render; an empty-deps useCallback would freeze them on render 1 when
+  // state was still null, so the commit timeout would call a stale
+  // removeItemRow that bailed out before snapshotting anything for the
+  // undo toast. Re-creating per render is cheap (the row re-renders anyway).
   const swipeRef = useRef<{
     el: HTMLDivElement;
     startX: number;
@@ -237,7 +244,7 @@ export default function RoomPage() {
     armed: boolean;
     itemId: string;
   } | null>(null);
-  const onSwipeStart = useCallback((e: React.PointerEvent<HTMLDivElement>, itemId: string) => {
+  const onSwipeStart = (e: React.PointerEvent<HTMLDivElement>, itemId: string) => {
     swipeRef.current = {
       el: e.currentTarget,
       startX: e.clientX,
@@ -245,8 +252,8 @@ export default function RoomPage() {
       armed: false,
       itemId,
     };
-  }, []);
-  const onSwipeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  };
+  const onSwipeMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const s = swipeRef.current;
     if (!s) return;
     const dx = e.clientX - s.startX;
@@ -274,8 +281,8 @@ export default function RoomPage() {
     const offset = dx < 0 ? dx : dx * 0.25;
     s.el.style.transform = `translateX(${offset}px)`;
     s.el.style.transition = "";
-  }, []);
-  const onSwipeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  };
+  const onSwipeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     const s = swipeRef.current;
     if (!s || !s.armed) {
       swipeRef.current = null;
@@ -297,15 +304,15 @@ export default function RoomPage() {
       el.style.transform = "translateX(0)";
     }
     swipeRef.current = null;
-  }, []);
-  const onSwipeCancel = useCallback(() => {
+  };
+  const onSwipeCancel = () => {
     const s = swipeRef.current;
     if (s?.armed) {
       s.el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
       s.el.style.transform = "translateX(0)";
     }
     swipeRef.current = null;
-  }, []);
+  };
   const cancelLongPress = useCallback(() => {
     if (lpTimer.current) {
       clearTimeout(lpTimer.current);
