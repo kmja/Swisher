@@ -287,7 +287,9 @@ export class RoomDO extends DurableObject {
 
   /** Any diner can add a line OCR missed. Shared lines are pre-claimed for all.
    *  Optional fields let an "undo remove" call round-trip the item's category,
-   *  emoji and share-count so the restored row looks identical. */
+   *  emoji and share-count so the restored row looks identical. An optional
+   *  `index` inserts the item at that position instead of appending — used by
+   *  undo to put a removed item back where it was. */
   async addItem(
     actorId: string,
     data: {
@@ -297,6 +299,7 @@ export class RoomDO extends DurableObject {
       shareCount?: number;
       category?: string;
       emoji?: string;
+      index?: number;
     },
   ): Promise<RoomState | null> {
     const state = await this.load();
@@ -308,7 +311,7 @@ export class RoomDO extends DurableObject {
       typeof data.shareCount === "number" && data.shareCount > 0 ? Math.round(data.shareCount) : undefined;
     const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
     const fully = isFullyShared({ shared: data.shared === true, shareCount }, groupSize);
-    state.items.push({
+    const newItem: RoomItem = {
       id: uid(),
       description: String(data.description).slice(0, 80),
       priceOre,
@@ -317,7 +320,12 @@ export class RoomDO extends DurableObject {
       shared: data.shared === true,
       shareCount,
       claimedBy: fully ? state.people.map((p) => p.id) : [],
-    });
+    };
+    const insertAt =
+      typeof data.index === "number" && data.index >= 0 && data.index <= state.items.length
+        ? Math.floor(data.index)
+        : state.items.length;
+    state.items.splice(insertAt, 0, newItem);
     await this.save(state);
     return state;
   }

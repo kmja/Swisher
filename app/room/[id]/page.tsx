@@ -199,6 +199,9 @@ export default function RoomPage() {
     shareCount?: number;
     category?: string;
     emoji?: string;
+    /** Position in state.items at the time of removal, so undo can restore
+     *  the row in its original slot rather than appending it to the end. */
+    index: number;
   };
   const [pendingUndo, setPendingUndo] = useState<RemovedSnapshot | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -623,7 +626,8 @@ export default function RoomPage() {
     cancelEdit();
   }
   async function removeItemRow(itemId: string) {
-    const item = state?.items.find((i) => i.id === itemId);
+    const idx = state?.items.findIndex((i) => i.id === itemId) ?? -1;
+    const item = idx >= 0 ? state?.items[idx] : undefined;
     if (item) {
       setPendingUndo({
         description: item.description,
@@ -632,6 +636,7 @@ export default function RoomPage() {
         shareCount: item.shareCount,
         category: item.category,
         emoji: item.emoji,
+        index: idx,
       });
       if (undoTimer.current) clearTimeout(undoTimer.current);
       undoTimer.current = setTimeout(() => setPendingUndo(null), 6000);
@@ -656,6 +661,8 @@ export default function RoomPage() {
       shareCount: snap.shareCount,
       category: snap.category,
       emoji: snap.emoji,
+      // Re-insert at the original position rather than appending.
+      index: snap.index,
     });
   }
   async function addItemRow() {
