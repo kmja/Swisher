@@ -948,7 +948,7 @@ export default function RoomPage() {
           type="button"
           onClick={(e) => { e.stopPropagation(); openEdit(it); }}
           aria-label={t.editRow}
-          className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
+          className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-black/10 active:bg-gray-100 active:text-swish-dark"
         >
           <PencilIcon />
         </button>
@@ -1757,13 +1757,13 @@ function HomeLink({ label }: { label: string }) {
 }
 
 // Lucide "pencil" — flat stroked icon. Used for the per-item edit buttons.
-function PencilIcon() {
+function PencilIcon({ size = 16 }: { size?: number }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      width="20"
-      height="20"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
