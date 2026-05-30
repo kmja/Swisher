@@ -1141,7 +1141,7 @@ export default function RoomPage() {
           KvittLogo drops out on the room page — three buttons in 28 rem
           want every pixel — but it still appears on the home + history
           pages. */}
-      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <nav className="flex items-center justify-between gap-2">
           <a
             href="/"

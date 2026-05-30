@@ -192,7 +192,7 @@ export default function HistoryPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-8">
-      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <a
             href="/"

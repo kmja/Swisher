@@ -676,6 +676,21 @@ export default function Page() {
     };
   }, [wantsLiveCamera]);
 
+  // Belt-and-braces: as soon as we leave the capture step, kill any
+  // residual MediaStream so iOS doesn't keep the camera indicator (or
+  // re-prompt for permission) once the host has moved on to the items
+  // step. wantsLiveCamera should already turn off in that case, but
+  // this gives us a step-level guarantee that doesn't depend on the
+  // sub-conditions.
+  useEffect(() => {
+    if (step === "capture") return;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (cameraActive) setCameraActive(false);
+    if (torchAvailable) setTorchAvailable(false);
+    if (torchOn) setTorchOn(false);
+  }, [step, cameraActive, torchAvailable, torchOn]);
+
   async function toggleTorch() {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
@@ -1181,7 +1196,7 @@ export default function Page() {
   return (
     <FxProvider value={fx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-28">
-      <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="justify-self-start">
             {step === "capture" ? (
@@ -1205,9 +1220,12 @@ export default function Page() {
       {step !== "capture" && <Header step={step} t={t} />}
 
       {step === "capture" && (
-        <section key="capture" className="mt-2 flex flex-1 flex-col">
-          <h1 className="text-2xl font-bold">{t.title}</h1>
-          <p className="mt-1 text-[11px] text-gray-300">
+        <section key="capture" className="flex flex-1 flex-col">
+          {/* Debug strip stays so we can read version / wipe state, but the
+              "Dela kvittot" heading is gone — the viewfinder is the actual
+              focal point of this step and the page header already signals
+              where we are. */}
+          <p className="text-[10px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
             {process.env.NEXT_PUBLIC_BUILD_ID && <>{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
             <a href="/debug/icons" className="underline">icons</a> ·{" "}
@@ -1232,7 +1250,7 @@ export default function Page() {
             </a>
           </p>
 
-          <div className="relative mt-4 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div className="relative mt-2 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="h-full w-full object-contain" />
@@ -1298,7 +1316,7 @@ export default function Page() {
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-lg shadow-lg ring-1 ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/55 text-white ring-white/30 backdrop-blur"}`}
+                    className={`absolute right-4 top-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
                   >
                     {torchOn ? "🔦" : "💡"}
                   </button>
