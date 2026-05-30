@@ -8,6 +8,7 @@ import { formatOre, parseAmountToOre } from "@/lib/money";
 import { formatNative, flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { translations } from "@/lib/i18n";
 import { readLocalSplit, saveLocalSplit, toggleLocalPaid, type LocalSplit } from "@/lib/local-split";
+import { formatReceiptDate } from "@/lib/date";
 import LangToggle, { saveLang } from "@/components/LangToggle";
 
 const uid = () =>
@@ -145,7 +146,7 @@ export default function SplitPage() {
 
         <header className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
           <p className="truncate text-lg font-bold">{split.place || "Kvitt"}</p>
-          <p className="text-sm text-gray-500">{split.date}</p>
+          <p className="text-sm text-gray-500">{formatReceiptDate(split.date, lang)}</p>
           {fx && (
             <p className="mt-0.5 text-xs text-gray-400">
               {split.country ? `${flagEmoji(split.country)} ${regionName(split.country, lang)} · ` : ""}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { computeRoomShares, formatOre } from "@/lib/money";
 import { formatNative, type Fx } from "@/lib/currency";
 import { readHistory, removeHistory, type HistoryEntry } from "@/lib/history";
+import { formatReceiptDate } from "@/lib/date";
 import { readLocalSplit, removeLocalSplit } from "@/lib/local-split";
 import LangToggle, { saveLang } from "@/components/LangToggle";
 import KvittLogo from "@/components/KvittLogo";
@@ -203,7 +204,7 @@ export default function HistoryPage() {
                 <a href={e.kind === "local" ? `/split/${e.id}` : `/room/${e.id}`} className="block px-4 py-3 active:bg-gray-50">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="min-w-0 truncate font-semibold">{(s && s.status === "ok" && s.place) || e.place || "Kvitt"}</span>
-                    <span className="shrink-0 text-xs text-gray-400">{[(s && s.status === "ok" ? s.date : e.date), e.kind === "room" ? e.id : null].filter(Boolean).join(" · ")}</span>
+                    <span className="shrink-0 text-xs text-gray-400">{[formatReceiptDate((s && s.status === "ok" ? s.date : e.date) ?? "", lang), e.kind === "room" ? e.id : null].filter(Boolean).join(" · ")}</span>
                   </div>
                   <div className="mt-1 text-sm">
                     {!s || s.status === "loading" ? (

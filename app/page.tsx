@@ -9,6 +9,7 @@ import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa
 import KvittLogo from "@/components/KvittLogo";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
+import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
@@ -1493,21 +1494,31 @@ export default function Page() {
                 "show receipt" button hangs in the corner for quick
                 cross-checking against the photo. */}
             <div className="mb-3 flex items-start gap-2">
-              <div className="flex min-w-0 flex-1 gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <input
                   value={mealLabel}
                   onChange={(e) => setMealLabel(e.target.value)}
                   placeholder={t.placePlaceholder}
                   aria-label={t.placePlaceholder}
-                  className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none"
+                  className="min-w-0 rounded-xl bg-white px-3 py-2 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none"
                 />
-                <input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value || today)}
-                  aria-label={t.messageAria}
-                  className="rounded-xl bg-white px-2.5 py-2 text-sm text-gray-600 shadow-sm ring-1 ring-black/5 outline-none"
-                />
+                {/* Date display: we format with formatReceiptDate so the host
+                    sees "fredag den 6:e mars" / "Friday, March 6th" (or ISO
+                    for older years). A native <input type="date"> sits on
+                    top, invisible, so tapping the label opens the system
+                    date picker — keeping inline editability without
+                    inheriting the browser's locale-specific format. */}
+                <label className="relative inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-sm text-gray-500 active:bg-gray-100">
+                  <span aria-hidden>📅</span>
+                  <span>{formatReceiptDate(eventDate, lang)}</span>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value || today)}
+                    aria-label={t.messageAria}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </label>
               </div>
               {images.length > 0 && (
                 <button

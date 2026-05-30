@@ -6,6 +6,7 @@ import QrCard from "@/components/QrCard";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
@@ -1157,7 +1158,7 @@ export default function RoomPage() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
-            <p className="text-sm text-gray-500">{[state.date, code].filter(Boolean).join(" · ")}</p>
+            <p className="text-sm text-gray-500">{[formatReceiptDate(state.date, lang), code].filter(Boolean).join(" · ")}</p>
             {/* Host info — read-only for guests, tap-to-edit for the host
                 themselves. The Swish QR and payment messages all key off
                 payeeName/payeeNumber, so this is the single source of truth
