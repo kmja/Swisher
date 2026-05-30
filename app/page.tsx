@@ -313,6 +313,16 @@ export default function Page() {
   // briefly before being moved on — and so the receipt isn't half-validated
   // by the time the host is still typing their name.
   const [hostReady, setHostReady] = useState(false);
+  // Tick "1 → 2 → 3 → 1" every 400 ms so the "Reading" label has a live
+  // ellipsis while the host waits for OCR to catch up. Only ticks when
+  // the button is in its "host committed, scan still working" state.
+  const [readingDots, setReadingDots] = useState(1);
+  useEffect(() => {
+    if (!(hostReady && ocrLoading)) return;
+    setReadingDots(1);
+    const iv = setInterval(() => setReadingDots((d) => (d >= 3 ? 1 : d + 1)), 400);
+    return () => clearInterval(iv);
+  }, [hostReady, ocrLoading]);
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
@@ -1363,6 +1373,7 @@ export default function Page() {
                   const hasPhone = isValidPhone(payerPhone);
                   const hasGroup = groupSize >= 2;
                   const canCommit = hasName && hasPhone && hasGroup;
+                  const waiting = hostReady && ocrLoading;
                   return (
                     <button
                       type="button"
@@ -1370,7 +1381,16 @@ export default function Page() {
                       disabled={!canCommit || hostReady}
                       className="w-full rounded-xl bg-swish px-4 py-3 text-base font-semibold text-white active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
                     >
-                      {hostReady && ocrLoading ? t.reading : t.setupDone}
+                      {waiting ? (
+                        <>
+                          {t.reading}
+                          <span className="ml-0.5 inline-block w-5 text-left tabular-nums" aria-hidden>
+                            {".".repeat(readingDots)}
+                          </span>
+                        </>
+                      ) : (
+                        t.setupDone
+                      )}
                     </button>
                   );
                 })()}
@@ -1384,7 +1404,13 @@ export default function Page() {
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
           <div className="mt-5 space-y-2">
-            {ocrLoading || scanCount !== null ? null : (
+            {/* Once the setup card has taken focus, the photo / receipt
+                CTAs at the bottom of the capture step are noise — the
+                host's job is to finish the form, not pick a new picture.
+                Mute everything down here until either the scan flow is
+                fully done (handoff fires) or the host has bailed out of
+                it. */}
+            {ocrLoading || scanCount !== null || scanReady || hostReady ? null : (
               <>
                 {imageUrl ? (
                   <>
