@@ -1520,18 +1520,6 @@ export default function Page() {
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {t.mealPresets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setMealLabel(preset)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${mealLabel.trim() === preset ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200 active:bg-gray-100"}`}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
             <div className="mt-4">
               <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
               <p className="mt-1 text-sm leading-snug text-gray-600">{t.itemsHint}</p>
@@ -1592,12 +1580,9 @@ export default function Page() {
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
                 return (
-                <div
-                  key={rep.id}
-                  className="flex items-stretch gap-2"
-                >
+                <div key={rep.id}>
                   <div
-                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                    className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >
                     <div className="flex items-center gap-2">
                       <span aria-hidden className="pl-1 text-3xl leading-none">
@@ -1633,38 +1618,64 @@ export default function Page() {
                         ✕
                       </button>
                     </div>
-                    {!rep.isTip && rep.shared && (
+                    {!rep.isTip && (
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
-                        <span>{t.splitWays}</span>
                         <button
                           type="button"
-                          aria-label="−"
-                          onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                          role="switch"
+                          onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
+                          aria-checked={rep.shared}
+                          aria-label={t.sharedToggle}
+                          className="flex items-center gap-2"
                         >
-                          −
+                          <span
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              rep.shared ? "bg-swish" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                rep.shared ? "translate-x-4" : "translate-x-0.5"
+                              }`}
+                            />
+                          </span>
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                            {t.sharedLabel}
+                          </span>
                         </button>
-                        <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
-                        <button
-                          type="button"
-                          aria-label="+"
-                          onClick={() => updateGroup(rep, { shareCount: Math.min(50, d + 1) })}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                        >
-                          +
-                        </button>
-                        <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
-                      </div>
-                    )}
-                    {!rep.isTip && !rep.shared && sharedSuggestion(rep.description) && (
-                      <div className="mt-2 pl-1 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => updateGroup(rep, { shared: true, sharers: [], shareCount: undefined })}
-                          className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
-                        >
-                          {t.maybeShared}
-                        </button>
+                        {rep.shared && (
+                          <>
+                            <span>{t.splitWays}</span>
+                            <button
+                              type="button"
+                              aria-label="−"
+                              onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center text-base font-semibold tabular-nums text-gray-700">{d}</span>
+                            <button
+                              type="button"
+                              aria-label="+"
+                              onClick={() => updateGroup(rep, { shareCount: Math.min(50, d + 1) })}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                            >
+                              +
+                            </button>
+                            <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
+                          </>
+                        )}
+                        {!rep.shared && sharedSuggestion(rep.description) && (
+                          <button
+                            type="button"
+                            onClick={() => updateGroup(rep, { shared: true, sharers: [], shareCount: undefined })}
+                            className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
+                          >
+                            {t.maybeShared}
+                          </button>
+                        )}
                       </div>
                     )}
                     {rep.isTip && (
@@ -1676,33 +1687,6 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  {!rep.isTip && (
-                    <button
-                      type="button"
-                      role="switch"
-                      onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
-                      aria-checked={rep.shared}
-                      aria-label={t.sharedToggle}
-                      title={t.sharedToggle}
-                      className="flex w-14 shrink-0 flex-col items-center justify-center gap-1.5"
-                    >
-                      <span className={`text-[11px] font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                        {t.sharedLabel}
-                      </span>
-                      <span
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          rep.shared ? "bg-swish" : "bg-gray-300"
-                        }`}
-                      >
-                        <span
-                          aria-hidden
-                          className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
-                            rep.shared ? "translate-x-5" : "translate-x-0.5"
-                          }`}
-                        />
-                      </span>
-                    </button>
-                  )}
                 </div>
                 );
               })}

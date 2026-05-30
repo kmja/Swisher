@@ -107,7 +107,6 @@ export interface Strings {
   messagePlaceholder: string;
   messageAria: string;
   placePlaceholder: string;
-  mealPresets: string[];
 
   // live room
   liveRoomTitle: string;
@@ -264,7 +263,6 @@ const sv: Strings = {
   messagePlaceholder: "Meddelande",
   messageAria: "Meddelande-etikett",
   placePlaceholder: "Plats",
-  mealPresets: ["Middag", "Lunch", "Brunch", "Fika", "Resa"],
 
   liveRoomTitle: "Live-rum",
   liveRoomHint: "Skapa ett rum – så petar var och en in sina egna rätter på sin egen telefon.",
@@ -413,7 +411,6 @@ const en: Strings = {
   messagePlaceholder: "Message",
   messageAria: "Message label",
   placePlaceholder: "Place",
-  mealPresets: ["Dinner", "Lunch", "Brunch", "Coffee", "Trip"],
 
   liveRoomTitle: "Live room",
   liveRoomHint: "Create a room — everyone taps their own items on their own phone.",
