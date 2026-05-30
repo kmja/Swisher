@@ -61,17 +61,6 @@ textarea {
   animation: scan-card-rise 0.55s cubic-bezier(0.32, 0.72, 0.36, 1) forwards;
 }
 
-/* Items list pop-in: each row fades + lifts in turn after the scan completes,
-   so the list reads as "items being generated" instead of all-at-once dump.
-   `backwards` keeps each row hidden during its own animationDelay. */
-@keyframes item-pop-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.item-pop-in {
-  animation: item-pop-in 0.35s cubic-bezier(0.32, 0.72, 0.36, 1) backwards;
-}
-
 /* Undo-toast countdown bar: scales from full width to zero over 6 seconds so
    the user can see how much time they have left to tap Ångra. */
 @keyframes undo-countdown {
@@ -83,16 +72,6 @@ textarea {
   animation: undo-countdown 6s linear forwards;
 }
 
-/* Each capture/items/assign/result section fades + lifts in when the user
-   moves between steps, so the page feels like one continuous flow instead of
-   a hard cut. */
-@keyframes step-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.step-enter {
-  animation: step-enter 0.32s cubic-bezier(0.32, 0.72, 0.36, 1);
-}
 
 /* Scanner grid + glowing brackets for the scanning overlay. */
 .scan-grid {

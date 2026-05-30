@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
@@ -272,27 +272,6 @@ export default function Page() {
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
-  // Each row pops in exactly once — the first time we ever render its id.
-  // We drive the animation imperatively via Web Animations API in a
-  // useLayoutEffect so React re-renders (or iOS Safari layout recalcs from
-  // scroll / address-bar resize) can't restart the keyframe by toggling a
-  // CSS class on/off.
-  const animatedIdsRef = useRef<Set<string>>(new Set());
-  const itemRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  // One-shot section-enter lift, driven imperatively so iOS Safari can't
-  // replay it when the address bar resizes on scroll-stop. A stable
-  // useCallback ref fires only on each section's mount (sections are
-  // keyed by step name, so a new element appears per step change).
-  const playStepEnter = useCallback((el: HTMLElement | null) => {
-    if (!el || typeof el.animate !== "function") return;
-    el.animate(
-      [
-        { opacity: 0, transform: "translateY(10px)" },
-        { opacity: 1, transform: "translateY(0)" },
-      ],
-      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-    );
-  }, []);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -1042,33 +1021,6 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // Imperatively animate each row exactly once, on the layout pass right
-  // after it first appears. Web Animations completes cleanly without
-  // leaving a CSS class around for browser layout recalcs to restart.
-  useLayoutEffect(() => {
-    if (step !== "items") return;
-    itemGroups.forEach((g, idx) => {
-      const id = g[0].id;
-      if (animatedIdsRef.current.has(id)) return;
-      const el = itemRowRefs.current.get(id);
-      if (!el) return;
-      animatedIdsRef.current.add(id);
-      if (typeof el.animate !== "function") return;
-      el.animate(
-        [
-          { opacity: 0, transform: "translateY(10px)" },
-          { opacity: 1, transform: "translateY(0)" },
-        ],
-        {
-          duration: 350,
-          delay: Math.min(idx, 12) * 55,
-          easing: "cubic-bezier(0.32, 0.72, 0.36, 1)",
-          fill: "backwards",
-        },
-      );
-    });
-  }, [itemGroups, step]);
-
   const payer = namedDiners[0];
   const normalizedPayer = normalizePhone(payerPhone) ?? "";
   const assignedTotalOre = shares.reduce((acc, s) => acc + s.totalOre, 0);
@@ -1129,7 +1081,7 @@ export default function Page() {
       {step !== "capture" && <Header step={step} t={t} />}
 
       {step === "capture" && (
-        <section ref={playStepEnter} key="capture" className="mt-2 flex flex-1 flex-col">
+        <section key="capture" className="mt-2 flex flex-1 flex-col">
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
@@ -1450,7 +1402,7 @@ export default function Page() {
       )}
 
       {step === "items" && (
-        <section ref={playStepEnter} key="items" className="mt-6 flex flex-1 flex-col gap-6">
+        <section key="items" className="mt-6 flex flex-1 flex-col gap-6">
           <div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1528,10 +1480,6 @@ export default function Page() {
                 return (
                 <div
                   key={rep.id}
-                  ref={(el) => {
-                    if (el) itemRowRefs.current.set(rep.id, el);
-                    else itemRowRefs.current.delete(rep.id);
-                  }}
                   className="flex items-stretch gap-2"
                 >
                   <div
@@ -1798,7 +1746,7 @@ export default function Page() {
       )}
 
       {step === "assign" && (
-        <section ref={playStepEnter} key="assign" className="mt-6 flex flex-1 flex-col gap-3">
+        <section key="assign" className="mt-6 flex flex-1 flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">{t.assignTitle}</h2>
             <button type="button" onClick={spreadEverything} className="text-sm font-medium text-swish-dark">
@@ -1933,7 +1881,7 @@ export default function Page() {
       )}
 
       {step === "result" && (
-        <section ref={playStepEnter} key="result" className="mt-6 flex flex-1 flex-col gap-4">
+        <section key="result" className="mt-6 flex flex-1 flex-col gap-4">
           <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
           {tipOre > 0 && (

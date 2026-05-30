@@ -42,6 +42,15 @@ export function formatOre(ore: number): string {
   return `${sign}${grouped},${rest.toString().padStart(2, "0")}`;
 }
 
+/** Like formatOre but drops the ",00" tail for whole-kronor amounts, so
+ *  user-facing displays read "185" instead of "185,00" while keeping
+ *  "185,50" exact. Use formatOre for inputs/editing where the trailing
+ *  zero matters. */
+export function formatOreTrim(ore: number): string {
+  const s = formatOre(ore);
+  return s.endsWith(",00") ? s.slice(0, -3) : s;
+}
+
 /** Convert öre to a kronor number (max 2 decimals) for the Swish amount field. */
 export function oreToKronor(ore: number): number {
   return Math.round(ore) / 100;

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { formatOre } from "@/lib/money";
+import { formatOreTrim } from "@/lib/money";
 import { formatNative, type Fx } from "@/lib/currency";
 
 const FxContext = createContext<Fx>(null);
@@ -31,7 +31,16 @@ export function Money({
 }) {
   const fx = useFx();
   const native = formatNative(ore, fx);
-  const main = `${formatOre(ore)} SEK`;
+  const amount = formatOreTrim(ore);
+  // "SEK" is context, not data — scale it down relative to whatever font
+  // size the parent picked and drop the weight so the eye lands on the
+  // number first.
+  const main = (
+    <>
+      {amount}
+      <span className="ml-1 text-[0.72em] font-normal tracking-wide text-gray-400">SEK</span>
+    </>
+  );
   if (!native) return <span className={className}>{main}</span>;
   if (stack) {
     return (

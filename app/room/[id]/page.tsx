@@ -207,20 +207,6 @@ export default function RoomPage() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
-  // One-shot mount lift — driven imperatively so the keyframe can't be
-  // replayed by iOS Safari when the address bar collapses on scroll-stop.
-  // A stable useCallback ref means React only invokes us on first mount.
-  const playStepEnter = useCallback((el: HTMLElement | null) => {
-    if (!el || typeof el.animate !== "function") return;
-    el.animate(
-      [
-        { opacity: 0, transform: "translateY(10px)" },
-        { opacity: 1, transform: "translateY(0)" },
-      ],
-      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-    );
-  }, []);
-
   // Long-press → inline edit for description or price. The pencil button is
   // still there for "full" edits (shared, split count, delete); this is the
   // shortcut for the most common fixes (the OCR's typo, the wrong digit).
@@ -1017,7 +1003,7 @@ export default function RoomPage() {
             >
               <Money
                 ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
-                className="text-right text-sm font-semibold"
+                className="text-right text-base font-semibold"
               />
             </span>
           )}
@@ -1090,7 +1076,7 @@ export default function RoomPage() {
             </span>
             <Money
               ore={taken ? myTotalOre : rep.priceOre}
-              className="shrink-0 text-right text-sm font-semibold"
+              className="shrink-0 text-right text-base font-semibold"
             />
           </button>
           {/* Floating pencil on the card's top-right corner — matches the
@@ -1133,7 +1119,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main ref={playStepEnter} className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
       {/* Navigation */}
       <nav className="grid grid-cols-3 items-center gap-2 text-xs font-semibold">
         <a
@@ -1214,7 +1200,12 @@ export default function RoomPage() {
               </div>
             ) : (
               <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-                <span aria-hidden>👤</span>
+                <span aria-hidden className="text-gray-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                  </svg>
+                </span>
                 <span className="truncate">
                   {state.payeeName}
                   {state.payeeNumber && (

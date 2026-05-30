@@ -5,7 +5,7 @@ import type { ReactNode, ReactElement } from "react";
  *  soft specular gloss filter for the Apple look. 24×24, rendered at 1em. */
 function Svg({ children, label }: { children: ReactNode; label?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" role="img" aria-label={label} className="inline-block align-[-0.125em]">
+    <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" role="img" aria-label={label} className="inline-block align-[-0.18em]">
       {children}
     </svg>
   );
