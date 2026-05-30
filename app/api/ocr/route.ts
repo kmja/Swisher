@@ -63,14 +63,32 @@ function resultText(result: AiResult): string {
 }
 
 const USER_TEXT = "Extract the line items, total, moms and dricks from this receipt.";
+const USER_TEXT_MULTI =
+  "These are consecutive overlapping photo frames of ONE tall receipt, in order from the top of the receipt to the bottom. Each subsequent frame overlaps the previous one — sometimes by a lot. Read the receipt as a SINGLE document: every printed line appears in exactly one output item, even if it's visible in multiple frames. If the same line appears in frame N and frame N+1, emit it ONCE. Use the clearest copy of each line. Pay attention to multi-line items (a parent line with a continuation line below — merge them per the existing multi-line rules). Items must come out in the order they appear on the receipt (top → bottom across the whole stitched document).";
 
 /**
  * Call Claude (Haiku) via the Messages API over plain fetch — no SDK, so it
  * runs in the Worker. Returns the model's text; throws on non-2xx so the caller
  * falls back to Workers AI. The system prompt carries a cache breakpoint (it
  * only takes effect once the prompt exceeds Claude's ~4k-token cache minimum).
+ *
+ * Accepts either one image or a sequence (panorama sweep). The multi-image
+ * path uses a different user message asking the model to merge overlapping
+ * frames into one ordered item list.
  */
-async function runClaude(apiKey: string, mediaType: string, base64: string): Promise<string> {
+async function runClaude(
+  apiKey: string,
+  images: { mediaType: string; base64: string }[],
+): Promise<string> {
+  const multi = images.length > 1;
+  const userContent: Array<{ type: string; [k: string]: unknown }> = [];
+  for (const img of images) {
+    userContent.push({
+      type: "image",
+      source: { type: "base64", media_type: img.mediaType, data: img.base64 },
+    });
+  }
+  userContent.push({ type: "text", text: multi ? USER_TEXT_MULTI : USER_TEXT });
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -82,15 +100,7 @@ async function runClaude(apiKey: string, mediaType: string, base64: string): Pro
       model: ANTHROPIC_MODEL,
       max_tokens: 2048,
       system: [{ type: "text", text: PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: USER_TEXT },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content: userContent }],
     }),
   });
   if (!res.ok) {
@@ -248,19 +258,31 @@ async function withCurrency(parsed: OcrResult): Promise<Record<string, unknown>>
 }
 
 export async function POST(req: Request) {
-  let body: { image?: string };
+  let body: { image?: string; images?: string[] };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const match = typeof body.image === "string" && body.image.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
-  if (!match) {
+  // Accept either `image` (single dataURL) or `images` (panorama frames in
+  // order, top → bottom). Validate every input is a base64 dataURL.
+  const rawUrls: string[] = Array.isArray(body.images) && body.images.length > 0
+    ? body.images
+    : typeof body.image === "string" ? [body.image] : [];
+  if (rawUrls.length === 0) {
     return NextResponse.json({ error: "Expected a base64 image data URL." }, { status: 400 });
   }
-  const dataUrl = body.image as string;
-  const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
+  const parsed = rawUrls.map((u) => u.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i));
+  if (parsed.some((m) => !m)) {
+    return NextResponse.json({ error: "Expected a base64 image data URL." }, { status: 400 });
+  }
+  const matches = parsed as RegExpMatchArray[];
+  // For Workers AI fallback we use the first image only (those models don't
+  // accept image arrays); Claude handles the whole sequence.
+  const primary = matches[0];
+  const dataUrl = rawUrls[0];
+  const bytes = Uint8Array.from(Buffer.from(primary[2], "base64"));
 
   let ai: WorkersAI | undefined;
   let anthropicKey: string | undefined;
@@ -277,7 +299,8 @@ export async function POST(req: Request) {
 
   if (anthropicKey) {
     const key = anthropicKey;
-    attempts.push({ name: ANTHROPIC_MODEL, run: () => runClaude(key, match[1], match[2]) });
+    const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
+    attempts.push({ name: ANTHROPIC_MODEL, run: () => runClaude(key, images) });
   }
 
   if (ai) {

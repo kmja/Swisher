@@ -7,7 +7,6 @@ import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
-import { stitchVertically } from "@/lib/stitch";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -611,20 +610,27 @@ export default function Page() {
     if (frames.length === 0) return;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
+    // Cap the OCR input at 8 frames so the Claude bill for a long-receipt
+    // scan stays bounded (~$0.04 instead of $0.15 for a 30-frame sweep).
+    // Sample evenly across the sweep so we get the top, the bottom, and
+    // the middle of the receipt, not 8 consecutive near-duplicates.
+    const MAX_FRAMES = 8;
+    const sampled = frames.length <= MAX_FRAMES
+      ? frames
+      : Array.from({ length: MAX_FRAMES }, (_, i) =>
+          frames[Math.round((i * (frames.length - 1)) / (MAX_FRAMES - 1))],
+        );
     try {
-      if (frames.length === 1) {
-        setImageUrl(frames[0]);
-        await runOcr(frames[0]);
+      if (sampled.length === 1) {
+        setImageUrl(sampled[0]);
+        await runOcr(sampled[0]);
       } else {
-        setOcrLoading(true);
-        const { dataUrl } = await stitchVertically(frames);
-        setOcrLoading(false);
-        setImageUrl(dataUrl);
-        await runOcr(dataUrl);
+        setImageUrl(sampled[0]);
+        await runOcr(sampled[0], { frames: sampled });
       }
     } catch (err) {
       setOcrLoading(false);
-      setOcrError(err instanceof Error ? err.message : "Stitch failed");
+      setOcrError(err instanceof Error ? err.message : "OCR failed");
     }
   }
 
@@ -641,8 +647,16 @@ export default function Page() {
     }
   }
 
-  async function runOcr(img: string = imageUrl ?? "", opts: { append?: boolean } = {}) {
-    if (!img || ocrLoading) return;
+  async function runOcr(
+    img: string = imageUrl ?? "",
+    opts: { append?: boolean; frames?: string[] } = {},
+  ) {
+    // Multi-frame (panorama) path: opts.frames carries the full ordered list;
+    // we still set img as the "primary" so all the imageUrl-dependent UI
+    // keeps working.
+    const frames = opts.frames && opts.frames.length > 0 ? opts.frames : [img];
+    const primary = frames[0];
+    if (!primary || ocrLoading) return;
     const append = opts.append === true;
     const imgIndex = append ? images.length : 0;
     setOcrLoading(true);
@@ -652,7 +666,7 @@ export default function Page() {
       const res = await fetch("/api/ocr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: img }),
+        body: JSON.stringify(frames.length > 1 ? { images: frames } : { image: primary }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OCR failed.");
@@ -672,7 +686,9 @@ export default function Page() {
         imgIndex,
         y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y / 100)) : undefined,
       }));
-      setImages((prev) => (append ? [...prev, img] : [img]));
+      // For the multi-frame path keep every captured frame so the receipt
+      // viewer can show all of them; the single-frame paths behave as before.
+      setImages((prev) => (append ? [...prev, primary] : frames));
       setOcrLoading(false);
 
       if (append) {
@@ -1369,11 +1385,17 @@ export default function Page() {
                       if (stitchLoading || ocrLoading) return;
                       setStitchLoading(true);
                       try {
-                        const { dataUrl } = await stitchVertically(images);
-                        // runOcr replaces both items and images[] when called
-                        // without append, so the stitched result becomes the
-                        // single source of truth for both lists.
-                        await runOcr(dataUrl);
+                        // Cap multi-shot resyncs at 8 frames too, same as
+                        // the live panorama path. Already-captured shots
+                        // are at full resolution so this stays well within
+                        // the per-call image-token budget.
+                        const MAX_FRAMES = 8;
+                        const sampled = images.length <= MAX_FRAMES
+                          ? images
+                          : Array.from({ length: MAX_FRAMES }, (_, i) =>
+                              images[Math.round((i * (images.length - 1)) / (MAX_FRAMES - 1))],
+                            );
+                        await runOcr(sampled[0], { frames: sampled });
                       } catch (err) {
                         setOcrError(err instanceof Error ? err.message : "Stitch failed");
                       } finally {
