@@ -51,7 +51,7 @@ const R = {
     ownShare: "Din egen del",
     dontPaySelf: "du betalar inte dig själv",
     itemsTitle: "Vad åt du?",
-    claimHint: "Tryck på det du åt. Delar ni på något tar ni samma rad.",
+    claimHint: "Tryck på det du åt. Delade rätter ligger högst upp och är redan fördelade.",
     sharedSection: "Delas av alla",
     nLeft: (n: number) => `${n} kvar`,
     cartEmpty: "Inget taget än",
@@ -116,7 +116,7 @@ const R = {
     ownShare: "Your own share",
     dontPaySelf: "you don't pay yourself",
     itemsTitle: "What did you have?",
-    claimHint: "Tap what you had. Sharing something? You both tap it.",
+    claimHint: "Tap what you had. Shared dishes sit at the top — already split for the table.",
     sharedSection: "Shared by everyone",
     nLeft: (n: number) => `${n} left`,
     cartEmpty: "Nothing claimed yet",
@@ -1153,116 +1153,117 @@ export default function RoomPage() {
         </div>
       </nav>
 
-      {/* Share / invite */}
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
-            <p className="text-sm text-gray-500">{[formatReceiptDate(state.date, lang), code].filter(Boolean).join(" · ")}</p>
-            {/* Host info — read-only for guests, tap-to-edit for the host
-                themselves. The Swish QR and payment messages all key off
-                payeeName/payeeNumber, so this is the single source of truth
-                and any edit needs to propagate via the editPayee action. */}
-            {payeeEditing && isPayee ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <div className="relative min-w-[10rem] flex-1">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                    </svg>
-                  </span>
-                  <input
-                    value={payeeNameDraft}
-                    onChange={(e) => setPayeeNameDraft(e.target.value)}
-                    placeholder={tx.yourName}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") e.currentTarget.blur();
-                      else if (e.key === "Escape") setPayeeEditing(false);
-                    }}
-                    className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
-                  />
-                </div>
-                <div className="relative min-w-[10rem] flex-1">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="6" y="2" width="12" height="20" rx="2.5" />
-                      <path d="M12 18h.01" />
-                    </svg>
-                  </span>
-                  <input
-                    value={payeeNumberDraft}
-                    onChange={(e) => setPayeeNumberDraft(e.target.value)}
-                    inputMode="tel"
-                    placeholder={tx.swishNumber}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") e.currentTarget.blur();
-                      else if (e.key === "Escape") setPayeeEditing(false);
-                    }}
-                    className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={savePayeeEdit}
-                  aria-label={t.save}
-                  className="shrink-0 rounded-xl bg-swish px-3.5 py-2.5 text-base font-semibold text-white active:bg-swish-dark"
-                >
-                  ✓
-                </button>
-              </div>
-            ) : (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-                <span aria-hidden className="text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                  </svg>
-                </span>
-                <span className="truncate">
-                  {state.payeeName}
-                  {state.payeeNumber && (
-                    <span className="text-gray-400"> · {state.payeeNumber}</span>
-                  )}
-                </span>
-                {isPayee && (
-                  <button
-                    type="button"
-                    onClick={openPayeeEdit}
-                    aria-label={t.editRow}
-                    className="-my-1 shrink-0 p-1 text-gray-300 active:text-swish-dark"
-                  >
-                    <PencilIcon />
-                  </button>
-                )}
-              </p>
-            )}
-            {roomFx && (
-              <p className="mt-0.5 text-xs text-gray-400">
-                {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
-                {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} SEK`}
-              </p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {state.imageCount > 0 && (
-              <button
-                type="button"
-                onClick={openReceipt}
-                aria-label={t.showReceipt}
-                className="rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-swish-dark ring-1 ring-gray-200 active:bg-gray-100"
-              >
-                🧾
-              </button>
-            )}
+      {/* Share / invite — restacked so the title gets the full width, the
+          room code drops out (it lives in the share dialog anyway), and the
+          🧾 / Share buttons run as a proper action row at the bottom of
+          the card instead of fighting the title for the right rail. */}
+      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+        <div className="min-w-0">
+          <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
+          <p className="text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
+        </div>
+        {/* Host info — read-only for guests, tap-to-edit for the host
+            themselves. The Swish QR and payment messages all key off
+            payeeName/payeeNumber, so this is the single source of truth
+            and any edit needs to propagate via the editPayee action. */}
+        {payeeEditing && isPayee ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[10rem] flex-1">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                </svg>
+              </span>
+              <input
+                value={payeeNameDraft}
+                onChange={(e) => setPayeeNameDraft(e.target.value)}
+                placeholder={tx.yourName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  else if (e.key === "Escape") setPayeeEditing(false);
+                }}
+                className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
+              />
+            </div>
+            <div className="relative min-w-[10rem] flex-1">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                  <path d="M12 18h.01" />
+                </svg>
+              </span>
+              <input
+                value={payeeNumberDraft}
+                onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                inputMode="tel"
+                placeholder={tx.swishNumber}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  else if (e.key === "Escape") setPayeeEditing(false);
+                }}
+                className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
+              />
+            </div>
             <button
               type="button"
-              onClick={() => setShareOpen(true)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+              onClick={savePayeeEdit}
+              aria-label={t.save}
+              className="shrink-0 rounded-xl bg-swish px-3.5 py-2.5 text-base font-semibold text-white active:bg-swish-dark"
             >
-              {t.share}
+              ✓
             </button>
           </div>
+        ) : (
+          <p className="flex items-center gap-1.5 text-sm text-gray-500">
+            <span aria-hidden className="text-gray-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+              </svg>
+            </span>
+            <span className="min-w-0 truncate">
+              {state.payeeName}
+              {state.payeeNumber && (
+                <span className="text-gray-400"> · {state.payeeNumber}</span>
+              )}
+            </span>
+            {isPayee && (
+              <button
+                type="button"
+                onClick={openPayeeEdit}
+                aria-label={t.editRow}
+                className="-my-1 shrink-0 p-1 text-gray-300 active:text-swish-dark"
+              >
+                <PencilIcon />
+              </button>
+            )}
+          </p>
+        )}
+        {roomFx && (
+          <p className="text-xs text-gray-400">
+            {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
+            {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} SEK`}
+          </p>
+        )}
+        <div className="flex items-stretch gap-2 pt-0.5">
+          {state.imageCount > 0 && (
+            <button
+              type="button"
+              onClick={openReceipt}
+              aria-label={t.showReceipt}
+              className="shrink-0 rounded-xl bg-white px-3.5 text-base shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+            >
+              🧾
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+          >
+            {t.share}
+          </button>
         </div>
       </section>
 
@@ -1280,16 +1281,11 @@ export default function RoomPage() {
           : t.paidProgress(paidCount, otherShares.length);
         return (
           <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t.remainingToCollect}</span>
-              <span className="text-[11px] text-gray-500">{subtitle}</span>
-            </div>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t.remainingToCollect}</span>
             <div className="mt-1">
-              <Money ore={toCollectOre} className="block text-3xl font-bold text-swish-dark" />
+              <Money ore={toCollectOre} className="block text-4xl font-bold text-swish-dark" />
             </div>
-            {unassignedOre > 0 && (
-              <p className="mt-2 text-xs text-amber-700"><Money ore={unassignedOre} /> {lang === "sv" ? "ofördelat" : "unassigned"}</p>
-            )}
+            <p className="mt-1.5 text-sm text-gray-500">{subtitle}</p>
             {!empty && (
               <ul className="mt-3 space-y-2 border-t border-gray-100 pt-3">
                 {otherShares.map((s) => {

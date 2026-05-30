@@ -27,6 +27,7 @@ const R = {
     paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
     outstanding: (amt: string) => `${amt} kvar att få in`,
     allSettled: "Allt inbetalt ✓",
+    waitingForGuests: "Väntar på gäster…",
     youOwe: (amt: string) => `Du ska betala ${amt}`,
     youPaid: "Du har betalat ✓",
     nothing: "Inget att betala",
@@ -44,6 +45,7 @@ const R = {
     paidOf: (paid: number, total: number) => `${paid} of ${total} paid`,
     outstanding: (amt: string) => `${amt} outstanding`,
     allSettled: "All settled ✓",
+    waitingForGuests: "Waiting for guests…",
     youOwe: (amt: string) => `You owe ${amt}`,
     youPaid: "You're paid up ✓",
     nothing: "Nothing to pay",
@@ -62,6 +64,7 @@ type Summary =
       paidCount: number;
       payeeCount: number;
       outstandingOre: number;
+      waitingForGuests: boolean;
       myOre: number;
       iPaid: boolean;
     };
@@ -111,6 +114,7 @@ export default function HistoryPage() {
             paidCount: payees.filter((s) => paid.has(s.id)).length,
             payeeCount: payees.length,
             outstandingOre: payees.filter((s) => !paid.has(s.id)).reduce((a, s) => a + s.totalOre, 0),
+            waitingForGuests: false,
             myOre: 0,
             iPaid: false,
           },
@@ -141,6 +145,13 @@ export default function HistoryPage() {
           const outstandingOre = payees
             .filter((s) => !paidBy.includes(s.dinerId))
             .reduce((acc, s) => acc + s.totalOre, 0);
+          // The host picks groupSize during scan, so we know roughly how
+          // many guests SHOULD eventually join — show "0 of 4" while we
+          // wait instead of "0 of 0 · all settled", which read as "done"
+          // for an empty just-created room.
+          const expectedPayees = Math.max(0, (state.groupSize ?? state.people.length) - 1);
+          const displayPayeeCount = Math.max(payees.length, expectedPayees);
+          const waitingForGuests = payees.length === 0 && expectedPayees > 0;
           const mine = shares.find((s) => s.dinerId === personId);
           const fx: Fx =
             state.currency && state.currency !== "SEK" && state.rate > 0
@@ -156,8 +167,9 @@ export default function HistoryPage() {
                 isHost,
                 fx,
                 paidCount,
-                payeeCount: payees.length,
+                payeeCount: displayPayeeCount,
                 outstandingOre,
+                waitingForGuests,
                 myOre: mine?.totalOre ?? 0,
                 iPaid: !!personId && paidBy.includes(personId),
               },
@@ -214,8 +226,12 @@ export default function HistoryPage() {
                     ) : s.isHost ? (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-gray-500">{t.paidOf(s.paidCount, s.payeeCount)}</span>
-                        <span className={s.outstandingOre > 0 ? "font-semibold text-swish-dark" : "font-semibold text-emerald-600"}>
-                          {s.outstandingOre > 0 ? t.outstanding(money(s.outstandingOre, s.fx)) : t.allSettled}
+                        <span className={s.waitingForGuests ? "font-medium text-gray-400" : s.outstandingOre > 0 ? "font-semibold text-swish-dark" : "font-semibold text-emerald-600"}>
+                          {s.waitingForGuests
+                            ? t.waitingForGuests
+                            : s.outstandingOre > 0
+                              ? t.outstanding(money(s.outstandingOre, s.fx))
+                              : t.allSettled}
                         </span>
                       </div>
                     ) : s.myOre > 0 ? (
