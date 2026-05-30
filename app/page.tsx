@@ -323,6 +323,21 @@ export default function Page() {
     const iv = setInterval(() => setReadingDots((d) => (d >= 3 ? 1 : d + 1)), 400);
     return () => clearInterval(iv);
   }, [hostReady, ocrLoading]);
+  // Pan the validation step in from the right when it first mounts —
+  // signals "we've moved you on to the next stage" without going back
+  // to a CSS animation class that iOS Safari could try to replay. The
+  // stable useCallback ref fires only on the section's mount, and the
+  // imperative animation completes once and detaches itself.
+  const playPanIn = useCallback((el: HTMLElement | null) => {
+    if (!el || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { opacity: 0, transform: "translateX(36px)" },
+        { opacity: 1, transform: "translateX(0)" },
+      ],
+      { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+    );
+  }, []);
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
@@ -1512,7 +1527,7 @@ export default function Page() {
       )}
 
       {step === "items" && (
-        <section key="items" className="mt-6 flex flex-1 flex-col gap-6">
+        <section ref={playPanIn} key="items" className="mt-6 flex flex-1 flex-col gap-6">
           <div>
             {/* Place + date sit at the very top of the validation step so
                 the host instantly knows which receipt they're looking at,

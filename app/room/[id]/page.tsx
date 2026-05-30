@@ -1012,8 +1012,11 @@ export default function RoomPage() {
               onPointerCancel={cancelLongPress}
               onClick={swallowLongPressClick}
               onContextMenu={(e) => e.preventDefault()}
-              className="shrink-0 select-none [-webkit-touch-callout:none]"
+              className="flex shrink-0 select-none flex-col items-end leading-tight [-webkit-touch-callout:none]"
             >
+              {it.shared && (
+                <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{t.yourTotal}</span>
+              )}
               <Money
                 ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
                 className="text-right text-base font-semibold"
