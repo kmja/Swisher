@@ -815,7 +815,7 @@ export default function RoomPage() {
                   >
                     −
                   </button>
-                  <span className="min-w-[3.5rem] text-center text-lg font-semibold tabular-nums text-gray-700">{dv}/{groupSize}</span>
+                  <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
                   <button
                     type="button"
                     aria-label="+"

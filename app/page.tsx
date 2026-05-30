@@ -680,7 +680,16 @@ export default function Page() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) return;
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          // Ask for an explicit 30 fps and a 720 p target — iOS Safari
+          // otherwise picks a conservative default that ends up around
+          // 15 fps on the rear camera. The constraints are `ideal`, so
+          // a device that can't meet them falls back gracefully.
+          video: {
+            facingMode: { ideal: "environment" },
+            frameRate: { ideal: 30, min: 24 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
         if (cancelled) {
@@ -1333,10 +1342,15 @@ export default function Page() {
                 {/* Subtle scanner sweep: a pink horizontal beam travels
                     top → bottom on a slow loop while the live camera is
                     on, so the viewfinder reads like a real document
-                    scanner. Sits behind the corner brackets / instruction
-                    card via natural DOM order. */}
+                    scanner. The .vf-scan class is on the wrapper (full
+                    viewfinder height) so its transform: translateY(0 →
+                    100%) actually moves the line across the frame —
+                    putting it on the 2 px line itself would only shift
+                    it by 2 px. */}
                 {cameraActive && !ocrLoading && (
-                  <div className="vf-scan pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-swish/70 to-transparent shadow-[0_0_18px_4px_rgba(238,92,154,0.32)]" />
+                  <div className="vf-scan pointer-events-none absolute inset-0">
+                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-swish/70 to-transparent shadow-[0_0_18px_4px_rgba(238,92,154,0.32)]" />
+                  </div>
                 )}
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
@@ -1826,17 +1840,17 @@ export default function Page() {
                               type="button"
                               aria-label="−"
                               onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                              className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                             >
                               −
                             </button>
-                            <span className="min-w-[3rem] text-center text-base font-semibold tabular-nums text-gray-700">{d}/{groupSize}</span>
+                            <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
                             <button
                               type="button"
                               aria-label="+"
                               disabled={d >= groupSize}
                               onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                              className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                             >
                               +
                             </button>
@@ -2069,7 +2083,7 @@ export default function Page() {
                       >
                         −
                       </button>
-                      <span className="min-w-[3.5rem] text-center text-lg font-semibold tabular-nums text-gray-700">{d}/{groupSize}</span>
+                      <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
                       <button
                         type="button"
                         aria-label="+"

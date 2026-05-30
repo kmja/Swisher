@@ -36,16 +36,18 @@ textarea {
 /* Subtle scanner sweep on the LIVE viewfinder — a pinkish horizontal
    line that travels top → bottom on a slow loop so the camera feed
    reads like a real document scanner is at work, not just a video
-   preview. Lower opacity + slower cadence than the OCR sweep so it
-   stays out of the host's way. */
+   preview. Driven through a tall (h-full) wrapper that translates via
+   GPU-friendly transform, so the live video's frame rate isn't held
+   back by per-frame layout on a `top` animation. */
 @keyframes vf-scan {
-  0%   { top: 0; opacity: 0; }
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
   12%  { opacity: 0.65; }
   88%  { opacity: 0.65; }
-  100% { top: 100%; opacity: 0; }
+  100% { transform: translate3d(0, calc(100% - 2px), 0); opacity: 0; }
 }
 .vf-scan {
   animation: vf-scan 3.4s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 @keyframes scan-pulse {
   0%, 100% { opacity: 0.35; }
