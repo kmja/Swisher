@@ -12,7 +12,7 @@ import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSugg
 import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
-import { flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
+import { currencyFlag, flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import LangToggle from "@/components/LangToggle";
@@ -1652,37 +1652,14 @@ export default function Page() {
       {step === "items" && (
         <section ref={playPanIn} key="items" className="mt-6 flex flex-1 flex-col gap-6">
           <div>
-            {/* Place + date sit at the very top of the validation step so
-                the host instantly knows which receipt they're looking at,
-                and can correct the OCR-guessed name/date inline. The
-                "show receipt" button hangs in the corner for quick
-                cross-checking against the photo. */}
-            <div className="mb-3 flex items-start gap-2">
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <input
-                  value={mealLabel}
-                  onChange={(e) => setMealLabel(e.target.value)}
-                  placeholder={t.placePlaceholder}
-                  aria-label={t.placePlaceholder}
-                  className="min-w-0 rounded-xl bg-white px-3 py-2 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none"
-                />
-                {/* Date display: we format with formatReceiptDate so the host
-                    sees "fredag den 6:e mars" / "Friday, March 6th" (or ISO
-                    for older years). A native <input type="date"> sits on
-                    top, invisible, so tapping the label opens the system
-                    date picker — keeping inline editability without
-                    inheriting the browser's locale-specific format. */}
-                <label className="relative inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-sm text-gray-500 active:bg-gray-100">
-                  <span aria-hidden>📅</span>
-                  <span>{formatReceiptDate(eventDate, lang)}</span>
-                  <input
-                    type="date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value || today)}
-                    aria-label={t.messageAria}
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                  />
-                </label>
+            {/* Title comes first now so the host lands on the "is this
+                right?" verification prompt before the receipt metadata.
+                The 🧾 receipt button hangs in the corner for quick
+                cross-checking against the original photo. */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+                <p className="mt-1 text-sm leading-snug text-gray-600">{t.itemsHint}</p>
               </div>
               {images.length > 0 && (
                 <button
@@ -1696,34 +1673,56 @@ export default function Page() {
                 </button>
               )}
             </div>
-            <div className="mt-4">
-              <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
-              <p className="mt-1 text-sm leading-snug text-gray-600">{t.itemsHint}</p>
+            {/* Restaurant name and currency sit side by side — the
+                currency selector picks up a flag emoji ahead of the
+                code for quicker scanning. The date no longer gets its
+                own input; it lives as a small tappable subtitle below,
+                with the native picker hidden underneath the label. */}
+            <div className="mt-4 flex items-stretch gap-2">
+              <input
+                value={mealLabel}
+                onChange={(e) => setMealLabel(e.target.value)}
+                placeholder={t.placePlaceholder}
+                aria-label={t.placePlaceholder}
+                className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none"
+              />
+              <div className="relative shrink-0">
+                <select
+                  value={currency}
+                  onChange={(e) => changeCurrency(e.target.value)}
+                  disabled={fxChanging}
+                  aria-label={t.currencyLabel}
+                  className="h-full appearance-none rounded-xl bg-white py-2 pl-3 pr-8 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none disabled:opacity-50"
+                >
+                  {currencyOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {currencyFlag(c)} {c}
+                    </option>
+                  ))}
+                </select>
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-400">▾</span>
+              </div>
             </div>
+            <label className="mt-1.5 relative inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-sm text-gray-500 active:bg-gray-100">
+              <span aria-hidden>📅</span>
+              <span>{formatReceiptDate(eventDate, lang)}</span>
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value || today)}
+                aria-label={t.messageAria}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+            </label>
             {ocrModel && (
-              <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
+              <p className="mt-1.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
             )}
             {ocrModel && !ocrModel.startsWith("claude") && (
               <p className="mt-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
                 {t.ocrFallback}
               </p>
             )}
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <span>{t.currencyLabel}</span>
-              <select
-                value={currency}
-                onChange={(e) => changeCurrency(e.target.value)}
-                disabled={fxChanging}
-                className="rounded-lg bg-white px-2 py-1 font-medium text-ink ring-1 ring-black/10 outline-none disabled:opacity-50"
-              >
-                {currencyOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              {fxChanging && <span className="text-gray-400">…</span>}
-            </div>
+            {fxChanging && <p className="mt-1 text-xs text-gray-400">…</p>}
             {isForeign && (fx ? (
               <p className="mt-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 ring-1 ring-amber-200">
                 {t.fxLine(

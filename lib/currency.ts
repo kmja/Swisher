@@ -40,6 +40,20 @@ export function flagEmoji(code: string): string {
   return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
+/** Best-effort flag emoji for a currency code. Most currencies map 1:1 to
+ *  a single country / region (SEK → 🇸🇪, EUR → 🇪🇺, USD → 🇺🇸, …); a few
+ *  multi-country currencies pick the most recognisable bearer. Falls back
+ *  to 🌍 for codes we don't have a mapping for. */
+const CURRENCY_FLAGS: Record<string, string> = {
+  SEK: "🇸🇪", EUR: "🇪🇺", USD: "🇺🇸", GBP: "🇬🇧", NOK: "🇳🇴", DKK: "🇩🇰",
+  CHF: "🇨🇭", ISK: "🇮🇸", JPY: "🇯🇵", THB: "🇹🇭", AUD: "🇦🇺", CAD: "🇨🇦",
+  PLN: "🇵🇱", CZK: "🇨🇿", HUF: "🇭🇺", TRY: "🇹🇷", SGD: "🇸🇬", HKD: "🇭🇰",
+  AED: "🇦🇪", INR: "🇮🇳", MXN: "🇲🇽", BRL: "🇧🇷", ZAR: "🇿🇦", NZD: "🇳🇿",
+};
+export function currencyFlag(currency: string): string {
+  return CURRENCY_FLAGS[currency.toUpperCase()] ?? "🌍";
+}
+
 /** Localised country name for an alpha-2 code, falling back to the code. */
 export function regionName(code: string, locale: string): string {
   try {
