@@ -1051,13 +1051,13 @@ export default function RoomPage() {
 
     return (
       <div key={rep.id} className="flex flex-col gap-1">
-        <div className="flex items-center gap-1">
+        <div className="relative">
           <button
             type="button"
             onClick={tapRow}
             disabled={availableCount === 0 && mineCount === 0}
-            className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
-              taken ? "bg-swish/10 ring-swish" : "bg-white ring-black/5"
+            className={`relative flex min-w-0 w-full items-center gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 transition ${
+              taken ? "bg-[#f4e6ee] ring-swish" : "bg-white ring-black/5"
             }`}
           >
             <span
@@ -1079,11 +1079,13 @@ export default function RoomPage() {
               className="shrink-0 text-right text-sm font-semibold"
             />
           </button>
+          {/* Floating pencil on the card's top-right corner — matches the
+              single-copy claim row. */}
           <button
             type="button"
-            onClick={() => openEdit(rep)}
+            onClick={(e) => { e.stopPropagation(); openEdit(rep); }}
             aria-label={t.editRow}
-            className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 active:text-swish-dark"
+            className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-black/10 active:bg-gray-100 active:text-swish-dark"
           >
             <PencilIcon />
           </button>
