@@ -30,16 +30,23 @@ function loadImg(src: string): Promise<HTMLImageElement> {
 type Gray = { data: Uint8Array; w: number; h: number };
 
 /** Draw the image into a downscaled offscreen canvas and extract a Y-channel
- *  (luminance) buffer for alignment. */
-function downscaleGray(img: HTMLImageElement, targetW: number): Gray {
+ *  (luminance) buffer for alignment. `cropFrac` lets us crop a fraction off
+ *  each side of the source before downscaling — useful for alignment, where
+ *  the receipt sits in the middle of the frame and the borders are noisy
+ *  background (table, fingers, lens distortion) that throws NCC off. */
+function downscaleGray(img: HTMLImageElement, targetW: number, cropFrac = 0): Gray {
   const w = Math.max(2, targetW);
-  const h = Math.max(2, Math.round(img.naturalHeight * (w / img.naturalWidth)));
+  const cropPx = Math.floor(img.naturalWidth * cropFrac);
+  const srcX = cropPx;
+  const srcW = img.naturalWidth - cropPx * 2;
+  const srcH = img.naturalHeight;
+  const h = Math.max(2, Math.round(srcH * (w / srcW)));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2d context unavailable");
-  ctx.drawImage(img, 0, 0, w, h);
+  ctx.drawImage(img, srcX, 0, srcW, srcH, 0, 0, w, h);
   const src = ctx.getImageData(0, 0, w, h).data;
   const gray = new Uint8Array(w * h);
   for (let i = 0, j = 0; i < src.length; i += 4, j++) {
@@ -150,22 +157,37 @@ export async function stitchVertically(srcs: string[]): Promise<StitchResult> {
   // Per-image rendered heights after fitting to canvas width.
   const renderedH = imgs.map((img) => Math.round(img.naturalHeight * (W / img.naturalWidth)));
 
-  // Detection-resolution grayscales (cheap NCC).
+  // Detection-resolution grayscales. Crop 15 % off each side so the NCC
+  // sees only the centre of the frame — the receipt itself. The borders
+  // are usually table, fingers, or lens-distorted edges that don't move
+  // consistently with the page and just throw the correlation off.
   const DETECT_W = 160;
-  const detect = imgs.map((img) => downscaleGray(img, DETECT_W));
+  const SIDE_CROP = 0.15;
+  const detect = imgs.map((img) => downscaleGray(img, DETECT_W, SIDE_CROP));
 
+  // First pass: resolve each seam. Frames whose best NCC is below a
+  // confidence threshold are dropped — they were probably captured while
+  // the user wobbled sideways or rotated the phone and they'd just add
+  // ghosting to the composite.
+  const MIN_SEAM_SCORE = 0.4;
+  const kept: number[] = [0];
   const offsets: number[] = [0];
   const seamScores: number[] = [];
   let totalH = renderedH[0];
 
   for (let i = 1; i < imgs.length; i++) {
-    const { overlap: scaledOvl, score } = findOverlap(detect[i - 1], detect[i]);
-    // Translate the overlap from detect-resolution into rendered (W-wide) rows.
-    const overlapPx = Math.round(scaledOvl * (renderedH[i - 1] / detect[i - 1].h));
-    const startY = offsets[i - 1] + renderedH[i - 1] - overlapPx;
+    const prev = kept[kept.length - 1];
+    const { overlap: scaledOvl, score } = findOverlap(detect[prev], detect[i]);
+    if (score < MIN_SEAM_SCORE) {
+      // Bad match — skip this frame entirely.
+      continue;
+    }
+    const overlapPx = Math.round(scaledOvl * (renderedH[prev] / detect[prev].h));
+    const startY = offsets[offsets.length - 1] + renderedH[prev] - overlapPx;
+    kept.push(i);
     offsets.push(startY);
-    totalH = startY + renderedH[i];
     seamScores.push(score);
+    totalH = startY + renderedH[i];
   }
 
   // Bound the final canvas size so we don't crash a phone with 30 megapixels.
@@ -182,10 +204,11 @@ export async function stitchVertically(srcs: string[]): Promise<StitchResult> {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvasW, canvasH);
 
-  for (let i = 0; i < imgs.length; i++) {
+  for (let i = 0; i < kept.length; i++) {
+    const idx = kept[i];
     const y = Math.round(offsets[i] * scale);
-    const h = Math.round(renderedH[i] * scale);
-    ctx.drawImage(imgs[i], 0, y, canvasW, h);
+    const h = Math.round(renderedH[idx] * scale);
+    ctx.drawImage(imgs[idx], 0, y, canvasW, h);
   }
 
   return {
