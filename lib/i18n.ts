@@ -204,8 +204,8 @@ const sv: Strings = {
   chooseLibrary: "Välj från galleri",
   skipManual: "Hoppa över – skriv in själv",
 
-  itemsTitle: "Rader",
-  itemsHint: "Kontrollera och rätta avläsningen. Priser inkl. moms.",
+  itemsTitle: "Stämmer det här?",
+  itemsHint: "Vi har försökt läsa av varje rad från kvittot — gå igenom listan, rätta det som blivit fel, och markera vilka rader som ska delas. Priser inkl. moms.",
   readBy: (model) => `Avläst av ${model}`,
   ocrFallback: "Avläst med en reservläsare – kontrollera beloppen extra noga.",
   sortBy: "Sortera",
@@ -353,8 +353,8 @@ const en: Strings = {
   chooseLibrary: "Choose from library",
   skipManual: "Skip – enter manually",
 
-  itemsTitle: "Items",
-  itemsHint: "Check and fix the scan. Prices include VAT.",
+  itemsTitle: "Does this look right?",
+  itemsHint: "We've tried to read every line from the receipt — go through the list, fix anything that came out wrong, and mark which rows are shared. Prices include VAT.",
   readBy: (model) => `Read by ${model}`,
   ocrFallback: "Read by a fallback model — double-check the amounts.",
   sortBy: "Sort",

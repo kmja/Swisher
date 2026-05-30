@@ -1486,23 +1486,55 @@ export default function Page() {
       {step === "items" && (
         <section key="items" className="mt-6 flex flex-1 flex-col gap-6">
           <div>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
-                <p className="text-sm text-gray-600">{t.itemsHint}</p>
+            {/* Place + date sit at the very top of the validation step so
+                the host instantly knows which receipt they're looking at,
+                and can correct the OCR-guessed name/date inline. The
+                "show receipt" button hangs in the corner for quick
+                cross-checking against the photo. */}
+            <div className="mb-3 flex items-start gap-2">
+              <div className="flex min-w-0 flex-1 gap-2">
+                <input
+                  value={mealLabel}
+                  onChange={(e) => setMealLabel(e.target.value)}
+                  placeholder={t.placePlaceholder}
+                  aria-label={t.placePlaceholder}
+                  className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 text-base font-semibold text-ink shadow-sm ring-1 ring-black/5 outline-none"
+                />
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value || today)}
+                  aria-label={t.messageAria}
+                  className="rounded-xl bg-white px-2.5 py-2 text-sm text-gray-600 shadow-sm ring-1 ring-black/5 outline-none"
+                />
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                {images.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setReceiptOpen(true)}
-                    aria-label={t.showReceipt}
-                    className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
-                  >
-                    🧾 {t.showReceipt}
-                  </button>
-                )}
-              </div>
+              {images.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setReceiptOpen(true)}
+                  aria-label={t.showReceipt}
+                  className="shrink-0 rounded-xl bg-white px-3 py-2 text-base shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+                  title={t.showReceipt}
+                >
+                  🧾
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {t.mealPresets.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setMealLabel(preset)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${mealLabel.trim() === preset ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200 active:bg-gray-100"}`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4">
+              <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
+              <p className="mt-1 text-sm leading-snug text-gray-600">{t.itemsHint}</p>
             </div>
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
@@ -1736,35 +1768,7 @@ export default function Page() {
           </div>
 
           <div>
-            <div className="flex flex-wrap gap-1.5">
-              {t.mealPresets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setMealLabel(preset)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${mealLabel.trim() === preset ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200 active:bg-gray-100"}`}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <input
-                value={mealLabel}
-                onChange={(e) => setMealLabel(e.target.value)}
-                placeholder={t.placePlaceholder}
-                aria-label={t.placePlaceholder}
-                className="min-w-0 flex-1 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
-              />
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value || today)}
-                aria-label={t.messageAria}
-                className="rounded-xl bg-white px-3 py-3 text-sm shadow-sm ring-1 ring-black/5 outline-none"
-              />
-            </div>
-            <p className="mt-1 px-1 text-xs text-gray-400">”{message}”</p>
+            <p className="px-1 text-xs text-gray-400">”{message}”</p>
             {roomError && <p className="mt-2 text-sm text-red-600">{roomError}</p>}
           </div>
 
