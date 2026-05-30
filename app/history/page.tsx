@@ -192,13 +192,15 @@ export default function HistoryPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-8">
-      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-[#f5f5f7]/90 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <a
             href="/"
-            className="inline-flex justify-self-start items-center gap-1.5 rounded-full bg-swish px-4 py-2 text-sm font-semibold text-white shadow-sm active:bg-swish-dark"
+            aria-label={t.newReceipt}
+            title={t.newReceipt}
+            className="flex h-11 w-11 items-center justify-center justify-self-start rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
           >
-            + {t.newReceipt}
+            +
           </a>
           <KvittLogo className="justify-self-center" />
           <div className="justify-self-end">

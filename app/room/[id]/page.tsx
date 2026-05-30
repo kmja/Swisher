@@ -1141,20 +1141,24 @@ export default function RoomPage() {
           KvittLogo drops out on the room page — three buttons in 28 rem
           want every pixel — but it still appears on the home + history
           pages. */}
-      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-[#f5f5f7]/90 px-4 py-3 backdrop-blur">
-        <nav className="flex items-center justify-between gap-2 text-sm font-semibold">
+      <header className="sticky top-0 z-30 -mx-4 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur">
+        <nav className="flex items-center justify-between gap-2">
           <a
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-full bg-swish px-4 py-2 text-white shadow-sm active:bg-swish-dark"
+            aria-label={t.newReceipt}
+            title={t.newReceipt}
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
           >
-            + {t.newReceipt}
+            +
           </a>
           <div className="flex items-center gap-2">
             <a
               href="/history"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+              aria-label={t.history}
+              title={t.history}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl text-swish-dark active:bg-gray-200"
             >
-              🕘 {t.history}
+              🕘
             </a>
             <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
           </div>
