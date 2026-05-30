@@ -1253,6 +1253,70 @@ export default function RoomPage() {
         </div>
       </section>
 
+      {/* Host's primary view: a focused collection summary + diner list at
+          the top of the page so the host lands on "what's still owed and
+          who hasn't paid" rather than the items grid. Replaces the old
+          sticky bottom footer. */}
+      {personId && isPayee && (() => {
+        const empty = otherShares.length === 0;
+        const allPaid = !empty && unpaidOthersOre === 0 && unassignedOre === 0;
+        const subtitle = empty
+          ? t.waitingForGuests
+          : allPaid
+          ? t.nobodyOwes
+          : t.paidProgress(paidCount, otherShares.length);
+        return (
+          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t.remainingToCollect}</span>
+              <span className="text-[11px] text-gray-500">{subtitle}</span>
+            </div>
+            <div className="mt-1">
+              <Money ore={toCollectOre} className="block text-3xl font-bold text-swish-dark" />
+            </div>
+            {unassignedOre > 0 && (
+              <p className="mt-2 text-xs text-amber-700"><Money ore={unassignedOre} /> {lang === "sv" ? "ofördelat" : "unassigned"}</p>
+            )}
+            {!empty && (
+              <ul className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                {otherShares.map((s) => {
+                  const isPaid = paidSet.has(s.dinerId);
+                  const isDone = (state.doneBy ?? []).includes(s.dinerId);
+                  return (
+                    <li key={s.dinerId} className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
+                        {initials(nameById.get(s.dinerId) ?? "?")}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium">
+                          {nameById.get(s.dinerId)}
+                          {isDone && <span className="ml-1.5 text-[10px] text-emerald-600">{t.doneOn}</span>}
+                        </span>
+                        <Money
+                          ore={s.totalOre}
+                          className={`text-[11px] tabular-nums ${isPaid ? "text-gray-400 line-through" : "text-gray-500"}`}
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => togglePaid(s.dinerId)}
+                        className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${
+                          isPaid
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            : "bg-white text-gray-600 ring-gray-300 active:bg-gray-100"
+                        }`}
+                      >
+                        {isPaid ? `✓ ${t.paid}` : t.markPaid}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })()}
+
       {/* Join, or the claiming UI */}
       {!personId ? (
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -1450,30 +1514,10 @@ export default function RoomPage() {
             </div>
           )}
 
-          {/* My share + pay */}
-          {myShare && (
-            isPayee ? (
-              <section className="rounded-2xl border border-dashed border-gray-300 bg-white/60 p-4">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold">{t.remainingToCollect}</span>
-                  {toCollectOre > 0 ? (
-                    <Money ore={toCollectOre} className="text-xl font-bold text-swish-dark" />
-                  ) : otherShares.length > 0 ? (
-                    <span className="text-sm font-semibold text-emerald-600">{t.allCollected}</span>
-                  ) : (
-                    <Money ore={0} className="text-xl font-bold text-swish-dark" />
-                  )}
-                </div>
-                {otherShares.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">{t.paidProgress(paidCount, otherShares.length)}</p>
-                )}
-                {myShare.totalOre > 0 && (
-                  <p className="mt-1 text-xs text-gray-400">
-                    {t.ownShare} <Money ore={myShare.totalOre} className="font-medium" /> · {t.dontPaySelf}
-                  </p>
-                )}
-              </section>
-            ) : myShare.totalOre > 0 ? (
+          {/* Guest's own share + pay QR. Hosts get the collection summary
+              + diner list at the top of the page instead. */}
+          {!isPayee && myShare && (
+            myShare.totalOre > 0 ? (
               <div id="pay-qr">
                 <QrCard
                   name={t.yourTotal}
@@ -1493,7 +1537,9 @@ export default function RoomPage() {
             )
           )}
 
-          {/* Everyone */}
+          {/* Everyone — guest view only. Hosts have a dedicated diner list
+              at the top of the page. */}
+          {!isPayee && (
           <section>
             <h2 className="mb-2 text-base font-bold text-gray-700">{t.peopleTitle}</h2>
             <div className="space-y-2">
@@ -1541,92 +1587,9 @@ export default function RoomPage() {
               <p className="mt-2 text-xs text-amber-600"><Money ore={unassignedOre} /> {lang === "sv" ? "ofördelat" : "unassigned"}</p>
             )}
           </section>
+          )}
         </>
       )}
-{personId && isPayee && (() => {
-        // Host sticky footer: focus on collection state, not on the host's own
-        // share. Tapping the bar opens a per-diner list with mark-as-paid.
-        const empty = otherShares.length === 0;
-        const allPaid = !empty && unpaidOthersOre === 0 && unassignedOre === 0;
-        const subtitle = empty
-          ? t.waitingForGuests
-          : allPaid
-          ? t.nobodyOwes
-          : t.paidProgress(paidCount, otherShares.length);
-        return (
-          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
-            {cartOpen && (
-              <div className="max-h-[42vh] overflow-y-auto border-b border-white/10 px-4 py-3 text-sm">
-                {empty ? (
-                  <p className="py-2 text-center text-white/60">{t.waitingForGuests}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {otherShares.map((s) => {
-                      const isPaid = paidSet.has(s.dinerId);
-                      const isDone = (state.doneBy ?? []).includes(s.dinerId);
-                      return (
-                        <li key={s.dinerId} className="flex items-center gap-2">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/90">
-                            {initials(nameById.get(s.dinerId) ?? "?")}
-                          </span>
-                          <span className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate text-sm">
-                              {nameById.get(s.dinerId)}
-                              {isDone && <span className="ml-1.5 text-[10px] text-emerald-300">{t.doneOn}</span>}
-                            </span>
-                            <Money
-                              ore={s.totalOre}
-                              className={`text-[11px] tabular-nums ${isPaid ? "text-white/40 line-through" : "text-white/70"}`}
-                            />
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => togglePaid(s.dinerId)}
-                            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold ${
-                              isPaid
-                                ? "bg-emerald-500/30 text-emerald-200"
-                                : "bg-white/15 text-white/90 active:bg-white/25"
-                            }`}
-                          >
-                            {isPaid ? `✓ ${t.paid}` : t.markPaid}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setCartOpen((v) => !v)}
-              disabled={empty && toCollectOre === 0}
-              className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left active:bg-white/5 disabled:active:bg-transparent"
-            >
-              <span className="min-w-0 flex-1 truncate text-xs text-white/70">{subtitle}</span>
-              <span className="flex shrink-0 items-center gap-2">
-                <span className="flex flex-col items-end leading-tight">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
-                    {t.remainingToCollect}
-                  </span>
-                  <Money
-                    ore={toCollectOre}
-                    className="text-lg font-bold"
-                    nativeClassName="ml-1 text-[11px] font-normal text-white/60"
-                  />
-                </span>
-                {!empty && (
-                  <span
-                    className={`text-2xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}
-                  >
-                    ▾
-                  </span>
-                )}
-              </span>
-            </button>
-          </div>
-        );
-      })()}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
         // What I've claimed, aggregated by description so "3 × Bryggkaffe"

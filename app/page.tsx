@@ -469,17 +469,20 @@ export default function Page() {
   }, [ocrLoading]);
 
   // Once OCR finishes (scanReady), advance to the items step only when the
-  // host has a name AND a valid phone — they fill those right on the scan
-  // overlay, so a host still mid-typing isn't kicked off the screen.
+  // host has filled in name, valid phone, AND a group size of at least 2 —
+  // the divisor for shared items needs to be real before we hand off, and
+  // pre-filling the form during the scan means the host typing isn't kicked
+  // off the screen mid-keystroke.
   useEffect(() => {
     if (!scanReady) return;
     const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
     const hasPhone = isValidPhone(payerPhone);
-    if (hasName && hasPhone) {
+    const hasGroup = groupSize >= 2;
+    if (hasName && hasPhone && hasGroup) {
       setScanReady(false);
       setStep("items");
     }
-  }, [scanReady, diners, payerPhone]);
+  }, [scanReady, diners, payerPhone, groupSize]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -659,9 +662,10 @@ export default function Page() {
         description: it.description,
         priceInput: formatOre(Math.round(it.price * 100)),
         sharers: [],
-        // Trust the model's call, but auto-mark near-certain shared lines it missed
-        // (a 75cl bottle, a sharing platter, "att dela", …).
-        shared: it.shared === true || sharedSuggestion(it.description) === "auto",
+        // Nothing is auto-marked as shared anymore — the host explicitly
+        // toggles each row. The items step still surfaces a "maybe shared"
+        // hint via sharedSuggestion for high-probability candidates.
+        shared: false,
         category: it.category ?? "",
         emoji: it.emoji,
         imgIndex,
@@ -1213,7 +1217,7 @@ export default function Page() {
                 host's name + valid phone (scanReady), so a host still
                 mid-typing isn't kicked off the screen. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && (
-              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 top-1/2 z-20 space-y-2.5 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/10 backdrop-blur">
+              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 top-1/2 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
@@ -1222,14 +1226,14 @@ export default function Page() {
                     <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
                   )}
                 </div>
-                <div className="-mt-0.5">
-                  <p className="text-[11px] text-gray-500">{t.inTheMeantime}</p>
-                  <p className="text-sm font-bold text-ink">{t.payerTitle}</p>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-gray-400">{t.inTheMeantime}</p>
+                  <p className="mt-0.5 text-base font-bold text-ink">{t.payerTitle}</p>
                 </div>
-                <div className="flex items-stretch gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-gray-400">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <div>
+                  <div className="relative">
+                    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="8" r="4" />
                         <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
                       </svg>
@@ -1238,12 +1242,15 @@ export default function Page() {
                       value={diners[0]?.name ?? ""}
                       onChange={(e) => updateDiner(diners[0].id, e.target.value)}
                       placeholder={t.yourName}
-                      className="w-full rounded-xl bg-gray-50 py-2.5 pl-9 pr-3 outline-none"
+                      className="w-full rounded-xl bg-gray-50 py-3 pl-11 pr-3 text-base outline-none"
                     />
                   </div>
-                  <div className="relative min-w-0 flex-1">
-                    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-gray-400">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyName}</p>
+                </div>
+                <div>
+                  <div className="relative">
+                    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <rect x="6" y="2" width="12" height="20" rx="2.5" />
                         <path d="M12 18h.01" />
                       </svg>
@@ -1256,40 +1263,48 @@ export default function Page() {
                       }}
                       inputMode="tel"
                       placeholder={t.swishNumber}
-                      className="w-full rounded-xl bg-gray-50 py-2.5 pl-9 pr-8 outline-none"
+                      className="w-full rounded-xl bg-gray-50 py-3 pl-11 pr-9 text-base outline-none"
                     />
                     {isValidPhone(payerPhone) && (
                       <span
                         aria-hidden
-                        className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-base font-bold text-emerald-600"
+                        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-base font-bold text-emerald-600"
                       >
                         ✓
                       </span>
                     )}
                   </div>
+                  <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyNumber}</p>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-600">{t.groupSizeLabel}</span>
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      type="button"
-                      aria-label="−"
-                      onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                    >
-                      −
-                    </button>
-                    <span className="w-5 text-center text-base font-semibold tabular-nums">{groupSize || "–"}</span>
-                    <button
-                      type="button"
-                      aria-label="+"
-                      onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-swish text-xl font-bold leading-none text-white active:bg-swish-dark"
-                    >
-                      +
-                    </button>
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">{t.groupSizeLabel}</span>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        aria-label="−"
+                        onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-swish text-2xl font-bold leading-none text-white active:bg-swish-dark"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
+                  <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyGroup}</p>
                 </div>
+                <p className="-mb-0.5 flex items-center gap-1.5 border-t border-gray-100 pt-2.5 text-[11px] text-gray-400">
+                  <span aria-hidden>🔒</span>
+                  {t.stayLocal}
+                </p>
               </div>
             )}
           </div>

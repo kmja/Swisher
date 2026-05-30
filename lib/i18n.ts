@@ -27,6 +27,12 @@ export interface Strings {
   itemsFound: (n: number) => string;
   /** Soft intro for the host setup card overlaid on the live scan. */
   inTheMeantime: string;
+  /** Tiny captions under each setup-card input explaining why we ask. */
+  whyName: string;
+  whyNumber: string;
+  whyGroup: string;
+  /** Reassurance footer for the setup card. */
+  stayLocal: string;
   readReceipt: string;
   chooseOther: string;
   photoOrChoose: string;
@@ -183,6 +189,10 @@ const sv: Strings = {
   scanPhrases: ["Läser av rader…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
   itemsFound: (n) => `${n} rader tillagda`,
   inTheMeantime: "Under tiden…",
+  whyName: "Visas för dina gäster så de vet vem de Swishar till.",
+  whyNumber: "Används bara här i mobilen för att skapa en Swish-QR — vi sparar inget på en server.",
+  whyGroup: "Hjälper appen dela rätt om något står på notan att dela på.",
+  stayLocal: "Allt stannar på din telefon.",
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
   photoOrChoose: "Fota eller välj bild",
@@ -257,7 +267,7 @@ const sv: Strings = {
   createRoom: "Bjud in att dela",
   creatingRoom: "Bjuder in…",
 
-  groupSizeLabel: "Antal som delar (valfritt)",
+  groupSizeLabel: "Antal som delar",
   sharedGroupPrompt: "Det ser ut som ni har delade rätter – hur många är ni?",
   sharedToggle: "Delas av alla",
   shareThis: "Dela",
@@ -327,6 +337,10 @@ const en: Strings = {
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],
   itemsFound: (n) => `${n} items added`,
   inTheMeantime: "In the meantime…",
+  whyName: "Shown to your guests so they know who they're paying.",
+  whyNumber: "Used right here on your phone to build the Swish QR — nothing is sent to a server.",
+  whyGroup: "Lets the app split shared items evenly across the group.",
+  stayLocal: "Everything stays on your phone.",
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",
   photoOrChoose: "Take or choose a photo",
@@ -401,7 +415,7 @@ const en: Strings = {
   createRoom: "Invite people to split",
   creatingRoom: "Inviting…",
 
-  groupSizeLabel: "People sharing (optional)",
+  groupSizeLabel: "People sharing",
   sharedGroupPrompt: "Looks like you have shared items — how many are you?",
   sharedToggle: "Shared",
   shareThis: "Share",
