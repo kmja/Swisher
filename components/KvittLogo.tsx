@@ -6,7 +6,7 @@ export default function KvittLogo({ className = "" }: { className?: string }) {
     <a
       href="/"
       aria-label="Kvitt"
-      className={`inline-flex items-center justify-center text-base font-extrabold tracking-tight text-ink active:opacity-80 ${className}`}
+      className={`inline-flex items-center justify-center text-2xl font-extrabold tracking-tight text-ink active:opacity-80 ${className}`}
     >
       Kvitt<span className="ml-px text-swish">.</span>
     </a>

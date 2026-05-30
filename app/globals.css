@@ -11,7 +11,7 @@ html {
 }
 
 body {
-  background: #ebebef;
+  background: #f0f0f4;
   color: var(--color-ink);
   overscroll-behavior-y: none;
 }
