@@ -272,9 +272,10 @@ export default function Page() {
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
-  // Stagger the items list's pop-in for a moment after we hand off to the
-  // items step — feels like the rows are being generated rather than dumped.
-  const [itemsJustEntered, setItemsJustEntered] = useState(false);
+  // Each row pops in exactly once — the first time we render it. Tracking by
+  // id (rather than a time-window flag) means later state changes can't
+  // restart the animation.
+  const animatedIdsRef = useRef<Set<string>>(new Set());
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -457,15 +458,6 @@ export default function Page() {
     const id = setTimeout(() => setScanCardVisible(true), 1000);
     return () => clearTimeout(id);
   }, [ocrLoading]);
-
-  // Pop-in flag is true for a couple of seconds after we enter the items
-  // step. Edits afterwards don't re-animate the list.
-  useEffect(() => {
-    if (step !== "items") return;
-    setItemsJustEntered(true);
-    const id = setTimeout(() => setItemsJustEntered(false), 1500);
-    return () => clearTimeout(id);
-  }, [step]);
 
   // Once OCR finishes (scanReady), advance to the items step only when the
   // host has a name AND a valid phone — they fill those right on the scan
@@ -1410,11 +1402,13 @@ export default function Page() {
                 const lowConfidence = !rep.isTip && !rep.shared && (
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
+                const isNew = !animatedIdsRef.current.has(rep.id);
+                if (isNew) animatedIdsRef.current.add(rep.id);
                 return (
                 <div
                   key={rep.id}
-                  className={`flex items-stretch gap-2 ${itemsJustEntered ? "item-pop-in" : ""}`}
-                  style={itemsJustEntered ? { animationDelay: `${Math.min(gIdx, 12) * 55}ms` } : undefined}
+                  className={`flex items-stretch gap-2 ${isNew ? "item-pop-in" : ""}`}
+                  style={isNew ? { animationDelay: `${Math.min(gIdx, 12) * 55}ms` } : undefined}
                 >
                   <div
                     className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
