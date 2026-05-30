@@ -928,7 +928,7 @@ export default function RoomPage() {
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-2 font-medium">
-            <span aria-hidden className="shrink-0 text-2xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
+            <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
               {editingDesc ? (
                 <input
                   ref={quickEditInputRef}
@@ -1068,7 +1068,7 @@ export default function RoomPage() {
               ✓
             </span>
             <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
-              <span aria-hidden className="shrink-0 text-3xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+              <span aria-hidden className="inline-flex w-9 shrink-0 items-center justify-center text-3xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
               <span className="min-w-0 truncate">
                 {rep.description}
                 {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
