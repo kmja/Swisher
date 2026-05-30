@@ -844,9 +844,15 @@ export default function RoomPage() {
           }}
           className={`relative flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
             mine
-              ? "bg-swish/10 ring-swish"
+              // Opaque colours so the red swipe-reveal layer behind the row
+              // doesn't bleed through. `bg-swish/10` over the page bg used to
+              // resolve to ~#f4e6ee; freeze that as the literal mine colour.
+              // sharesFull keeps a soft gray (no opacity-60, which would let
+              // red show through) with dimmed text for the "no more shares"
+              // signal.
+              ? "bg-[#f4e6ee] ring-swish"
               : sharesFull
-              ? "bg-gray-50 opacity-60 ring-black/5"
+              ? "bg-gray-100 text-gray-400 ring-black/5"
               : "bg-white ring-black/5"
           } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
         >
