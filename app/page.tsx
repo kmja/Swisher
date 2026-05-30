@@ -968,7 +968,8 @@ export default function Page() {
   // number of diners — never below 2 (sharing one way makes no sense).
   const itemDivisorFor = (it: UiItem) =>
     Math.max(2, it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize > 0 ? groupSize : namedDiners.length);
-  const setShareCount = (id: string, n: number) => updateItem(id, { shareCount: Math.max(2, Math.min(50, n)) });
+  const setShareCount = (id: string, n: number) =>
+    updateItem(id, { shareCount: Math.max(2, Math.min(Math.max(2, groupSize || 50), n)) });
 
   // --- live room -------------------------------------------------------------
   const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && payDestOk;
@@ -1655,12 +1656,13 @@ export default function Page() {
                             >
                               −
                             </button>
-                            <span className="w-8 text-center text-base font-semibold tabular-nums text-gray-700">{d}</span>
+                            <span className="min-w-[3rem] text-center text-base font-semibold tabular-nums text-gray-700">{d}/{groupSize}</span>
                             <button
                               type="button"
                               aria-label="+"
-                              onClick={() => updateGroup(rep, { shareCount: Math.min(50, d + 1) })}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                              disabled={d >= groupSize}
+                              onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                             >
                               +
                             </button>
@@ -1893,12 +1895,13 @@ export default function Page() {
                       >
                         −
                       </button>
-                      <span className="w-9 text-center text-lg font-semibold tabular-nums text-gray-700">{d}</span>
+                      <span className="min-w-[3.5rem] text-center text-lg font-semibold tabular-nums text-gray-700">{d}/{groupSize}</span>
                       <button
                         type="button"
                         aria-label="+"
+                        disabled={d >= groupSize}
                         onClick={() => setShareCount(it.id, d + 1)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                       >
                         +
                       </button>
