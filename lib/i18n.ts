@@ -18,6 +18,9 @@ export interface Strings {
   readReceiptN: (n: number) => string;
   /** Tertiary: throw away pending shots and start over. */
   discardShots: string;
+  /** Aria label for the viewfinder flashlight toggle. */
+  torchOn: string;
+  torchOff: string;
   reading: string;
   scanning: string;
   scanPhrases: string[];
@@ -173,6 +176,8 @@ const sv: Strings = {
   takeAnotherShot: "+ Ny bild",
   readReceiptN: (n) => `Läs av (${n})`,
   discardShots: "Börja om",
+  torchOn: "Slå på ficklampan",
+  torchOff: "Stäng av ficklampan",
   reading: "Läser av…",
   scanning: "Skannar kvittot…",
   scanPhrases: ["Läser av rader…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
@@ -315,6 +320,8 @@ const en: Strings = {
   takeAnotherShot: "+ New shot",
   readReceiptN: (n) => `Read receipt (${n})`,
   discardShots: "Start over",
+  torchOn: "Turn flashlight on",
+  torchOff: "Turn flashlight off",
   reading: "Reading…",
   scanning: "Scanning receipt…",
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],

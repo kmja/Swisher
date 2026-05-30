@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
@@ -272,10 +272,13 @@ export default function Page() {
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
-  // Each row pops in exactly once — the first time we render it. Tracking by
-  // id (rather than a time-window flag) means later state changes can't
-  // restart the animation.
+  // Each row pops in exactly once — the first time we ever render its id.
+  // We drive the animation imperatively via Web Animations API in a
+  // useLayoutEffect so React re-renders (or iOS Safari layout recalcs from
+  // scroll / address-bar resize) can't restart the keyframe by toggling a
+  // CSS class on/off.
   const animatedIdsRef = useRef<Set<string>>(new Set());
+  const itemRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -343,6 +346,19 @@ export default function Page() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  // Some phones expose a `torch` constraint on the rear camera; we light it
+  // up so the receipt stays legible in dim restaurants.
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  // Default is single-shot: take a photo, see a preview, commit. Only when
+  // the host opts into another shot do we restart the camera with the
+  // alignment overlay on top.
+  const [wantMoreShots, setWantMoreShots] = useState(false);
+  // Multi-shot capture: each new shot stacks onto pendingShots until the
+  // host commits to OCR. For long receipts a strip of the previous shot's
+  // bottom is overlaid at the top of the live viewfinder so they can line
+  // up the next shot's top edge with where the previous one left off.
+  const [pendingShots, setPendingShots] = useState<string[]>([]);
   const router = useRouter();
 
   // Switch language; carry over the meal label only if it is still the
@@ -503,8 +519,12 @@ export default function Page() {
   // --- capture ---------------------------------------------------------------
   // Live camera preview on the capture step. Falls back silently (cameraActive
   // stays false) when there's no camera or permission is denied.
+  // We only stream when there's actually a viewfinder on screen: empty
+  // pendingShots (first shot) or wantMoreShots (host opted into multi-shot).
+  const wantsLiveCamera =
+    step === "capture" && !imageUrl && (pendingShots.length === 0 || wantMoreShots);
   useEffect(() => {
-    if (step !== "capture" || imageUrl) return;
+    if (!wantsLiveCamera) return;
     let cancelled = false;
     let stream: MediaStream | null = null;
     (async () => {
@@ -519,6 +539,9 @@ export default function Page() {
           return;
         }
         streamRef.current = stream;
+        const track = stream.getVideoTracks()[0];
+        const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
+        setTorchAvailable(!!caps.torch);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           try {
@@ -537,8 +560,22 @@ export default function Page() {
       stream?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       setCameraActive(false);
+      setTorchAvailable(false);
+      setTorchOn(false);
     };
-  }, [step, imageUrl]);
+  }, [wantsLiveCamera]);
+
+  async function toggleTorch() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next } as unknown as MediaTrackConstraintSet] });
+      setTorchOn(next);
+    } catch {
+      setTorchAvailable(false);
+    }
+  }
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -562,6 +599,8 @@ export default function Page() {
     if (pendingShots.length === 0 || ocrLoading) return;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
+    setTorchOn(false);
+    setWantMoreShots(false);
     const shots = pendingShots;
     setPendingShots([]);
     // Cap at 8 to keep the Claude bill bounded even if someone takes lots
@@ -578,15 +617,9 @@ export default function Page() {
   }
   function discardPendingShots() {
     setPendingShots([]);
+    setWantMoreShots(false);
   }
 
-  // Multi-shot capture: the user takes 1–N intentional photos to cover the
-  // receipt, then commits to OCR. Each new shot stacks onto pendingShots
-  // until the user taps "Read receipt". For long receipts: a semi-
-  // transparent strip of the previous shot's bottom is overlaid at the top
-  // of the live viewfinder so the user can line up the next shot's top
-  // edge with where the previous one left off.
-  const [pendingShots, setPendingShots] = useState<string[]>([]);
   const lastShot = pendingShots[pendingShots.length - 1];
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -995,6 +1028,33 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
+  // Imperatively animate each row exactly once, on the layout pass right
+  // after it first appears. Web Animations completes cleanly without
+  // leaving a CSS class around for browser layout recalcs to restart.
+  useLayoutEffect(() => {
+    if (step !== "items") return;
+    itemGroups.forEach((g, idx) => {
+      const id = g[0].id;
+      if (animatedIdsRef.current.has(id)) return;
+      const el = itemRowRefs.current.get(id);
+      if (!el) return;
+      animatedIdsRef.current.add(id);
+      if (typeof el.animate !== "function") return;
+      el.animate(
+        [
+          { opacity: 0, transform: "translateY(10px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        {
+          duration: 350,
+          delay: Math.min(idx, 12) * 55,
+          easing: "cubic-bezier(0.32, 0.72, 0.36, 1)",
+          fill: "backwards",
+        },
+      );
+    });
+  }, [itemGroups, step]);
+
   const payer = namedDiners[0];
   const normalizedPayer = normalizePhone(payerPhone) ?? "";
   const assignedTotalOre = shares.reduce((acc, s) => acc + s.totalOre, 0);
@@ -1105,13 +1165,25 @@ export default function Page() {
             )}
             {imageUrl ? null : (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`h-full w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
-                />
+                {/* Single-shot review: after the very first photo, show the
+                    captured frame full-bleed so the host can sanity-check
+                    before committing — no live camera, no overlay. */}
+                {pendingShots.length > 0 && !wantMoreShots ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={pendingShots[pendingShots.length - 1]}
+                    alt=""
+                    className="h-full w-full bg-black object-contain"
+                  />
+                ) : (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`h-full w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
+                  />
+                )}
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
                     <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
@@ -1119,7 +1191,7 @@ export default function Page() {
                     <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
                     <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
                     <span className="absolute inset-x-0 bottom-1 text-center text-xs font-medium text-white/90 drop-shadow">
-                      {lastShot ? t.lineUpOverlay : t.scanGuide}
+                      {lastShot && wantMoreShots ? t.lineUpOverlay : t.scanGuide}
                     </span>
                     {pendingShots.length > 0 && (
                       <span className="absolute left-1/2 top-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
@@ -1128,12 +1200,25 @@ export default function Page() {
                     )}
                   </div>
                 )}
+                {/* Flashlight: only surfaced when the browser exposes the
+                    torch constraint on this track. */}
+                {cameraActive && torchAvailable && !ocrLoading && (
+                  <button
+                    type="button"
+                    onClick={toggleTorch}
+                    aria-label={torchOn ? t.torchOff : t.torchOn}
+                    aria-pressed={torchOn}
+                    className={`absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-lg shadow-lg ring-1 ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/55 text-white ring-white/30 backdrop-blur"}`}
+                  >
+                    {torchOn ? "🔦" : "💡"}
+                  </button>
+                )}
                 {/* Overlay: bottom 45 % of the last captured shot, anchored
                     to the TOP of the viewfinder so the user can line up
                     where the previous shot ended with what they're about
-                    to capture. Object-position: bottom so the strip shows
-                    the LAST rows of the previous shot. */}
-                {cameraActive && lastShot && (
+                    to capture. Only shown once the host has opted into
+                    another shot. */}
+                {cameraActive && lastShot && wantMoreShots && (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={lastShot}
@@ -1142,7 +1227,7 @@ export default function Page() {
                     className="pointer-events-none absolute inset-x-0 top-0 h-[45%] w-full object-cover object-bottom opacity-50 mix-blend-multiply"
                   />
                 )}
-                {!cameraActive && (
+                {!cameraActive && pendingShots.length === 0 && (
                   <button
                     type="button"
                     onClick={() => cameraRef.current?.click()}
@@ -1288,7 +1373,25 @@ export default function Page() {
                         {t.scanCta}
                       </button>
                     )}
-                    {cameraActive && pendingShots.length > 0 && (
+                    {pendingShots.length > 0 && !wantMoreShots && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={finishCapture}
+                          className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                        >
+                          {t.readReceipt}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWantMoreShots(true)}
+                          className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                        >
+                          {t.takeAnotherShot}
+                        </button>
+                      </>
+                    )}
+                    {cameraActive && pendingShots.length > 0 && wantMoreShots && (
                       <div className="grid grid-cols-[1fr_1.4fr] gap-2">
                         <button
                           type="button"
@@ -1315,13 +1418,15 @@ export default function Page() {
                         {t.discardShots}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => fileRef.current?.click()}
-                      className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
-                    >
-                      {t.chooseLibrary}
-                    </button>
+                    {pendingShots.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                      >
+                        {t.chooseLibrary}
+                      </button>
+                    )}
                   </>
                 )}
               </>
@@ -1402,13 +1507,14 @@ export default function Page() {
                 const lowConfidence = !rep.isTip && !rep.shared && (
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
-                const isNew = !animatedIdsRef.current.has(rep.id);
-                if (isNew) animatedIdsRef.current.add(rep.id);
                 return (
                 <div
                   key={rep.id}
-                  className={`flex items-stretch gap-2 ${isNew ? "item-pop-in" : ""}`}
-                  style={isNew ? { animationDelay: `${Math.min(gIdx, 12) * 55}ms` } : undefined}
+                  ref={(el) => {
+                    if (el) itemRowRefs.current.set(rep.id, el);
+                    else itemRowRefs.current.delete(rep.id);
+                  }}
+                  className="flex items-stretch gap-2"
                 >
                   <div
                     className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}

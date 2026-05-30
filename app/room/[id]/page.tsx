@@ -1151,10 +1151,10 @@ export default function RoomPage() {
                 payeeName/payeeNumber, so this is the single source of truth
                 and any edit needs to propagate via the editPayee action. */}
             {payeeEditing && isPayee ? (
-              <div className="mt-1 flex items-center gap-1.5">
-                <div className="relative min-w-0 flex-1">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-gray-400">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="relative min-w-[10rem] flex-1">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="8" r="4" />
                       <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
                     </svg>
@@ -1167,12 +1167,12 @@ export default function RoomPage() {
                       if (e.key === "Enter") e.currentTarget.blur();
                       else if (e.key === "Escape") setPayeeEditing(false);
                     }}
-                    className="w-full rounded-lg bg-gray-50 py-1 pl-7 pr-2 text-sm outline-none ring-1 ring-swish/40"
+                    className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
                   />
                 </div>
-                <div className="relative min-w-0 flex-1">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-gray-400">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <div className="relative min-w-[10rem] flex-1">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <rect x="6" y="2" width="12" height="20" rx="2.5" />
                       <path d="M12 18h.01" />
                     </svg>
@@ -1186,14 +1186,14 @@ export default function RoomPage() {
                       if (e.key === "Enter") e.currentTarget.blur();
                       else if (e.key === "Escape") setPayeeEditing(false);
                     }}
-                    className="w-full rounded-lg bg-gray-50 py-1 pl-7 pr-2 text-sm outline-none ring-1 ring-swish/40"
+                    className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={savePayeeEdit}
                   aria-label={t.save}
-                  className="shrink-0 rounded-lg bg-swish px-2 py-1 text-sm font-semibold text-white active:bg-swish-dark"
+                  className="shrink-0 rounded-xl bg-swish px-3.5 py-2.5 text-base font-semibold text-white active:bg-swish-dark"
                 >
                   ✓
                 </button>
