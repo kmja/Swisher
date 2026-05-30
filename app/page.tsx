@@ -47,6 +47,44 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
   return [...arr].sort((a, b) => rank(a) - rank(b));
 }
 
+/** Visual group-size indicator: a casual cluster of person silhouettes
+ *  that bunches up tighter as the count grows. Slight rotation + vertical
+ *  jitter (deterministic per index) so the row reads as a real group, not
+ *  a uniform fence. Capped at 10 visible chips; anything beyond shows
+ *  "+N" so the cluster width stays sane. */
+function GroupVisual({ count }: { count: number }) {
+  const visible = Math.max(0, Math.min(count, 10));
+  const overflow = Math.max(0, count - visible);
+  // Closer overlap once the cluster crosses 5 people so it never blows out
+  // past the stepper.
+  const overlap = visible <= 4 ? "-space-x-2" : visible <= 7 ? "-space-x-3" : "-space-x-3.5";
+  return (
+    <div aria-hidden className="flex items-center">
+      <div className={`flex items-center ${overlap}`}>
+        {Array.from({ length: visible }).map((_, i) => {
+          const rotate = (i % 2 === 0 ? -1 : 1) * (3 + (i % 3));
+          const lift = i % 2 === 0 ? -1 : 2;
+          return (
+            <span
+              key={i}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-swish/15 text-swish-dark ring-2 ring-white"
+              style={{ transform: `rotate(${rotate}deg) translateY(${lift}px)`, zIndex: 10 - i }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+              </svg>
+            </span>
+          );
+        })}
+      </div>
+      {overflow > 0 && (
+        <span className="ml-1.5 text-[11px] font-semibold text-gray-500">+{overflow}</span>
+      )}
+    </div>
+  );
+}
+
 /** A sample dinner order for 8 (shared items, drinks, dessert) loaded via
  *  "/?demo=1" — handy for exercising the split flow without a real receipt. */
 const DEMO_ORDER: { d: string; o: number; c: string; s?: boolean }[] = [
@@ -269,6 +307,11 @@ export default function Page() {
   // its setup card up so the host can finish typing their name & phone
   // before the app advances to the items step.
   const [scanReady, setScanReady] = useState(false);
+  // Explicit "Done" tap on the setup card. The handoff to the items step
+  // waits for BOTH this and scanReady, so a host can review the scan card
+  // briefly before being moved on — and so the receipt isn't half-validated
+  // by the time the host is still typing their name.
+  const [hostReady, setHostReady] = useState(false);
   // Defer the setup card's entrance by ~1 s so a fast scan doesn't yank a
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
@@ -330,7 +373,11 @@ export default function Page() {
 
   const [receiptChargedOre, setReceiptChargedOre] = useState(0);
 
-  const [groupSize, setGroupSize] = useState(0);
+  // Default to 4 — a sensible "small dinner" size that fits the most common
+  // host case and saves a tap. The host adjusts via the +/− stepper on the
+  // setup card; the auto-estimate effect only runs when the value is 0 (e.g.
+  // an explicit reset path), so this default keeps it dormant.
+  const [groupSize, setGroupSize] = useState(4);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -468,21 +515,22 @@ export default function Page() {
     return () => clearTimeout(id);
   }, [ocrLoading]);
 
-  // Once OCR finishes (scanReady), advance to the items step only when the
-  // host has filled in name, valid phone, AND a group size of at least 2 —
-  // the divisor for shared items needs to be real before we hand off, and
-  // pre-filling the form during the scan means the host typing isn't kicked
-  // off the screen mid-keystroke.
+  // Once both halves are committed — OCR finished AND the host pressed Done
+  // on the setup card — advance to the items step. We still re-validate the
+  // form on the way out so a Done tap followed by edits to an invalid value
+  // can't sneak through, but the wait-on-explicit-tap is the meaningful
+  // gate now.
   useEffect(() => {
-    if (!scanReady) return;
+    if (!scanReady || !hostReady) return;
     const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
     const hasPhone = isValidPhone(payerPhone);
     const hasGroup = groupSize >= 2;
     if (hasName && hasPhone && hasGroup) {
       setScanReady(false);
+      setHostReady(false);
       setStep("items");
     }
-  }, [scanReady, diners, payerPhone, groupSize]);
+  }, [scanReady, hostReady, diners, payerPhone, groupSize]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -730,9 +778,9 @@ export default function Page() {
       setItems(sortByCategory(mapped));
       setRemovedItems([]);
       setUndoItem(null);
-      // Reset the group size for the new receipt; it's re-seeded (below) once a
-      // shared item or tip is present, whether detected now or toggled later.
-      setGroupSize(0);
+      // Reset to the default of 4 for the new receipt — same baseline as the
+      // initial state.
+      setGroupSize(4);
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
@@ -1279,32 +1327,51 @@ export default function Page() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-ink">{t.groupSizeLabel}</span>
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        type="button"
-                        aria-label="−"
-                        onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
-                      <button
-                        type="button"
-                        aria-label="+"
-                        onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-swish text-2xl font-bold leading-none text-white active:bg-swish-dark"
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center gap-3">
+                      <GroupVisual count={groupSize} />
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          aria-label="−"
+                          onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-lg font-semibold tabular-nums">{groupSize || "–"}</span>
+                        <button
+                          type="button"
+                          aria-label="+"
+                          onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-swish text-2xl font-bold leading-none text-white active:bg-swish-dark"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyGroup}</p>
                 </div>
-                <p className="-mb-0.5 flex items-center gap-1.5 border-t border-gray-100 pt-2.5 text-[11px] text-gray-400">
+                <p className="flex items-center gap-1.5 border-t border-gray-100 pt-2.5 text-[11px] text-gray-400">
                   <span aria-hidden>🔒</span>
                   {t.stayLocal}
                 </p>
+                {(() => {
+                  const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
+                  const hasPhone = isValidPhone(payerPhone);
+                  const hasGroup = groupSize >= 2;
+                  const canCommit = hasName && hasPhone && hasGroup;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setHostReady(true)}
+                      disabled={!canCommit || hostReady}
+                      className="w-full rounded-xl bg-swish px-4 py-3 text-base font-semibold text-white active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
+                    >
+                      {hostReady && ocrLoading ? t.reading : t.setupDone}
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>

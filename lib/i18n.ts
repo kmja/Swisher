@@ -33,6 +33,9 @@ export interface Strings {
   whyGroup: string;
   /** Reassurance footer for the setup card. */
   stayLocal: string;
+  /** CTA on the setup card; only after this tap (and scan completion) is the
+   *  host moved to the items step. */
+  setupDone: string;
   readReceipt: string;
   chooseOther: string;
   photoOrChoose: string;
@@ -193,6 +196,7 @@ const sv: Strings = {
   whyNumber: "Används bara här i mobilen för att skapa en Swish-QR — vi sparar inget på en server.",
   whyGroup: "Hjälper appen dela rätt om något står på notan att dela på.",
   stayLocal: "Allt stannar på din telefon.",
+  setupDone: "Klar",
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
   photoOrChoose: "Fota eller välj bild",
@@ -341,6 +345,7 @@ const en: Strings = {
   whyNumber: "Used right here on your phone to build the Swish QR — nothing is sent to a server.",
   whyGroup: "Lets the app split shared items evenly across the group.",
   stayLocal: "Everything stays on your phone.",
+  setupDone: "Done",
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",
   photoOrChoose: "Take or choose a photo",
