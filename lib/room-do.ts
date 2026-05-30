@@ -235,6 +235,14 @@ export class RoomDO extends DurableObject {
       if (typeof patch.priceOre === "number" && Number.isFinite(patch.priceOre) && patch.priceOre >= 0) {
         item.priceOre = Math.round(patch.priceOre);
       }
+      // shareCount has to land BEFORE the shared toggle decides whether to
+      // pre-claim everyone — otherwise turning an unshared item into a
+      // partial share (e.g. 3 ways in a 6-person room) sends shared+shareCount
+      // in the same patch, the shared block reads the old (undefined)
+      // shareCount, isFullyShared returns true, and we wrongly pre-claim the
+      // whole room.
+      if (patch.shareCount === null || patch.shareCount === 0) item.shareCount = undefined;
+      else if (typeof patch.shareCount === "number" && patch.shareCount > 0) item.shareCount = Math.round(patch.shareCount);
       if (typeof patch.shared === "boolean" && patch.shared !== item.shared) {
         item.shared = patch.shared;
         // Turning shared on pre-claims it for everyone only when the result is
@@ -244,8 +252,6 @@ export class RoomDO extends DurableObject {
           item.claimedBy = isFullyShared(item, groupSize) ? state.people.map((p) => p.id) : [];
         }
       }
-      if (patch.shareCount === null || patch.shareCount === 0) item.shareCount = undefined;
-      else if (typeof patch.shareCount === "number" && patch.shareCount > 0) item.shareCount = Math.round(patch.shareCount);
       await this.save(state);
     }
     return state;
