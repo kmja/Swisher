@@ -7,6 +7,7 @@ import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
+import { stitchVertically } from "@/lib/stitch";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -312,6 +313,7 @@ export default function Page() {
   const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [stitchLoading, setStitchLoading] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -1255,16 +1257,42 @@ export default function Page() {
                 <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
                 <p className="text-sm text-gray-600">{t.itemsHint}</p>
               </div>
-              {images.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setReceiptOpen(true)}
-                  aria-label={t.showReceipt}
-                  className="shrink-0 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
-                >
-                  🧾 {t.showReceipt}
-                </button>
-              )}
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {images.length > 1 && (
+                  <button
+                    type="button"
+                    disabled={stitchLoading || ocrLoading}
+                    onClick={async () => {
+                      if (stitchLoading || ocrLoading) return;
+                      setStitchLoading(true);
+                      try {
+                        const { dataUrl } = await stitchVertically(images);
+                        // runOcr replaces both items and images[] when called
+                        // without append, so the stitched result becomes the
+                        // single source of truth for both lists.
+                        await runOcr(dataUrl);
+                      } catch (err) {
+                        setOcrError(err instanceof Error ? err.message : "Stitch failed");
+                      } finally {
+                        setStitchLoading(false);
+                      }
+                    }}
+                    className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100 disabled:opacity-50"
+                  >
+                    {stitchLoading ? "Syr ihop…" : `🧵 Sy ihop (${images.length})`}
+                  </button>
+                )}
+                {images.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setReceiptOpen(true)}
+                    aria-label={t.showReceipt}
+                    className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+                  >
+                    🧾 {t.showReceipt}
+                  </button>
+                )}
+              </div>
             </div>
             {ocrModel && (
               <p className="mt-0.5 text-xs text-gray-400">{t.readBy(OCR_MODEL_LABEL[ocrModel] ?? ocrModel)}</p>
