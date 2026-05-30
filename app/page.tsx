@@ -1366,7 +1366,7 @@ export default function Page() {
                 host's name + valid phone (scanReady), so a host still
                 mid-typing isn't kicked off the screen. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && (
-              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 top-1/2 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
+              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
