@@ -220,7 +220,23 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["vatten", "water", "mineralvatten"]), "💧"],
   [makeMatcher(["mjölk", "milk", "milkshake", "pucko"]), "🥛"],
   // food
-  [makeMatcher(["pizza", "calzone"]), "🍕"],
+  // Pizza needs to match before the prosciutto/skinka pork rule so that
+  // pizzeria lines like "Prosciutto Cotto 40cm" don't fall through to 🐖.
+  // Widen with classic pizza names + a regex on the size suffix Xcm — the
+  // tell-tale pizzeria size on a line like "Capricciosa 33cm" or "Margherita
+  // 40cm". Real pizza names ("prosciutto cotto", "quattro formaggi") cover
+  // the menu-item shorthand; ambiguous words like "vegetariano" are left
+  // alone so a vegetarian non-pizza dish isn't dragged in.
+  [
+    (d: string) =>
+      makeMatcher([
+        "pizza", "calzone", "margherita", "capricciosa", "diavola", "funghi",
+        "hawaii", "marinara", "salsiccia", "pepperoni", "peperoni", "frutti di mare",
+        "quattro stagioni", "quattro formaggi", "prosciutto cotto", "prosciutto crudo",
+        "salame piccante",
+      ])(d) || /\d{2,3}\s*cm\b/i.test(d),
+    "🍕",
+  ],
   [makeMatcher(["pasta", "spaghetti", "carbonara", "tagliatelle", "penne", "bolognese"]), "🍝"],
   [makeMatcher(["burgare", "burger", "hamburgare", "cheeseburgare"]), "🍔"],
   [makeMatcher(["pommes", "fries", "strips"]), "🍟"],

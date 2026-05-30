@@ -76,6 +76,19 @@ describe("emojiFor", () => {
     expect(emojiFor("Sangria")).toBe("ci:sangria");
   });
 
+  it("identifies pizzeria lines as pizza even when they name pork toppings", () => {
+    // A pizzeria's "Prosciutto Cotto 40cm" would otherwise fall to the
+    // pork rule on "prosciutto". The pizza rule fires first, both via the
+    // phrase "prosciutto cotto" and via the Xcm size suffix.
+    expect(emojiFor("Prosciutto Cotto 40cm")).toBe("🍕");
+    expect(emojiFor("S Capricciosa 33cm")).toBe("🍕");
+    expect(emojiFor("L Margherita")).toBe("🍕");
+    expect(emojiFor("Calzone Diavola")).toBe("🍕");
+    expect(emojiFor("Quattro Formaggi")).toBe("🍕");
+    // Plain "Prosciutto" (no pizza signal) keeps its pork mapping.
+    expect(emojiFor("Prosciutto")).toBe("🐖");
+  });
+
   it("does not let the soda rule swallow fläsk (suffix-match regression)", () => {
     // Pork now uses the pig emoji; the soda rule must still not steal it.
     expect(emojiFor("fläskkarré")).toBe("🐖");
