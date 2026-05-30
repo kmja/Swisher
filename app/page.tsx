@@ -1498,6 +1498,10 @@ export default function Page() {
               {itemGroups.map((copies, gIdx) => {
                 const rep = copies[0];
                 const rowOre = parseAmountToOre(rep.priceInput) ?? 0;
+                // A shared row's per-person split has to use every copy's
+                // value — toggling "shared" on a "Pizza ×3" row means the
+                // group is splitting all three pizzas, not just one.
+                const sharedOre = rowOre * copies.length;
                 const divisor = groupSize > 0 ? groupSize : namedDiners.length;
                 const d = itemDivisorFor(rep);
                 // "Low confidence" = the keyword layer couldn't categorise this
@@ -1573,7 +1577,7 @@ export default function Page() {
                         >
                           +
                         </button>
-                        <span className="text-gray-400">≈ {formatOre(Math.floor(rowOre / d))} SEK</span>
+                        <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
                       </div>
                     )}
                     {!rep.isTip && !rep.shared && sharedSuggestion(rep.description) && (
@@ -1591,7 +1595,7 @@ export default function Page() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm">
                         <span className="rounded-full bg-swish/15 px-2 py-0.5 font-semibold text-swish-dark">{t.sharedToggle}</span>
                         {divisor >= 2 && (
-                          <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(rowOre / divisor)))}</span>
+                          <span className="text-gray-500">{t.sharedSplit(divisor, formatOre(Math.floor(sharedOre / divisor)))}</span>
                         )}
                       </div>
                     )}
