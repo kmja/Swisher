@@ -1293,11 +1293,27 @@ export default function Page() {
                     <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-white/90" />
                     <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
                     <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
-                    <span className="absolute inset-x-0 bottom-1 text-center text-xs font-medium text-white/90 drop-shadow">
-                      {lastShot && wantMoreShots ? t.lineUpOverlay : t.scanGuide}
-                    </span>
+                    {/* Instruction card — translucent dark panel hanging
+                        below the corner brackets at the top of the
+                        viewfinder. Two lines: headline + a tip that
+                        explains long-receipt multi-shot. Swaps to the
+                        alignment hint once the host has opted into
+                        another shot. */}
+                    <div className="absolute inset-x-0 top-0 mx-auto max-w-[20rem] rounded-2xl bg-black/55 px-3.5 py-2.5 text-center text-white shadow-lg backdrop-blur">
+                      {lastShot && wantMoreShots ? (
+                        <>
+                          <p className="text-sm font-semibold leading-tight">{t.lineUpOverlayTitle}</p>
+                          <p className="mt-1 text-[11px] leading-snug text-white/80">{t.lineUpOverlay}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold leading-tight">{t.scanGuideTitle}</p>
+                          <p className="mt-1 text-[11px] leading-snug text-white/80">{t.scanGuideLong}</p>
+                        </>
+                      )}
+                    </div>
                     {pendingShots.length > 0 && (
-                      <span className="absolute left-1/2 top-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
+                      <span className="absolute left-1/2 bottom-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
                         📷 {pendingShots.length}
                       </span>
                     )}

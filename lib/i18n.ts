@@ -10,8 +10,16 @@ export interface Strings {
   tapToPhoto: string;
   scanCta: string;
   scanGuide: string;
+  /** Detailed two-line instructions overlaid on the viewfinder before the
+   *  host has taken a photo: headline + a hint that multi-shot is allowed
+   *  for long receipts. */
+  scanGuideTitle: string;
+  scanGuideLong: string;
   /** Guide shown over the viewfinder when a previous shot is overlaid. */
   lineUpOverlay: string;
+  /** Headline + body for the alignment overlay shown once the host opts
+   *  into a second shot. */
+  lineUpOverlayTitle: string;
   /** Secondary button: take an additional shot in the same scan session. */
   takeAnotherShot: string;
   /** Primary button: commit the N captured shots to OCR. */
@@ -180,7 +188,10 @@ const sv: Strings = {
   tapToPhoto: "Tryck för att skanna kvittot",
   scanCta: "Skanna kvitto",
   scanGuide: "Få plats med hela kvittot i ramen",
+  scanGuideTitle: "Få med hela kvittot",
+  scanGuideLong: "Är kvittot för långt? Ta flera bilder, så pusslar vi ihop dem.",
   lineUpOverlay: "Linjera den ljusrosa raden med samma rad på kvittot",
+  lineUpOverlayTitle: "Fortsätt där förra bilden slutade",
   takeAnotherShot: "+ Ny bild",
   readReceiptN: (n) => `Läs av (${n})`,
   discardShots: "Börja om",
@@ -328,7 +339,10 @@ const en: Strings = {
   tapToPhoto: "Tap to scan the receipt",
   scanCta: "Scan receipt",
   scanGuide: "Fit the whole receipt in the frame",
+  scanGuideTitle: "Fit the whole receipt",
+  scanGuideLong: "Is it too long? Take more photos — we'll stitch them together.",
   lineUpOverlay: "Line the pink overlay up with the same row on the receipt",
+  lineUpOverlayTitle: "Pick up where the last shot ended",
   takeAnotherShot: "+ New shot",
   readReceiptN: (n) => `Read receipt (${n})`,
   discardShots: "Start over",
