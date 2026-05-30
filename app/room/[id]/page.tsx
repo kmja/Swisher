@@ -810,19 +810,8 @@ export default function RoomPage() {
     const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
     const anyQuickEdit = editingDesc || editingPrice;
     return (
-      <div key={it.id} className="relative overflow-hidden rounded-2xl">
-        {/* Red "remove" layer revealed as the user swipes the row leftward. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 flex items-center justify-end rounded-2xl bg-red-500 pr-5 text-white"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          </svg>
-        </div>
-        <div
+      <div
+          key={it.id}
           role="button"
           tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
           aria-pressed={mine}
@@ -952,7 +941,6 @@ export default function RoomPage() {
         >
           <PencilIcon />
         </button>
-        </div>
       </div>
     );
   }
