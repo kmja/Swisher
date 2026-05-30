@@ -207,6 +207,20 @@ export default function RoomPage() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
+  // One-shot mount lift — driven imperatively so the keyframe can't be
+  // replayed by iOS Safari when the address bar collapses on scroll-stop.
+  // A stable useCallback ref means React only invokes us on first mount.
+  const playStepEnter = useCallback((el: HTMLElement | null) => {
+    if (!el || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { opacity: 0, transform: "translateY(10px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+    );
+  }, []);
+
   // Long-press → inline edit for description or price. The pencil button is
   // still there for "full" edits (shared, split count, delete); this is the
   // shortcut for the most common fixes (the OCR's typo, the wrong digit).
@@ -1119,7 +1133,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="step-enter mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
+    <main ref={playStepEnter} className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32 pt-5">
       {/* Navigation */}
       <nav className="grid grid-cols-3 items-center gap-2 text-xs font-semibold">
         <a

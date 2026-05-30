@@ -279,6 +279,20 @@ export default function Page() {
   // CSS class on/off.
   const animatedIdsRef = useRef<Set<string>>(new Set());
   const itemRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // One-shot section-enter lift, driven imperatively so iOS Safari can't
+  // replay it when the address bar resizes on scroll-stop. A stable
+  // useCallback ref fires only on each section's mount (sections are
+  // keyed by step name, so a new element appears per step change).
+  const playStepEnter = useCallback((el: HTMLElement | null) => {
+    if (!el || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { opacity: 0, transform: "translateY(10px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+    );
+  }, []);
 
   const [items, setItems] = useState<UiItem[]>([]);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
@@ -1115,7 +1129,7 @@ export default function Page() {
       {step !== "capture" && <Header step={step} t={t} />}
 
       {step === "capture" && (
-        <section key="capture" className="step-enter mt-2 flex flex-1 flex-col">
+        <section ref={playStepEnter} key="capture" className="mt-2 flex flex-1 flex-col">
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="mt-1 text-[11px] text-gray-300">
             {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
@@ -1436,7 +1450,7 @@ export default function Page() {
       )}
 
       {step === "items" && (
-        <section key="items" className="step-enter mt-6 flex flex-1 flex-col gap-6">
+        <section ref={playStepEnter} key="items" className="mt-6 flex flex-1 flex-col gap-6">
           <div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1784,7 +1798,7 @@ export default function Page() {
       )}
 
       {step === "assign" && (
-        <section key="assign" className="step-enter mt-6 flex flex-1 flex-col gap-3">
+        <section ref={playStepEnter} key="assign" className="mt-6 flex flex-1 flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">{t.assignTitle}</h2>
             <button type="button" onClick={spreadEverything} className="text-sm font-medium text-swish-dark">
@@ -1919,7 +1933,7 @@ export default function Page() {
       )}
 
       {step === "result" && (
-        <section key="result" className="step-enter mt-6 flex flex-1 flex-col gap-4">
+        <section ref={playStepEnter} key="result" className="mt-6 flex flex-1 flex-col gap-4">
           <h2 className="text-xl font-bold">{t.payTitle}</h2>
 
           {tipOre > 0 && (
