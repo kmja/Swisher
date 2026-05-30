@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
+import SwishIcon from "@/components/SwishIcon";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
@@ -1708,9 +1709,7 @@ export default function RoomPage() {
                   <span>{t.doneOn}</span>
                 ) : (
                   <>
-                    <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-base font-black italic text-swish">
-                      S
-                    </span>
+                    <SwishIcon size={28} className="shrink-0" />
                     <span>{t.payWithSwishAmt(formatOre(myShare.totalOre))}</span>
                   </>
                 )}
