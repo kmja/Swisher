@@ -61,9 +61,10 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 function GroupVisual({ count }: { count: number }) {
   const visible = Math.max(0, Math.min(count, 10));
   const overflow = Math.max(0, count - visible);
-  // Closer overlap once the cluster crosses 5 people so it never blows out
-  // past the stepper.
-  const overlap = visible <= 4 ? "-space-x-2.5" : visible <= 7 ? "-space-x-4" : "-space-x-5";
+  // ~50 % horizontal overlap on h-14 (56 px) chips — every chip's left
+  // half stays visible behind the next one, so the stack reads as a
+  // neat avatar pile, not a smear. The leftmost chip is on top (z-index
+  // decreases L→R) so the same "front of the line" reads at any count.
   const clusterRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const prevCount = useRef(count);
@@ -72,26 +73,24 @@ function GroupVisual({ count }: { count: number }) {
     const grew = count > prevCount.current;
     const prev = prevCount.current;
     prevCount.current = count;
-    // Cluster bounce.
     if (clusterRef.current?.animate) {
       clusterRef.current.animate(
         [
           { transform: "scale(1)" },
-          { transform: grew ? "scale(1.1)" : "scale(0.94)" },
+          { transform: grew ? "scale(1.08)" : "scale(0.95)" },
           { transform: "scale(1)" },
         ],
         { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
       );
     }
-    // Per-chip pop-in for any chip that's new since last render.
     if (grew) {
       for (let i = prev; i < Math.min(count, 10); i++) {
         const el = chipRefs.current[i];
         if (!el?.animate) continue;
         el.animate(
           [
-            { transform: "scale(0) rotate(0deg)", opacity: 0 },
-            { transform: "scale(1.18)", opacity: 1, offset: 0.7 },
+            { transform: "scale(0)", opacity: 0 },
+            { transform: "scale(1.16)", opacity: 1, offset: 0.7 },
             { transform: "scale(1)", opacity: 1 },
           ],
           { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
@@ -101,27 +100,23 @@ function GroupVisual({ count }: { count: number }) {
   }, [count]);
   return (
     <div aria-hidden className="flex items-center">
-      <div ref={clusterRef} className={`flex items-center ${overlap}`}>
-        {Array.from({ length: visible }).map((_, i) => {
-          const rotate = (i % 2 === 0 ? -1 : 1) * (3 + (i % 3));
-          const lift = i % 2 === 0 ? -2 : 3;
-          return (
-            <span
-              key={i}
-              ref={(el) => { chipRefs.current[i] = el; }}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-swish/15 text-swish-dark ring-2 ring-white"
-              style={{ transform: `rotate(${rotate}deg) translateY(${lift}px)`, zIndex: 10 - i }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="3.5" />
-                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-              </svg>
-            </span>
-          );
-        })}
+      <div ref={clusterRef} className="flex items-center -space-x-7">
+        {Array.from({ length: visible }).map((_, i) => (
+          <span
+            key={i}
+            ref={(el) => { chipRefs.current[i] = el; }}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-swish/20 text-swish-dark ring-[3px] ring-white"
+            style={{ zIndex: visible - i }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+            </svg>
+          </span>
+        ))}
       </div>
       {overflow > 0 && (
-        <span className="ml-2 text-sm font-semibold text-gray-500">+{overflow}</span>
+        <span className="ml-2 text-base font-semibold text-gray-500">+{overflow}</span>
       )}
     </div>
   );
@@ -1430,7 +1425,7 @@ export default function Page() {
                       type="button"
                       aria-label="+"
                       onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                      className="flex h-12 w-12 items-center justify-center rounded-full bg-swish text-3xl font-bold leading-none text-white active:bg-swish-dark"
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       +
                     </button>
