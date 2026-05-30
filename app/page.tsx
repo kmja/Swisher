@@ -555,84 +555,42 @@ export default function Page() {
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     enhanceForScan(ctx, canvas.width, canvas.height);
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    setCameraActive(false);
     setOcrError(null);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    setImageUrl(dataUrl);
-    runOcr(dataUrl); // scan automatically
+    // Stack the new shot; the camera stays live so the user can either
+    // take another (long receipt) or tap "Read receipt" to commit.
+    setPendingShots((prev) => [...prev, dataUrl]);
   }
-
-  // Panorama capture: while panoramaActive, grab a frame from the live
-  // <video> every ~320 ms and stash the raw dataURL. On stop, hand them off
-  // to lib/stitch and run OCR on the resulting tall image. Frames are NOT
-  // enhanced here — the stitcher composites the raw frames and we let the
-  // existing per-image enhancement pass run during the final OCR upload.
-  const [panoramaActive, setPanoramaActive] = useState(false);
-  const [panoramaFrames, setPanoramaFrames] = useState(0);
-  const panoramaFramesRef = useRef<string[]>([]);
-  const panoramaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  function capturePanoramaFrame(): string | null {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return null;
-    // Keep frames at native resolution — receipts benefit from every pixel
-    // and the stitch composite caps total canvas height anyway.
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
-  }
-  function startPanorama() {
-    if (panoramaActive) return;
-    panoramaFramesRef.current = [];
-    setPanoramaFrames(0);
-    setPanoramaActive(true);
-    setOcrError(null);
-    panoramaTimerRef.current = setInterval(() => {
-      const f = capturePanoramaFrame();
-      if (!f) return;
-      panoramaFramesRef.current.push(f);
-      setPanoramaFrames(panoramaFramesRef.current.length);
-      // Hard cap so a slow scan can't OOM the phone.
-      if (panoramaFramesRef.current.length >= 30) stopPanorama();
-    }, 320);
-  }
-  async function stopPanorama() {
-    if (panoramaTimerRef.current) clearInterval(panoramaTimerRef.current);
-    panoramaTimerRef.current = null;
-    setPanoramaActive(false);
-    const frames = panoramaFramesRef.current;
-    panoramaFramesRef.current = [];
-    setPanoramaFrames(0);
-    if (frames.length === 0) return;
+  async function finishCapture() {
+    if (pendingShots.length === 0 || ocrLoading) return;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setCameraActive(false);
-    // Cap the OCR input at 8 frames so the Claude bill for a long-receipt
-    // scan stays bounded (~$0.04 instead of $0.15 for a 30-frame sweep).
-    // Sample evenly across the sweep so we get the top, the bottom, and
-    // the middle of the receipt, not 8 consecutive near-duplicates.
+    const shots = pendingShots;
+    setPendingShots([]);
+    // Cap at 8 to keep the Claude bill bounded even if someone takes lots
+    // of shots; in practice 3-4 covers any real receipt.
     const MAX_FRAMES = 8;
-    const sampled = frames.length <= MAX_FRAMES
-      ? frames
+    const sampled = shots.length <= MAX_FRAMES
+      ? shots
       : Array.from({ length: MAX_FRAMES }, (_, i) =>
-          frames[Math.round((i * (frames.length - 1)) / (MAX_FRAMES - 1))],
+          shots[Math.round((i * (shots.length - 1)) / (MAX_FRAMES - 1))],
         );
-    try {
-      if (sampled.length === 1) {
-        setImageUrl(sampled[0]);
-        await runOcr(sampled[0]);
-      } else {
-        setImageUrl(sampled[0]);
-        await runOcr(sampled[0], { frames: sampled });
-      }
-    } catch (err) {
-      setOcrLoading(false);
-      setOcrError(err instanceof Error ? err.message : "OCR failed");
-    }
+    setImageUrl(sampled[0]);
+    if (sampled.length === 1) await runOcr(sampled[0]);
+    else await runOcr(sampled[0], { frames: sampled });
   }
+  function discardPendingShots() {
+    setPendingShots([]);
+  }
+
+  // Multi-shot capture: the user takes 1–N intentional photos to cover the
+  // receipt, then commits to OCR. Each new shot stacks onto pendingShots
+  // until the user taps "Read receipt". For long receipts: a semi-
+  // transparent strip of the previous shot's bottom is overlaid at the top
+  // of the live viewfinder so the user can line up the next shot's top
+  // edge with where the previous one left off.
+  const [pendingShots, setPendingShots] = useState<string[]>([]);
+  const lastShot = pendingShots[pendingShots.length - 1];
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1159,36 +1117,33 @@ export default function Page() {
                 />
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
-                    <span
-                      className={`absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 ${
-                        panoramaActive ? "border-swish" : "border-white/90"
-                      }`}
-                    />
-                    <span
-                      className={`absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 ${
-                        panoramaActive ? "border-swish" : "border-white/90"
-                      }`}
-                    />
-                    <span
-                      className={`absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 ${
-                        panoramaActive ? "border-swish" : "border-white/90"
-                      }`}
-                    />
-                    <span
-                      className={`absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 ${
-                        panoramaActive ? "border-swish" : "border-white/90"
-                      }`}
-                    />
+                    <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
+                    <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-white/90" />
+                    <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
+                    <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
                     <span className="absolute inset-x-0 bottom-1 text-center text-xs font-medium text-white/90 drop-shadow">
-                      {panoramaActive ? t.panoramaGuide : t.scanGuide}
+                      {lastShot ? t.lineUpOverlay : t.scanGuide}
                     </span>
-                    {panoramaActive && (
-                      <span className="absolute left-1/2 top-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
-                        <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-white" aria-hidden />
-                        REC · {panoramaFrames}
+                    {pendingShots.length > 0 && (
+                      <span className="absolute left-1/2 top-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
+                        📷 {pendingShots.length}
                       </span>
                     )}
                   </div>
+                )}
+                {/* Overlay: bottom 45 % of the last captured shot, anchored
+                    to the TOP of the viewfinder so the user can line up
+                    where the previous shot ended with what they're about
+                    to capture. Object-position: bottom so the strip shows
+                    the LAST rows of the previous shot. */}
+                {cameraActive && lastShot && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={lastShot}
+                    alt=""
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[45%] w-full object-cover object-bottom opacity-50 mix-blend-multiply"
+                  />
                 )}
                 {!cameraActive && (
                   <button
@@ -1325,33 +1280,43 @@ export default function Page() {
                       </button>
                     </div>
                   </>
-                ) : panoramaActive ? (
-                  <button
-                    type="button"
-                    onClick={stopPanorama}
-                    className="w-full rounded-xl bg-red-600 px-4 py-3.5 font-semibold text-white shadow-lg active:bg-red-700"
-                  >
-                    {t.panoramaStop(panoramaFrames)}
-                  </button>
                 ) : (
                   <>
-                    {cameraActive && (
-                      <div className="grid grid-cols-[2fr_1fr] gap-2">
+                    {cameraActive && pendingShots.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                      >
+                        {t.scanCta}
+                      </button>
+                    )}
+                    {cameraActive && pendingShots.length > 0 && (
+                      <div className="grid grid-cols-[1fr_1.4fr] gap-2">
                         <button
                           type="button"
                           onClick={capturePhoto}
-                          className="rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
                         >
-                          {t.scanCta}
+                          {t.takeAnotherShot}
                         </button>
                         <button
                           type="button"
-                          onClick={startPanorama}
-                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                          onClick={finishCapture}
+                          className="rounded-xl bg-swish px-4 py-3.5 text-sm font-semibold text-white active:bg-swish-dark"
                         >
-                          {t.panoramaCta}
+                          {t.readReceiptN(pendingShots.length)}
                         </button>
                       </div>
+                    )}
+                    {pendingShots.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={discardPendingShots}
+                        className="w-full rounded-xl bg-white px-4 py-2 text-xs font-medium text-gray-500 ring-1 ring-gray-200 active:bg-gray-100"
+                      >
+                        {t.discardShots}
+                      </button>
                     )}
                     <button
                       type="button"
