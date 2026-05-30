@@ -312,7 +312,6 @@ export default function Page() {
   const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
-  const [stitchLoading, setStitchLoading] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -1342,36 +1341,6 @@ export default function Page() {
                 <p className="text-sm text-gray-600">{t.itemsHint}</p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                {images.length > 1 && (
-                  <button
-                    type="button"
-                    disabled={stitchLoading || ocrLoading}
-                    onClick={async () => {
-                      if (stitchLoading || ocrLoading) return;
-                      setStitchLoading(true);
-                      try {
-                        // Cap multi-shot resyncs at 8 frames too, same as
-                        // the live panorama path. Already-captured shots
-                        // are at full resolution so this stays well within
-                        // the per-call image-token budget.
-                        const MAX_FRAMES = 8;
-                        const sampled = images.length <= MAX_FRAMES
-                          ? images
-                          : Array.from({ length: MAX_FRAMES }, (_, i) =>
-                              images[Math.round((i * (images.length - 1)) / (MAX_FRAMES - 1))],
-                            );
-                        await runOcr(sampled[0], { frames: sampled });
-                      } catch (err) {
-                        setOcrError(err instanceof Error ? err.message : "Stitch failed");
-                      } finally {
-                        setStitchLoading(false);
-                      }
-                    }}
-                    className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-swish-dark shadow-sm ring-1 ring-gray-200 active:bg-gray-100 disabled:opacity-50"
-                  >
-                    {stitchLoading ? "Syr ihop…" : `🧵 Sy ihop (${images.length})`}
-                  </button>
-                )}
                 {images.length > 0 && (
                   <button
                     type="button"
