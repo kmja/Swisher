@@ -52,17 +52,28 @@ function downscaleGray(img: HTMLImageElement, targetW: number): Gray {
  * For each candidate overlap in [minOvl, maxOvl] (in scaled rows), compute
  * NCC of A's bottom strip vs B's top strip and pick the best. Returns the
  * overlap in scaled rows + the correlation score (1.0 = perfect).
+ *
+ * Two-stage pick: find the global best NCC, then among candidates within a
+ * small tolerance (0.02) of that score, choose the HIGHEST overlap. This
+ * matters for nearly-stationary frames — when the user pans slowly enough
+ * that two consecutive frames look almost identical, NCC stays near 1.0
+ * across most candidate offsets. Without the bias toward higher overlap,
+ * the algorithm picks the smallest overlap in the tie and leaves a near-
+ * duplicate frame's worth of content in the composite.
  */
 function findOverlap(a: Gray, b: Gray): { overlap: number; score: number } {
   if (a.w !== b.w) throw new Error("width mismatch");
   const W = a.w;
-  const minOvl = Math.max(20, Math.floor(Math.min(a.h, b.h) * 0.08));
-  const maxOvl = Math.floor(Math.min(a.h, b.h) * 0.85);
+  // Generous window so slow pans (95 %+ overlap) and brisk pans (~5 %)
+  // both fall inside the search.
+  const minOvl = Math.max(10, Math.floor(Math.min(a.h, b.h) * 0.03));
+  const maxOvl = Math.floor(Math.min(a.h, b.h) * 0.97);
+  const step = 2; // half the work, ~1 row resolution at detect scale
 
+  const scores: number[] = [];
   let bestScore = -Infinity;
-  let bestOvl = minOvl;
 
-  for (let ovl = minOvl; ovl <= maxOvl; ovl++) {
+  for (let ovl = minOvl; ovl <= maxOvl; ovl += step) {
     const aStart = (a.h - ovl) * W;
     const count = ovl * W;
     let sumA = 0, sumB = 0, sumA2 = 0, sumB2 = 0, cross = 0;
@@ -77,12 +88,25 @@ function findOverlap(a: Gray, b: Gray): { overlap: number; score: number } {
     const meanB = sumB / count;
     const varA = sumA2 / count - meanA * meanA;
     const varB = sumB2 / count - meanB * meanB;
-    if (varA <= 0 || varB <= 0) continue;
+    if (varA <= 0 || varB <= 0) {
+      scores.push(-Infinity);
+      continue;
+    }
     const cov = cross / count - meanA * meanB;
     const score = cov / Math.sqrt(varA * varB);
-    if (score > bestScore) {
-      bestScore = score;
-      bestOvl = ovl;
+    scores.push(score);
+    if (score > bestScore) bestScore = score;
+  }
+
+  // Walk down from the highest candidate overlap; the first score within
+  // the tolerance of best wins. Near-stationary case → maxOvl.
+  const TIE_TOLERANCE = 0.02;
+  const threshold = bestScore - TIE_TOLERANCE;
+  let bestOvl = minOvl;
+  for (let i = scores.length - 1; i >= 0; i--) {
+    if (scores[i] >= threshold) {
+      bestOvl = minOvl + i * step;
+      break;
     }
   }
 

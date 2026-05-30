@@ -403,15 +403,29 @@ export default function RoomPage() {
   // Trap iOS' edge-swipe-back (and the system back button) so a live room
   // can't be accidentally navigated away from — leaving via the Kvitt UI
   // ("Nytt kvitto" / "Historik") still works because those are <a> links
-  // that fully navigate, which unmounts this page and detaches the
-  // listener. Pattern: push a sentinel entry on mount, re-push it on every
-  // popstate. The handler runs *after* the browser has popped, so the
-  // re-push lands the user right back where they were.
+  // that fully navigate, which unmounts this page and detaches the listener.
+  //
+  // The previous version pushed one sentinel entry and re-pushed on every
+  // popstate. That worked for the first swipe-back but failed on the second:
+  // Next.js's own popstate handler treated the pop as a route change, our
+  // component unmounted before we could refill, and the next swipe popped
+  // the trap-less history.
+  //
+  // Fix: push MANY sentinel entries, all explicitly pointing at the room's
+  // own URL. Popping any of them is a no-op for Next.js (URL didn't change
+  // → no route change → no unmount), so the trap stays installed and the
+  // user can swipe-back as many times as they like without escaping.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.history.pushState({ kvittTrap: true }, "");
+    const here = window.location.pathname + window.location.search;
+    // 30 is plenty: Safari historically caps history at ~50 entries and
+    // we want to leave room for the rest of the app's session.
+    for (let i = 0; i < 30; i++) {
+      window.history.pushState({ kvittTrap: true }, "", here);
+    }
     const onPopState = () => {
-      window.history.pushState({ kvittTrap: true }, "");
+      // Top up so the buffer can't drain even if the user fling-swipes.
+      window.history.pushState({ kvittTrap: true }, "", here);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
