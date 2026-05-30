@@ -232,17 +232,29 @@ export default function RoomPage() {
 
   // FLIP layout animation: when a row is removed and its neighbours shift up
   // (or down — if undo restores an item), animate the movement instead of
-  // snapping. Track each row's viewport-relative top after every render, then
-  // on the NEXT render compare against the stored value and apply an inverse
-  // translate that we transition back to 0. The rows are tagged with
-  // data-item-id so querySelector can find them.
+  // snapping. Two things conspire on iOS Safari that the v1.x code got wrong:
+  //
+  // 1. getBoundingClientRect().top is VIEWPORT-relative, so when the address
+  //    bar collapses on scroll-stop the viewport gets taller and every row's
+  //    top shifts. Add window.scrollY to anchor the stored positions to the
+  //    document instead — invariant under viewport resize.
+  // 2. The effect must only re-measure when the items SET actually changes.
+  //    With no deps it ran on every DO live-state push (state objects are
+  //    fresh JSON each round-trip), and combined with #1 produced a ~10 px
+  //    translateY animation on every render after a scroll. Gate on a
+  //    signature of item ids in order so unrelated state updates skip it.
   const rowPositionsRef = useRef<Map<string, number>>(new Map());
+  const itemIdsSig = useMemo(
+    () => (state?.items.map((i) => i.id).join("|") ?? ""),
+    [state?.items],
+  );
   useLayoutEffect(() => {
     if (!state) return;
+    const scrollY = window.scrollY;
     const next = new Map<string, number>();
     for (const item of state.items) {
       const el = document.querySelector(`[data-item-id="${item.id}"]`);
-      if (el instanceof HTMLElement) next.set(item.id, el.getBoundingClientRect().top);
+      if (el instanceof HTMLElement) next.set(item.id, el.getBoundingClientRect().top + scrollY);
     }
     for (const [id, newTop] of next) {
       const oldTop = rowPositionsRef.current.get(id);
@@ -264,7 +276,7 @@ export default function RoomPage() {
       el.style.transform = "translateY(0)";
     }
     rowPositionsRef.current = next;
-  });
+  }, [itemIdsSig, state]);
 
   // Swipe-left-to-remove on claim rows. Pure DOM transforms during the drag
   // (no React re-renders for smoothness); React only re-renders on commit
