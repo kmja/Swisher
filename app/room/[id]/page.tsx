@@ -218,6 +218,32 @@ export default function RoomPage() {
   // doesn't linger over the bottom action row.
   const [markedSharedToast, setMarkedSharedToast] = useState<{ description: string } | null>(null);
   const markedSharedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Promote-to-shared animation. Two pieces of state cooperate:
+  //   • promoteRequestRef caches the source rect captured BEFORE the
+  //     edit is applied (so the edit form is still on screen).
+  //   • flyingItem is the live ghost data once we've resolved the
+  //     target rect from sharedHeaderRef on the next layout pass.
+  // The shared-section header gets a ref so we can grab its bounding
+  // rect for the target, even when the section is collapsed (the
+  // header still exists; only the drawer is height 0).
+  const sharedHeaderRef = useRef<HTMLButtonElement>(null);
+  type FlyRect = { x: number; y: number; w: number; h: number };
+  type PromoteRequest = {
+    description: string;
+    emoji?: string;
+    category?: string;
+    source: FlyRect;
+  };
+  const promoteRequestRef = useRef<PromoteRequest | null>(null);
+  const [flyingItem, setFlyingItem] = useState<{
+    description: string;
+    emoji?: string;
+    category?: string;
+    source: FlyRect;
+    target: { x: number; y: number };
+  } | null>(null);
+  const flyingRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!markedSharedToast) return;
     if (markedSharedTimer.current) clearTimeout(markedSharedTimer.current);
@@ -302,6 +328,49 @@ export default function RoomPage() {
     }
     rowPositionsRef.current = next;
   }, [itemIdsSig, state]);
+
+  // After the items state lands with a freshly promoted row, look up
+  // the shared section header's position and seed flyingItem with both
+  // source + target rects. Runs on every items change but only does
+  // anything when promoteRequestRef has been staged by saveEdit.
+  useLayoutEffect(() => {
+    const req = promoteRequestRef.current;
+    if (!req) return;
+    const targetEl = sharedHeaderRef.current;
+    if (!targetEl) return;
+    const t = targetEl.getBoundingClientRect();
+    promoteRequestRef.current = null;
+    setFlyingItem({
+      description: req.description,
+      emoji: req.emoji,
+      category: req.category,
+      source: req.source,
+      target: { x: t.left + t.width / 2, y: t.top + t.height / 2 },
+    });
+  }, [itemIdsSig]);
+
+  // Play the fly-to-shared animation imperatively via WAAPI. We
+  // translate from (source top-left, scale 1) to (target centre, scale
+  // 0.4) over ~620 ms with a "land into a slot" curve — the row
+  // shrinks as it travels so it visually settles into the section
+  // header. If the target is off-screen the same math just sends the
+  // ghost off the edge of the viewport.
+  useLayoutEffect(() => {
+    if (!flyingItem || !flyingRef.current || typeof flyingRef.current.animate !== "function") return;
+    const dx = flyingItem.target.x - (flyingItem.source.x + flyingItem.source.w / 2);
+    const dy = flyingItem.target.y - (flyingItem.source.y + flyingItem.source.h / 2);
+    const anim = flyingRef.current.animate(
+      [
+        { transform: "translate(0px, 0px) scale(1)", opacity: 1 },
+        { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(0.85)`, opacity: 1, offset: 0.55 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0 },
+      ],
+      { duration: 620, easing: "cubic-bezier(0.45, 0.05, 0.5, 0.95)", fill: "forwards" },
+    );
+    const clear = () => setFlyingItem(null);
+    anim.onfinish = clear;
+    return () => { anim.cancel(); };
+  }, [flyingItem]);
 
   // Swipe-left-to-remove on claim rows. Pure DOM transforms during the drag
   // (no React re-renders for smoothness); React only re-renders on commit
@@ -684,10 +753,22 @@ export default function RoomPage() {
     );
     await editItem(itemId, patch);
     if (!wasFully && isFully) {
+      // Stage a fly-from-source animation. We capture the source rect
+      // (the edit form's bounding box) NOW, before the patch is
+      // applied; the target rect (the shared section header) only
+      // resolves on the next render, so a useLayoutEffect picks it up
+      // and seeds the flyingItem state from there.
+      const sourceEl = document.querySelector(`[data-item-id="${itemId}"]`);
+      if (sourceEl instanceof HTMLElement) {
+        const r = sourceEl.getBoundingClientRect();
+        promoteRequestRef.current = {
+          description: desc || before?.description || "",
+          emoji: before?.emoji,
+          category: before?.category,
+          source: { x: r.left, y: r.top, w: r.width, h: r.height },
+        };
+      }
       setMarkedSharedToast({ description: desc || before?.description || "" });
-      // Open the collapsed shared section so the FLIP move lands in
-      // a visible target instead of disappearing into a closed drawer.
-      setSharedOpen(true);
     }
     cancelEdit();
   }
@@ -809,7 +890,7 @@ export default function RoomPage() {
       const dv = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
       const draftOre = parseAmountToOre(editDraft.priceInput) ?? 0;
       return (
-        <div key={it.id} className="space-y-2">
+        <div key={it.id} data-item-id={it.id} className="space-y-2">
           <div className="flex items-stretch gap-2">
             <div
               className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${
@@ -1490,6 +1571,7 @@ export default function RoomPage() {
                 return (
                   <div className="space-y-2">
                     <button
+                      ref={sharedHeaderRef}
                       type="button"
                       onClick={() => setSharedOpen((v) => !v)}
                       aria-expanded={sharedOpen}
@@ -1780,6 +1862,30 @@ export default function RoomPage() {
             </div>
             <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80" />
           </div>
+        </div>
+      )}
+      {/* Ghost: a card-shaped chip pinned to the source row's bounding
+          rect that animates over to the shared-section header via the
+          fly-to-shared useLayoutEffect. Lives in a fixed layer so it
+          can travel across the page (and off-screen if the shared
+          section isn't currently in view). */}
+      {flyingItem && (
+        <div
+          ref={flyingRef}
+          aria-hidden
+          className="pointer-events-none fixed z-[60] flex items-center gap-2 rounded-2xl bg-white p-3 shadow-2xl ring-2 ring-swish/70"
+          style={{
+            left: flyingItem.source.x,
+            top: flyingItem.source.y,
+            width: flyingItem.source.w,
+            transformOrigin: "center",
+          }}
+        >
+          <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none">
+            <ItemEmoji description={flyingItem.description} hint={flyingItem.category} modelEmoji={flyingItem.emoji} />
+          </span>
+          <span className="min-w-0 truncate text-base font-medium text-ink">{flyingItem.description}</span>
+          <span aria-hidden className="ml-auto shrink-0 text-xl leading-none">🤝</span>
         </div>
       )}
       {/* Positive sister to the undo toast: surfaces when an edit
