@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import { computeShares, estimateGroupSize, formatOre, parseAmountToOre } from "@/lib/money";
+import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
@@ -1045,21 +1045,10 @@ export default function Page() {
   const totalDiffOre = receiptTotal === null ? 0 : receiptTotal - itemsSumOre;
   const totalReconciles = receiptTotal === null || Math.abs(totalDiffOre) < 100;
   const hasSharedItems = foodItems.some((it) => it.shared);
-  // The tip is itself a shared item, so the group-size control matters whenever
-  // there's a shared row or a tip.
-  const needsGroupSize = hasSharedItems || tipOre > 0;
-
-  // When shared items (or a tip) first appear, seed a sensible group size from
-  // the individual items by category (mains ≈ heads), so the picker is never
-  // blank. Editable afterwards.
-  useEffect(() => {
-    if (!needsGroupSize || groupSize !== 0) return;
-    const indiv = foodItems.filter((it) => !it.shared);
-    const byCat = (c: string) => indiv.filter((it) => categoryFor(it.description, it.category) === c).length;
-    setGroupSize(
-      estimateGroupSize({ food: byCat("food"), drink: byCat("drink"), dessert: byCat("dessert"), total: indiv.length }),
-    );
-  }, [needsGroupSize, groupSize, foodItems]);
+  // Group size lives in useState (defaulting to 4) and is the only
+  // seed we use. The old auto-estimate effect — which guessed a group
+  // size from category counts the moment a shared row appeared — was
+  // overwriting the host's explicit pick in edge cases, so it's gone.
 
   const itemsStepValid =
     validItems.length > 0 && namedDiners.length >= 2 && payDestOk;
@@ -1242,7 +1231,7 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <FxProvider value={fx}>
-    <main className={`mx-auto flex min-h-dvh max-w-md flex-col px-4 ${step === "capture" ? "pb-4" : "pb-28"}`}>
+    <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-dvh overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="justify-self-start">
@@ -1555,7 +1544,7 @@ export default function Page() {
 
           {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
 
-          <div className="mt-5 space-y-2">
+          <div className="mt-5 shrink-0 space-y-2">
             {/* Once the setup card has taken focus, the photo / receipt
                 CTAs at the bottom of the capture step are noise — the
                 host's job is to finish the form, not pick a new picture.
