@@ -54,6 +54,8 @@ const R = {
     itemsTitle: "Vad åt du?",
     claimHint: "Tryck på det du åt. Delade rätter ligger högst upp och är redan fördelade.",
     sharedSection: "Delas av alla",
+    markedShared: (desc: string) =>
+      `🤝 ”${desc || "Raden"}” delas nu av alla — flyttad till listan längst ner.`,
     nLeft: (n: number) => `${n} kvar`,
     cartEmpty: "Inget taget än",
     sharedBy: (n: number) => `delas av ${n}`,
@@ -119,6 +121,8 @@ const R = {
     itemsTitle: "What did you have?",
     claimHint: "Tap what you had. Shared dishes sit at the top — already split for the table.",
     sharedSection: "Shared by everyone",
+    markedShared: (desc: string) =>
+      `🤝 “${desc || "Item"}” is now shared by everyone — moved to the bottom.`,
     nLeft: (n: number) => `${n} left`,
     cartEmpty: "Nothing claimed yet",
     sharedBy: (n: number) => `shared by ${n}`,
@@ -209,6 +213,18 @@ export default function RoomPage() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
+  // Positive toast surfaced when an edit flips an item from
+  // not-fully-shared → fully-shared. Auto-dismisses after ~4 s so it
+  // doesn't linger over the bottom action row.
+  const [markedSharedToast, setMarkedSharedToast] = useState<{ description: string } | null>(null);
+  const markedSharedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!markedSharedToast) return;
+    if (markedSharedTimer.current) clearTimeout(markedSharedTimer.current);
+    markedSharedTimer.current = setTimeout(() => setMarkedSharedToast(null), 4200);
+    return () => { if (markedSharedTimer.current) clearTimeout(markedSharedTimer.current); };
+  }, [markedSharedToast]);
+
   // Long-press → inline edit for description or price. The pencil button is
   // still there for "full" edits (shared, split count, delete); this is the
   // shortcut for the most common fixes (the OCR's typo, the wrong digit).
@@ -246,8 +262,15 @@ export default function RoomPage() {
   //    translateY animation on every render after a scroll. Gate on a
   //    signature of item ids in order so unrelated state updates skip it.
   const rowPositionsRef = useRef<Map<string, number>>(new Map());
+  // Include shared / shareCount in the signature so the FLIP effect
+  // also re-measures when an item flips into / out of the "shared by
+  // everyone" section — the row's id is unchanged but its DOM slot
+  // moves, and we want the move animated.
   const itemIdsSig = useMemo(
-    () => (state?.items.map((i) => i.id).join("|") ?? ""),
+    () =>
+      state?.items
+        .map((i) => `${i.id}:${i.shared ? 1 : 0}:${i.shareCount ?? 0}`)
+        .join("|") ?? "",
     [state?.items],
   );
   useLayoutEffect(() => {
@@ -643,6 +666,7 @@ export default function RoomPage() {
   }
   async function saveEdit(itemId: string) {
     if (!editDraft) return cancelEdit();
+    const before = state?.items.find((i) => i.id === itemId);
     const desc = editDraft.description.trim();
     const priceOre = parseAmountToOre(editDraft.priceInput);
     const patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number } = {};
@@ -650,7 +674,21 @@ export default function RoomPage() {
     if (priceOre != null) patch.priceOre = priceOre;
     patch.shared = editDraft.shared;
     if (editDraft.shared) patch.shareCount = editDraft.shareCount;
+    // Did this edit promote the row into the "shared by everyone"
+    // section? Then surface the positive toast — the FLIP layout
+    // animation will carry the row down to the bottom on its own.
+    const wasFully = before ? isFullyShared(before, groupSize) : false;
+    const isFully = isFullyShared(
+      { shared: !!patch.shared, shareCount: patch.shareCount },
+      groupSize,
+    );
     await editItem(itemId, patch);
+    if (!wasFully && isFully) {
+      setMarkedSharedToast({ description: desc || before?.description || "" });
+      // Open the collapsed shared section so the FLIP move lands in
+      // a visible target instead of disappearing into a closed drawer.
+      setSharedOpen(true);
+    }
     cancelEdit();
   }
   async function removeItemRow(itemId: string) {
@@ -1366,58 +1404,6 @@ export default function RoomPage() {
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
             <p className="text-sm text-gray-600">{t.claimHint}</p>
             <div className="mt-3 space-y-3">
-              {state.items.some((it) => isFullyShared(it, groupSize)) && (() => {
-                // The "shared by everyone" section now only covers items the
-                // whole table takes a share of by default. Partial shares (a
-                // bottle for 2 of 4, etc.) fall through to their category row
-                // below and behave like opt-in multi-copy items.
-                const sharedItems = state.items.filter((it) => isFullyShared(it, groupSize));
-                const mySharedOre = sharedItems.reduce((acc, it) => {
-                  if (!personId || !it.claimedBy.includes(personId)) return acc;
-                  const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
-                  return acc + Math.floor(it.priceOre / divisor);
-                }, 0);
-                return (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setSharedOpen((v) => !v)}
-                      aria-expanded={sharedOpen}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl py-1 text-left text-base font-bold text-gray-700"
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <ChevronRightIcon
-                          className={`shrink-0 text-gray-400 transition-transform duration-200 ease-out ${sharedOpen ? "rotate-90" : ""}`}
-                        />
-                        <span aria-hidden className="text-2xl leading-none">🤝</span>
-                        <span className="truncate">
-                          {t.sharedSection} <span className="font-medium text-gray-400">({sharedItems.length})</span>
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end leading-tight">
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                          {t.yourTotal}
-                        </span>
-                        <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
-                      </span>
-                    </button>
-                    {/* Animate height by toggling grid-template-rows between 0fr and 1fr. */}
-                    <div
-                      className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                        sharedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                      }`}
-                    >
-                      {/* -mx-2 + px-2 gives the row shadows / ring 8 px of
-                          breathing room on each side so overflow-hidden
-                          doesn't clip them. The rows themselves stay the
-                          same width as siblings outside the collapser. */}
-                      <div className="-mx-2 min-h-0 overflow-hidden px-2">
-                        <div className="space-y-2 pt-1">{sharedItems.map(claimItemRow)}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
               {CATEGORY_ORDER.map((cat) => {
                 // Anything that isn't "shared by everyone" lives in the
                 // category sections — including partial shares, which the
@@ -1488,6 +1474,55 @@ export default function RoomPage() {
                   </div>
                 );
               })}
+              {/* "Shared by everyone" lives at the BOTTOM of the items
+                  list. Categories carry the diner's eye first because
+                  each diner usually has at least one row of their own
+                  there; the shared pile is a summary the whole table
+                  participates in equally, so it earns its place under
+                  the per-category sections. */}
+              {state.items.some((it) => isFullyShared(it, groupSize)) && (() => {
+                const sharedItems = state.items.filter((it) => isFullyShared(it, groupSize));
+                const mySharedOre = sharedItems.reduce((acc, it) => {
+                  if (!personId || !it.claimedBy.includes(personId)) return acc;
+                  const divisor = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
+                  return acc + Math.floor(it.priceOre / divisor);
+                }, 0);
+                return (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setSharedOpen((v) => !v)}
+                      aria-expanded={sharedOpen}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl py-1 text-left text-base font-bold text-gray-700"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <ChevronRightIcon
+                          className={`shrink-0 text-gray-400 transition-transform duration-200 ease-out ${sharedOpen ? "rotate-90" : ""}`}
+                        />
+                        <span aria-hidden className="text-2xl leading-none">🤝</span>
+                        <span className="truncate">
+                          {t.sharedSection} <span className="font-medium text-gray-400">({sharedItems.length})</span>
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end leading-tight">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          {t.yourTotal}
+                        </span>
+                        <Money ore={mySharedOre} className="font-bold text-swish-dark" nativeClassName="ml-1 text-xs font-normal text-gray-400" />
+                      </span>
+                    </button>
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                        sharedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      }`}
+                    >
+                      <div className="-mx-2 min-h-0 overflow-hidden px-2">
+                        <div className="space-y-2 pt-1">{sharedItems.map(claimItemRow)}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             {unclaimedCount > 0 ? (
               <p className="mt-2 text-xs text-amber-600">{t.unclaimed(unclaimedCount)}</p>
@@ -1744,6 +1779,25 @@ export default function RoomPage() {
               </button>
             </div>
             <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80" />
+          </div>
+        </div>
+      )}
+      {/* Positive sister to the undo toast: surfaces when an edit
+          promotes a row into the "shared by everyone" pile, so the
+          host knows where the item just went. The FLIP animation runs
+          the row down to the bottom on its own. */}
+      {markedSharedToast && (
+        <div className="fixed inset-x-0 bottom-28 z-50 mx-auto max-w-md px-4">
+          <div
+            key={markedSharedToast.description}
+            className="relative overflow-hidden rounded-xl bg-swish px-3 py-2.5 text-sm text-white shadow-lg ring-1 ring-swish-dark/40"
+          >
+            <p className="pr-1 leading-snug">{t.markedShared(markedSharedToast.description)}</p>
+            <span
+              aria-hidden
+              className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80"
+              style={{ animationDuration: "4.2s" }}
+            />
           </div>
         </div>
       )}
