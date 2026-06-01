@@ -1544,9 +1544,9 @@ export default function Page() {
                 slot. shadow-lg on every button so they read against the
                 live video underneath. */}
             {!(ocrLoading || scanCount !== null || scanReady || hostReady) && (
-              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 space-y-2">
+              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 space-y-1.5">
                 {ocrError && (
-                  <p className="rounded-lg bg-red-600 px-3 py-2 text-center text-sm font-medium text-white shadow-lg">
+                  <p className="rounded-lg bg-red-600 px-3 py-1.5 text-center text-xs font-medium text-white shadow-md">
                     {ocrError}
                   </p>
                 )}
@@ -1555,22 +1555,22 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={() => runOcr()}
-                      className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
+                      className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
                     >
                       {t.readReceipt}
                     </button>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
                         onClick={() => setImageUrl(null)}
-                        className="rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
+                        className="rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.takePhoto}
                       </button>
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
+                        className="rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.chooseLibrary}
                       </button>
@@ -1582,7 +1582,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={capturePhoto}
-                        className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
+                        className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
                       >
                         {t.scanCta}
                       </button>
@@ -1592,32 +1592,32 @@ export default function Page() {
                         <button
                           type="button"
                           onClick={finishCapture}
-                          className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
+                          className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
                         >
                           {t.readReceipt}
                         </button>
                         <button
                           type="button"
                           onClick={() => setWantMoreShots(true)}
-                          className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-swish-dark shadow-lg ring-1 ring-swish/40 active:bg-swish/10"
+                          className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-semibold text-swish-dark shadow-md ring-1 ring-swish/40 active:bg-swish/10"
                         >
                           {t.takeAnotherShot}
                         </button>
                       </>
                     )}
                     {cameraActive && pendingShots.length > 0 && wantMoreShots && (
-                      <div className="grid grid-cols-[1fr_1.4fr] gap-2">
+                      <div className="grid grid-cols-[1fr_1.4fr] gap-1.5">
                         <button
                           type="button"
                           onClick={capturePhoto}
-                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark shadow-lg ring-1 ring-swish/40 active:bg-swish/10"
+                          className="rounded-xl bg-white/95 px-3 py-2.5 text-xs font-semibold text-swish-dark shadow-md ring-1 ring-swish/40 active:bg-swish/10"
                         >
                           {t.takeAnotherShot}
                         </button>
                         <button
                           type="button"
                           onClick={finishCapture}
-                          className="rounded-xl bg-swish px-4 py-3.5 text-sm font-semibold text-white shadow-lg active:bg-swish-dark"
+                          className="rounded-xl bg-swish px-4 py-2.5 text-xs font-semibold text-white shadow-md active:bg-swish-dark"
                         >
                           {t.readReceiptN(pendingShots.length)}
                         </button>
@@ -1627,7 +1627,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={discardPendingShots}
-                        className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-medium text-gray-600 shadow-lg ring-1 ring-gray-200 active:bg-gray-100"
+                        className="w-full rounded-xl bg-white/95 px-4 py-1.5 text-[11px] font-medium text-gray-600 shadow-md ring-1 ring-gray-200 active:bg-gray-100"
                       >
                         {t.discardShots}
                       </button>
@@ -1636,7 +1636,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
+                        className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.chooseLibrary}
                       </button>
