@@ -252,6 +252,20 @@ export class RoomDO extends DurableObject {
           item.claimedBy = isFullyShared(item, groupSize) ? state.people.map((p) => p.id) : [];
         }
       }
+      // Catch promotions where `shared` didn't flip but shareCount alone
+      // bumped the item into the fully-shared band — e.g. a partial 4/6
+      // edited up to 6/6. The block above doesn't fire (patch.shared ===
+      // item.shared), so without this sweep the row lands in the "Delas
+      // av alla" section with an empty claimedBy. Anyone already on the
+      // list stays; we just additively add everyone who's missing.
+      {
+        const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+        if (item.shared && isFullyShared(item, groupSize)) {
+          for (const p of state.people) {
+            if (!item.claimedBy.includes(p.id)) item.claimedBy.push(p.id);
+          }
+        }
+      }
       await this.save(state);
     }
     return state;
