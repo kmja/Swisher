@@ -15,7 +15,8 @@ type Props = {
   download?: string;
   /** Bounding rect of the element the dialog should "grow out of" —
    *  usually the share-trigger button. The panel animates from that
-   *  rect to its centred resting position on open. */
+   *  rect to its centred resting position on open, and back into it
+   *  on close. */
   origin?: DOMRect | null;
   labels: {
     share: string;
@@ -46,6 +47,21 @@ export default function QrDialog({
   const [copied, setCopied] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Keep the dialog rendered through its closing animation. `mounted`
+  // tracks the DOM presence; `open` tracks the parent's intent. We
+  // unmount only AFTER the close keyframe finishes.
+  const [mounted, setMounted] = useState(open);
+  // Cache the most recent origin so the closing animation lands back
+  // at the same trigger even if the parent has nulled it out by the
+  // time onClose fires.
+  const lastOriginRef = useRef<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      if (origin) lastOriginRef.current = origin;
+    }
+  }, [open, origin]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,45 +78,56 @@ export default function QrDialog({
     };
   }, [open, onClose]);
 
-  /** Grow-from-origin animation: when the dialog mounts with an
-   *  `origin` rect we run the panel from that rect's position +
-   *  size to its centred resting frame. Backdrop fades in parallel
-   *  on its own curve. Without an `origin` we fall back to a plain
-   *  centred fade so old callers keep their previous look. */
+  /** Opening + closing animations. Both keyframes pivot around the
+   *  cached origin rect so the dialog literally grows out of (and
+   *  collapses back into) the share-trigger button. Falls back to a
+   *  centred scale/fade when no origin is available. */
   useLayoutEffect(() => {
-    if (!open || !panelRef.current || typeof panelRef.current.animate !== "function") return;
-    if (backdropRef.current?.animate) {
-      backdropRef.current.animate(
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 220, easing: "ease-out", fill: "backwards" },
+    if (!mounted || !panelRef.current || typeof panelRef.current.animate !== "function") return;
+    const panel = panelRef.current;
+    const backdrop = backdropRef.current;
+    const used = open ? (origin ?? lastOriginRef.current) : lastOriginRef.current;
+    // Backdrop fades on its own curve so the dark layer arrives /
+    // leaves independently of the panel.
+    if (backdrop?.animate) {
+      backdrop.animate(
+        open ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
+        { duration: open ? 220 : 220, easing: open ? "ease-out" : "ease-in", fill: "forwards" },
       );
     }
-    const panel = panelRef.current;
-    if (origin) {
+    let anim: Animation;
+    if (used) {
       const target = panel.getBoundingClientRect();
-      const scaleX = Math.max(0.04, origin.width / target.width);
-      const scaleY = Math.max(0.04, origin.height / target.height);
-      const dx = origin.left + origin.width / 2 - (target.left + target.width / 2);
-      const dy = origin.top + origin.height / 2 - (target.top + target.height / 2);
-      panel.animate(
-        [
-          { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, opacity: 0 },
-          { transform: "translate(0, 0) scale(1, 1)", opacity: 1 },
-        ],
-        { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      const sx = Math.max(0.04, used.width / target.width);
+      const sy = Math.max(0.04, used.height / target.height);
+      const dx = used.left + used.width / 2 - (target.left + target.width / 2);
+      const dy = used.top + used.height / 2 - (target.top + target.height / 2);
+      const big = { transform: "translate(0, 0) scale(1, 1)", opacity: 1 };
+      const small = { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 0 };
+      anim = panel.animate(
+        open ? [small, big] : [big, small],
+        { duration: open ? 320 : 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "forwards" },
       );
     } else {
-      panel.animate(
-        [
-          { transform: "scale(0.92)", opacity: 0 },
-          { transform: "scale(1)", opacity: 1 },
-        ],
-        { duration: 220, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      const big = { transform: "scale(1)", opacity: 1 };
+      const small = { transform: "scale(0.92)", opacity: 0 };
+      anim = panel.animate(
+        open ? [small, big] : [big, small],
+        { duration: open ? 220 : 200, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "forwards" },
       );
     }
-  }, [open, origin]);
+    if (!open) {
+      anim.onfinish = () => setMounted(false);
+    }
+    return () => {
+      // Don't cancel mid-flight — we want the onfinish handler to
+      // unmount the closing dialog. Only cancel if a NEW open/close
+      // toggle starts before the current finishes, which the next
+      // effect run will recreate cleanly anyway.
+    };
+  }, [open, mounted, origin]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   async function doShare() {
     if (shareUrl && typeof navigator !== "undefined" && navigator.share) {
@@ -126,12 +153,18 @@ export default function QrDialog({
 
   return (
     <div
-      ref={backdropRef}
       role="dialog"
       aria-modal="true"
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
+      {/* Dim backdrop — its own layer so opacity can fade
+          independently of the panel's transform / opacity. */}
+      <div
+        ref={backdropRef}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/70"
+        aria-hidden
+      />
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}

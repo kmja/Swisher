@@ -2606,14 +2606,30 @@ function Header({ step, t }: { step: Step; t: Strings }) {
   const activeIndex = step === "capture" ? 0 : step === "items" ? 1 : 2;
   return (
     <header className="flex items-center gap-2">
-      {labels.map((label, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-1">
-          <div className={`h-1.5 w-full rounded-full ${i <= activeIndex ? "bg-swish" : "bg-gray-200"}`} />
-          <span className={`text-[11px] ${i === activeIndex ? "font-semibold text-swish-dark" : "text-gray-400"}`}>
-            {label}
-          </span>
-        </div>
-      ))}
+      {labels.map((label, i) => {
+        const isActive = i === activeIndex;
+        const isDone = i < activeIndex;
+        // Three states: done (faded swish), active (solid swish), upcoming
+        // (gray). The done state is dimmer so the eye lands on the
+        // currently active pill while still showing what's already
+        // checked off behind.
+        const barClass = isActive
+          ? "bg-swish"
+          : isDone
+          ? "bg-swish/35"
+          : "bg-gray-200";
+        const labelClass = isActive
+          ? "font-semibold text-swish-dark"
+          : isDone
+          ? "text-swish-dark/45"
+          : "text-gray-400";
+        return (
+          <div key={i} className="flex flex-1 flex-col items-center gap-1">
+            <div className={`h-1.5 w-full rounded-full ${barClass}`} />
+            <span className={`text-[11px] ${labelClass}`}>{label}</span>
+          </div>
+        );
+      })}
     </header>
   );
 }

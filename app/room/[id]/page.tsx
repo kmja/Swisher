@@ -785,17 +785,18 @@ export default function RoomPage() {
   }
 
   /** Page-enter pan: when the room page mounts the whole main slides
-   *  up a few px and fades in. Imperative via WAAPI on a stable ref
-   *  so it fires exactly once per mount and doesn't get re-played by
-   *  iOS Safari layout recalcs. */
+   *  in from the right + fades up. Matches the items-step entrance in
+   *  app/page.tsx so scan → verify → room reads as one flow rather
+   *  than a hard cut. Imperative via WAAPI on a stable ref so it
+   *  fires exactly once per mount. */
   const playRoomEnter = useCallback((el: HTMLElement | null) => {
     if (!el || typeof el.animate !== "function") return;
     el.animate(
       [
-        { opacity: 0, transform: "translateY(14px)" },
-        { opacity: 1, transform: "translateY(0)" },
+        { opacity: 0, transform: "translateX(36px)" },
+        { opacity: 1, transform: "translateX(0)" },
       ],
-      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
     );
   }, []);
 
@@ -1382,10 +1383,17 @@ export default function RoomPage() {
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start gap-3">
           {/* Title block. min-w-0 + truncate so a long restaurant name
-              can shrink instead of pushing the QR off the card. */}
+              can shrink instead of pushing the QR off the card. The
+              total-bill line under the date is the receipt's headline
+              number — items + tip, no diner-share math. */}
           <div className="min-w-0 flex-1 pt-0.5">
             <h1 className="truncate text-xl font-bold text-ink">{state.place || "Kvitt"}</h1>
             <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
+            <Money
+              ore={state.items.reduce((sum, it) => sum + it.priceOre, 0) + (state.tipOre ?? 0)}
+              className="mt-0.5 block text-sm font-semibold text-ink"
+              nativeClassName="ml-1 text-[11px] font-normal text-gray-400"
+            />
             {state.imageCount > 0 && (
               <button
                 type="button"
