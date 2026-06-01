@@ -27,6 +27,10 @@ export interface Strings {
   lineUpOverlayTitle: string;
   /** Secondary button: take an additional shot in the same scan session. */
   takeAnotherShot: string;
+  /** Tooltip that hovers next to the take-another button in the preview
+   *  state, nudging the host that long receipts can be stitched together
+   *  across multiple shots. */
+  multiShotTip: string;
   /** Primary button: commit the N captured shots to OCR. */
   readReceiptN: (n: number) => string;
   /** Tertiary: throw away pending shots and start over. */
@@ -198,6 +202,7 @@ const sv: Strings = {
   lineUpOverlay: "Linjera den ljusrosa raden med samma rad på kvittot",
   lineUpOverlayTitle: "Fortsätt där förra bilden slutade",
   takeAnotherShot: "+ Ny bild",
+  multiShotTip: "Fick inte med allt på en bild? Ta en till — vi syr ihop dem.",
   readReceiptN: (n) => `Läs av (${n})`,
   discardShots: "Börja om",
   torchOn: "Slå på ficklampan",
@@ -349,6 +354,7 @@ const en: Strings = {
   lineUpOverlay: "Line the pink overlay up with the same row on the receipt",
   lineUpOverlayTitle: "Pick up where the last shot ended",
   takeAnotherShot: "+ New shot",
+  multiShotTip: "Couldn't fit it all in one photo? Take another — we'll stitch them together.",
   readReceiptN: (n) => `Read receipt (${n})`,
   discardShots: "Start over",
   torchOn: "Turn flashlight on",

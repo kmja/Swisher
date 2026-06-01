@@ -82,28 +82,55 @@ const CHIP_TINTS = [
 const CHIP_LIFTS = [0, -3, 2, -1, 3, -2, 1, -3, 2, -1];
 const CHIP_ROTATIONS = [-3, 2, 0, -2, 3, -1, 0, -3, 1, 2];
 
-/** Round 44 px secondary button styled like the side controls in a
- *  native camera app — translucent dark surface, white icon, soft
- *  outline so it sits comfortably over the live video. */
+/** Round secondary button styled like the side controls in a native
+ *  camera app — translucent dark surface, white icon, soft outline so
+ *  it sits comfortably over the live video. The `lg` size matches the
+ *  "choose from library" affordance and gives an SVG icon room. */
 function CaptureIconButton({
   onClick,
   label,
   children,
+  size = "default",
 }: {
   onClick: () => void;
   label: string;
   children: React.ReactNode;
+  size?: "default" | "lg";
 }) {
+  const dims = size === "lg" ? "h-14 w-14" : "h-11 w-11";
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-lg text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:scale-95 transition-transform"
+      className={`pointer-events-auto flex items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30 backdrop-blur transition-transform active:scale-95 ${dims}`}
     >
       {children}
     </button>
+  );
+}
+
+/** Monochrome photo icon (frame + sun + mountains) used for the
+ *  choose-from-library button. Rendered with currentColor so it
+ *  picks up the button's white text colour automatically. */
+function PhotoIcon({ size = 26 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path d="M21 16l-4.5-5.5-4 4.5-2.5-2L3.5 18" />
+    </svg>
   );
 }
 
@@ -1473,7 +1500,7 @@ export default function Page() {
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`absolute right-4 top-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
+                    className={`absolute right-5 bottom-28 z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
                   >
                     {torchOn ? "🔦" : "💡"}
                   </button>
@@ -1642,20 +1669,34 @@ export default function Page() {
                     {ocrError}
                   </p>
                 )}
+                {/* Tooltip above the left slot, only shown right after
+                    the first shot. Explains that long receipts can be
+                    captured across multiple photos and get stitched
+                    server-side. */}
+                {!imageUrl && pendingShots.length > 0 && !wantMoreShots && (
+                  <div className="pointer-events-none absolute -top-2 left-2 right-2 -translate-y-full">
+                    <div className="mx-auto max-w-[260px] rounded-2xl bg-black/75 px-3.5 py-2 text-xs leading-snug text-white shadow-xl backdrop-blur">
+                      {t.multiShotTip}
+                      <span aria-hidden className="absolute -bottom-1 left-7 h-3 w-3 rotate-45 bg-black/75" />
+                    </div>
+                  </div>
+                )}
                 {/* iOS-camera style action row: a big shutter / commit
-                    circle in the centre, with state-specific 44 px
-                    secondaries to either side. pointer-events on the
-                    wrapper are off; each individual button opts back in. */}
+                    circle in the centre, with state-specific secondaries
+                    to either side. pointer-events on the wrapper are
+                    off; each individual button opts back in. */}
                 <div className="grid grid-cols-3 items-center">
                   {/* LEFT slot ---------------------------------------- */}
                   <div className="justify-self-start">
                     {imageUrl ? (
                       <CaptureIconButton onClick={() => setImageUrl(null)} label={t.takePhoto}>📷</CaptureIconButton>
                     ) : pendingShots.length === 0 ? (
-                      <CaptureIconButton onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>📁</CaptureIconButton>
+                      <CaptureIconButton size="lg" onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>
+                        <PhotoIcon />
+                      </CaptureIconButton>
                     ) : !wantMoreShots ? (
-                      <CaptureIconButton onClick={() => setWantMoreShots(true)} label={t.takeAnotherShot}>
-                        <span className="text-2xl leading-none">+</span>
+                      <CaptureIconButton size="lg" onClick={() => setWantMoreShots(true)} label={t.takeAnotherShot}>
+                        <span className="text-3xl leading-none">+</span>
                       </CaptureIconButton>
                     ) : (
                       <CaptureIconButton onClick={discardPendingShots} label={t.discardShots}>✕</CaptureIconButton>
@@ -1676,7 +1717,9 @@ export default function Page() {
                   {/* RIGHT slot --------------------------------------- */}
                   <div className="justify-self-end">
                     {imageUrl ? (
-                      <CaptureIconButton onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>📁</CaptureIconButton>
+                      <CaptureIconButton size="lg" onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>
+                        <PhotoIcon />
+                      </CaptureIconButton>
                     ) : pendingShots.length === 0 ? null : !wantMoreShots ? (
                       <CaptureIconButton onClick={discardPendingShots} label={t.discardShots}>✕</CaptureIconButton>
                     ) : (
