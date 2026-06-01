@@ -265,6 +265,39 @@ function FishAndChips() {
   );
 }
 
+function Schnitzel() {
+  return (
+    <>
+      {/* Soft plate underneath. */}
+      <ellipse cx="11.5" cy="18" rx="10.5" ry="2.6" fill="#EDEDED" />
+      {/* Breaded cutlet — irregular oval so it doesn't read as a burger. */}
+      <path
+        d="M3.5 13.4 Q4.2 7.8 11 7.4 Q18.6 7 20.2 12 Q20.8 15.6 16.8 17 Q11 18.6 6.2 17.2 Q2.6 16.2 3.5 13.4 Z"
+        fill="#D69E5F"
+      />
+      {/* Darker breading crust along the rim. */}
+      <path
+        d="M3.7 13.4 Q4.4 8.2 11 7.8 Q18.4 7.4 20 12 L19.3 12.3 Q17.9 8.7 11 9 Q4.9 9.3 4.4 13.4 Z"
+        fill="#B07A3C"
+        opacity="0.55"
+      />
+      {/* Breadcrumb texture — a handful of bumps. */}
+      <ellipse cx="7.5" cy="11.4" rx="1.1" ry="0.55" fill="#B07A3C" />
+      <ellipse cx="13.3" cy="10.7" rx="1.3" ry="0.6" fill="#B07A3C" />
+      <ellipse cx="10.4" cy="13.5" rx="1.1" ry="0.55" fill="#B07A3C" />
+      <ellipse cx="16.2" cy="13.6" rx="0.9" ry="0.5" fill="#B07A3C" />
+      <circle cx="6.4" cy="13" r="0.45" fill="#EEC58E" />
+      <circle cx="11.2" cy="10" r="0.4" fill="#EEC58E" />
+      <circle cx="17" cy="11.3" r="0.45" fill="#EEC58E" />
+      <circle cx="14.5" cy="14.4" r="0.4" fill="#EEC58E" />
+      {/* Lemon wedge on the plate, top-right corner. */}
+      <path d="M19.5 4.8 L23 4.2 L22 8.2 Z" fill="#FBE16C" />
+      <path d="M20.6 5.4 L22.4 5 L22.1 6.8 Z" fill="#FFF1A8" opacity="0.85" />
+      <path d="M19.7 4.9 L22.5 4.4" stroke="#D6B448" strokeWidth="0.35" fill="none" />
+    </>
+  );
+}
+
 function Charcuterie() {
   return (
     <>
@@ -757,6 +790,7 @@ const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   poke: { label: "Poke bowl", Body: Poke },
   tartare: { label: "Tartare / råbiff", Body: Tartare },
   fishandchips: { label: "Fish & chips", Body: FishAndChips },
+  schnitzel: { label: "Schnitzel", Body: Schnitzel },
   charcuterie: { label: "Charcuterie / ostbricka", Body: Charcuterie },
   nachos: { label: "Nachos", Body: Nachos },
   tiramisu: { label: "Tiramisu", Body: Tiramisu },

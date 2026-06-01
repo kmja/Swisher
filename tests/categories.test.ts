@@ -81,8 +81,23 @@ describe("emojiFor", () => {
     // sniglar / escargot specifically.
     expect(emojiFor("Sniglar")).toBe("🐌");
     expect(emojiFor("Escargots à la persillade")).toBe("🐌");
-    // Banh mi: Vietnamese sandwich, closest Unicode is 🥪.
-    expect(emojiFor("Banh mi")).toBe("🥪");
+    // Banh mi: Vietnamese sandwich served on a baguette.
+    expect(emojiFor("Banh mi")).toBe("🥖");
+    // Coq au vin used to suffix-match "vin" and end up as the wine
+    // glass; the dedicated stew rule has to fire first.
+    expect(emojiFor("Coq au vin")).toBe("🍲");
+    expect(emojiFor("Beef Bourguignon")).toBe("🍲");
+    // Old Fashioned and friends sit in the cocktail bucket — the drink
+    // category fallback was painting them with 🍺.
+    expect(emojiFor("Old Fashioned")).toBe("🍸");
+    expect(emojiFor("Espresso Martini")).toBe("🍸");
+    expect(emojiFor("Whisky Sour")).toBe("🍸");
+    // Schnitzel gets its own hand-drawn icon so it stops sharing the
+    // generic 🥩 with every other cut of meat.
+    expect(emojiFor("Schnitzel")).toBe("ci:schnitzel");
+    expect(emojiFor("Wienerschnitzel")).toBe("ci:schnitzel");
+    // Don't let the schnitzel rule steal the lamb icon from lammkotlett.
+    expect(emojiFor("Lammkotlett")).toBe("🐑");
     // Vegan plate has no dedicated icon, but it should at least
     // categorise as food so it gets the plate-and-cutlery fallback
     // instead of the receipt icon used for "other".

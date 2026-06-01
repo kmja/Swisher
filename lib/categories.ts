@@ -156,6 +156,10 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
   poke: ["poke", "poke bowl", "pokebowl"],
   tartare: ["tartare", "råbiff", "steak tartare", "biff tartar"],
   fishandchips: ["fish and chips", "fish & chips", "fish n chips", "fish chips"],
+  // kotlett deliberately stays OUT: "lammkotlett" would otherwise
+  // suffix-match this rule and steal the lamb icon. Schnitzel-specific
+  // names only.
+  schnitzel: ["schnitzel", "wienerschnitzel", "wiener schnitzel", "milanesa"],
   charcuterie: ["charcuterie", "charkbricka", "ostbricka", "osttallrik", "antipasti", "plockmat"],
   nachos: ["nachos"],
   tiramisu: ["tiramisu"],
@@ -206,10 +210,14 @@ const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(
 // icons are matched before the emoji rules. Uses the compound-aware matcher.
 const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   ...CUSTOM_ICON_RULES,
+  // Stews that pair with wine in the name — has to fire BEFORE the
+  // wine rule, otherwise "Coq au vin" matches "vin" and the row gets
+  // a 🍷 instead of being recognised as a stew.
+  [makeMatcher(["coq au vin", "beef bourguignon", "boeuf bourguignon", "boeuf à la bourguignonne"]), "🍲"],
   // drinks
   [makeMatcher(["öl", "lager", "ipa", "ale", "stout", "pilsner", "porter", "brewing", "bryggeri"]), "🍺"],
   [makeMatcher(["champagne", "mumm", "bubbel", "cava", "prosecco", "mousserande"]), "🍾"],
-  [makeMatcher(["cocktail", "aviation", "negroni", "spritz", "mojito", "margarita", "martini", "aperol", "daiquiri", "gimlet"]), "🍸"],
+  [makeMatcher(["cocktail", "aviation", "negroni", "spritz", "mojito", "margarita", "martini", "aperol", "daiquiri", "gimlet", "old fashioned", "old-fashioned", "manhattan", "sazerac", "sidecar", "boulevardier", "paloma", "whisky sour", "pisco sour", "espresso martini", "moscow mule", "cosmopolitan"]), "🍸"],
   [makeMatcher([
     "vin", "rödvin", "rött vin", "vitt vin", "rosé", "blanc", "rouge", "wine", "merlot", "cabernet",
     "chardonnay", "sauvignon", "riesling", "pinot", "rioja", "chablis", "vouvray", "glögg",
@@ -271,8 +279,9 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   // generic starter / "other" fallback so the row doesn't default to
   // the leaf-salad 🥗 or the receipt 🧾.
   [makeMatcher(["sniglar", "snigel", "escargot", "escargots", "snail", "snails"]), "🐌"],
-  // Vietnamese sandwich — closest Unicode is the generic sandwich.
-  [makeMatcher(["banh mi", "banhmi", "bahn mi", "bánh mì"]), "🥪"],
+  // Vietnamese sandwich — served on a baguette, so the bread emoji
+  // reads more accurately than the generic 🥪.
+  [makeMatcher(["banh mi", "banhmi", "bahn mi", "bánh mì"]), "🥖"],
   [makeMatcher(["taco", "tacos", "burrito", "quesadilla", "nachos"]), "🌮"],
   [makeMatcher(["kebab", "falafel", "shawarma", "gyros", "wrap"]), "🥙"],
   [makeMatcher(["fralla", "macka", "mackor", "smörgås", "knäcke", "sandwich", "panini", "sub"]), "🥪"],

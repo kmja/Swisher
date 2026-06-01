@@ -1335,10 +1335,10 @@ export default function RoomPage() {
               </button>
             )}
           </div>
-          {/* QR + share — paired column on the right. QR is tappable;
-              the link CTA underneath matches its width so they read as
-              one control. */}
-          <div className="flex w-24 shrink-0 flex-col items-stretch gap-1.5">
+          {/* QR + share-icon row. The QR opens the share dialog on tap;
+              the icon button is a quicker grab for the same thing —
+              both feed setShareOpen so the host doesn't have to pick. */}
+          <div className="flex shrink-0 items-start gap-2">
             <button
               type="button"
               onClick={() => setShareOpen(true)}
@@ -1351,50 +1351,59 @@ export default function RoomPage() {
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+              aria-label={t.share}
+              title={t.share}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
             >
-              {t.share}
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
             </button>
           </div>
         </div>
         {isPayee ? (
-          <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">
-            {/* Host's name. */}
-            <div className="relative">
-              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                </svg>
-              </span>
-              <input
-                ref={payeeNameInputRef}
-                value={payeeNameDraft}
-                onChange={(e) => setPayeeNameDraft(e.target.value)}
-                onBlur={savePayeeDrafts}
-                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                placeholder={tx.yourName}
-                className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
-              />
-            </div>
-            {/* Host's Swish number. */}
-            <div className="relative">
-              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="6" y="2" width="12" height="20" rx="2.5" />
-                  <path d="M12 18h.01" />
-                </svg>
-              </span>
-              <input
-                ref={payeeNumberInputRef}
-                value={payeeNumberDraft}
-                onChange={(e) => setPayeeNumberDraft(e.target.value)}
-                onBlur={savePayeeDrafts}
-                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                inputMode="tel"
-                placeholder={tx.swishNumber}
-                className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
-              />
+          <div className="mt-5 space-y-2 border-t border-gray-100 pt-3">
+            {/* Name + number share a row now. Number column is fixed at
+                w-40 — enough for "0701234567" without forcing the name
+                column to shrink awkwardly on most viewports. */}
+            <div className="flex items-stretch gap-2">
+              <div className="relative min-w-0 flex-1">
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                  </svg>
+                </span>
+                <input
+                  ref={payeeNameInputRef}
+                  value={payeeNameDraft}
+                  onChange={(e) => setPayeeNameDraft(e.target.value)}
+                  onBlur={savePayeeDrafts}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                  placeholder={tx.yourName}
+                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                />
+              </div>
+              <div className="relative w-40 shrink-0">
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                    <path d="M12 18h.01" />
+                  </svg>
+                </span>
+                <input
+                  ref={payeeNumberInputRef}
+                  value={payeeNumberDraft}
+                  onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                  onBlur={savePayeeDrafts}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                  inputMode="tel"
+                  placeholder={tx.swishNumber}
+                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-2 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                />
+              </div>
             </div>
             {/* Group size — +/− stepper in the same input surface. */}
             <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-2 shadow-sm ring-1 ring-black/5">
