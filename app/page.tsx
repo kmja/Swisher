@@ -309,48 +309,133 @@ function GroupVisual({ count }: { count: number }) {
  *  category pools so the validation step looks different every reload,
  *  AND throws in a deliberately tricky bucket of abbreviations, foreign
  *  words and side-of-the-menu items that exercise the categorisation
- *  and OCR-mismatch paths. The goal is to make obvious bugs visible
- *  (wrong category, missing emoji, weird truncations, etc.) without
- *  needing a real receipt. */
-const DEMO_POOL = {
+ *  and OCR-mismatch paths.
+ *
+ *  Each item carries its own `shared` flag based on what the dish
+ *  actually is — a charcuterie platter is always shared, a single
+ *  entrecôte never is, a bottle of wine is, an individual glass isn't.
+ *  Deterministic per dish so the same item never flips sides across
+ *  reloads. Without this, "Bröd & smör" could land shared one tap and
+ *  unshared the next, which would make the demo unusable for repro'ing
+ *  bugs. */
+type DemoItem = { d: string; shared?: boolean };
+const DEMO_POOL: Record<"starters" | "mains" | "drinks" | "desserts" | "tricky", readonly DemoItem[]> = {
   starters: [
-    "Bröd & smör", "Charkbricka", "Skaldjursplateau", "Oliver",
-    "Burrata med tomat", "Carpaccio", "Toast Skagen", "Räkmacka",
-    "Löjromstoast", "Ostron", "Sniglar", "Hummus med pita",
-    "Caesar sallad", "Vitlöksbröd",
+    // Table items — shared by nature.
+    { d: "Bröd & smör", shared: true },
+    { d: "Charkbricka", shared: true },
+    { d: "Skaldjursplateau", shared: true },
+    { d: "Oliver", shared: true },
+    { d: "Hummus med pita", shared: true },
+    { d: "Vitlöksbröd", shared: true },
+    { d: "Antipasti misto", shared: true },
+    // Individual starters.
+    { d: "Burrata med tomat" },
+    { d: "Carpaccio" },
+    { d: "Toast Skagen" },
+    { d: "Räkmacka" },
+    { d: "Löjromstoast" },
+    { d: "Ostron" },
+    { d: "Sniglar" },
+    { d: "Caesar sallad" },
   ],
   mains: [
-    "Entrecôte 250g", "Oxfilé", "Fläskkarré", "Wallenbergare",
-    "Räkpasta", "Vegetarisk lasagne", "Stekt torsk", "Lammracks",
-    "Köttbullar med lingon", "Pad thai", "Risotto ai funghi",
-    "Tikka masala", "Schnitzel", "Magret de canard", "Bouillabaisse",
-    "Coq au vin", "Tagliatelle al ragù", "Janssons frestelse",
+    { d: "Entrecôte 250g" },
+    { d: "Oxfilé" },
+    { d: "Fläskkarré" },
+    { d: "Wallenbergare" },
+    { d: "Räkpasta" },
+    { d: "Vegetarisk lasagne" },
+    { d: "Stekt torsk" },
+    { d: "Lammracks" },
+    { d: "Köttbullar med lingon" },
+    { d: "Pad thai" },
+    { d: "Risotto ai funghi" },
+    { d: "Tikka masala" },
+    { d: "Schnitzel" },
+    { d: "Magret de canard" },
+    { d: "Bouillabaisse" },
+    { d: "Coq au vin" },
+    { d: "Tagliatelle al ragù" },
+    { d: "Janssons frestelse" },
   ],
   drinks: [
-    "Flaska Barolo 75cl", "Flaska Chablis 75cl", "Karaff rödvin",
-    "Flaska vatten", "Stor stark", "Glas rödvin", "Glas vitt vin",
-    "Coca-Cola", "Alkoholfri öl", "Bryggkaffe", "Espresso",
-    "Cappuccino", "Aperol Spritz", "Negroni", "Gin & tonic",
-    "Mojito", "Margarita", "Old Fashioned", "Champagne Mumm",
-    "Glögg", "OP Anderson", "Hallands Fläder",
+    // Bottles / carafes / pitchers — always shared.
+    { d: "Flaska Barolo 75cl", shared: true },
+    { d: "Flaska Chablis 75cl", shared: true },
+    { d: "Karaff rödvin", shared: true },
+    { d: "Champagne Mumm", shared: true },
+    { d: "Flaska vatten", shared: true },
+    // Individual drinks.
+    { d: "Stor stark" },
+    { d: "Glas rödvin" },
+    { d: "Glas vitt vin" },
+    { d: "Coca-Cola" },
+    { d: "Alkoholfri öl" },
+    { d: "Bryggkaffe" },
+    { d: "Espresso" },
+    { d: "Cappuccino" },
+    { d: "Aperol Spritz" },
+    { d: "Negroni" },
+    { d: "Gin & tonic" },
+    { d: "Mojito" },
+    { d: "Margarita" },
+    { d: "Old Fashioned" },
+    { d: "Glögg" },
+    { d: "OP Anderson" },
+    { d: "Hallands Fläder" },
   ],
   desserts: [
-    "Crème brûlée", "Kladdkaka med glass", "Glass", "Cheesecake",
-    "Tiramisu", "Macarons", "Churros", "Cannoli", "Mochi",
-    "Baklava", "Prinsesstårta", "Semla", "Kanelbulle",
-    "Marängsviss", "Citronfromage",
+    { d: "Crème brûlée" },
+    { d: "Kladdkaka med glass" },
+    { d: "Glass" },
+    { d: "Cheesecake" },
+    { d: "Tiramisu" },
+    { d: "Macarons" },
+    { d: "Churros" },
+    { d: "Cannoli" },
+    { d: "Mochi" },
+    { d: "Baklava" },
+    { d: "Prinsesstårta" },
+    { d: "Semla" },
+    { d: "Kanelbulle" },
+    { d: "Marängsviss" },
+    { d: "Citronfromage" },
   ],
-  // Tricky pool — abbreviations the model would normally have to
-  // expand, foreign / ambiguous words, sides that could fall in any
-  // category, and one or two service-line items.
+  // Tricky pool — abbreviations, foreign / ambiguous words, sides
+  // that could fall in any category, and one or two service-line
+  // items. Shared flag set per item where it makes sense (bread
+  // baskets, plates of fries to share, table water).
   tricky: [
-    "BR KAFFE", "ENTRC 250G", "WALLENB", "CAPP DBL", "ESPR MARTINI",
-    "RÄKM SK", "FL VATTEN", "STR STARK", "GLAS RÖDV",
-    "Råbiff", "Steak tartare", "Vegan plate", "Antipasti misto",
-    "Pintxos", "Empanada", "Bao bun", "Pho bo", "Banh mi", "Ramen",
-    "Edamame", "Vårrulle", "Samosa", "Burrata caprese",
-    "Pommes frites", "Rostade rotsaker", "Sallad",
-    "Snaps", "Akvavit", "Dricks", "Couvert",
+    { d: "BR KAFFE" },
+    { d: "ENTRC 250G" },
+    { d: "WALLENB" },
+    { d: "CAPP DBL" },
+    { d: "ESPR MARTINI" },
+    { d: "RÄKM SK" },
+    { d: "FL VATTEN", shared: true },
+    { d: "STR STARK" },
+    { d: "GLAS RÖDV" },
+    { d: "Råbiff" },
+    { d: "Steak tartare" },
+    { d: "Vegan plate" },
+    { d: "Pintxos", shared: true },
+    { d: "Empanada" },
+    { d: "Bao bun" },
+    { d: "Pho bo" },
+    { d: "Banh mi" },
+    { d: "Ramen" },
+    { d: "Edamame", shared: true },
+    { d: "Vårrulle" },
+    { d: "Samosa" },
+    { d: "Burrata caprese" },
+    { d: "Pommes frites", shared: true },
+    { d: "Rostade rotsaker", shared: true },
+    { d: "Sallad", shared: true },
+    { d: "Snaps" },
+    { d: "Akvavit" },
+    { d: "Dricks" },
+    { d: "Couvert", shared: true },
   ],
 };
 
@@ -371,37 +456,39 @@ function demoPickAny<T>(arr: readonly T[], n: number): T[] {
   return Array.from({ length: n }, () => arr[demoRandInt(0, arr.length - 1)]);
 }
 
-/** Build a fresh randomised demo order. Prices are in öre and rounded
- *  to whole kronor to match a real receipt's coarse-grained display. */
+/** Build a fresh randomised demo order. Items are picked at random
+ *  from each pool, but each item's shared flag is fixed in the pool
+ *  itself — the same dish always behaves the same way across reloads.
+ *  Prices are in öre, rounded to whole kronor to match what a real
+ *  receipt prints. */
 function generateDemoOrder(): { d: string; o: number; c: string; s?: boolean }[] {
   const items: { d: string; o: number; c: string; s?: boolean }[] = [];
   const kronor = (k: number) => k * 100;
-  // Starters — mostly shared at the table.
-  for (const d of demoPickUnique(DEMO_POOL.starters, demoRandInt(2, 5))) {
-    items.push({ d, o: kronor(demoRandInt(60, 195)), c: "starter", s: Math.random() > 0.25 });
+  for (const x of demoPickUnique(DEMO_POOL.starters, demoRandInt(2, 5))) {
+    items.push({ d: x.d, o: kronor(demoRandInt(60, 195)), c: "starter", s: x.shared });
   }
-  // Mains — roughly one per diner, with repeats allowed.
-  for (const d of demoPickAny(DEMO_POOL.mains, demoRandInt(6, 12))) {
-    items.push({ d, o: kronor(demoRandInt(195, 425)), c: "food" });
+  for (const x of demoPickAny(DEMO_POOL.mains, demoRandInt(6, 12))) {
+    items.push({ d: x.d, o: kronor(demoRandInt(195, 425)), c: "food", s: x.shared });
   }
-  // Drinks — bottles get the shared treatment + a higher price band.
-  for (const d of demoPickAny(DEMO_POOL.drinks, demoRandInt(8, 16))) {
-    const isBottle = /flaska|75 ?cl|champagne|karaff/i.test(d);
+  for (const x of demoPickAny(DEMO_POOL.drinks, demoRandInt(8, 16))) {
+    // Bottles + carafes come pre-flagged shared in the pool; that flag
+    // also doubles as the price-band switch (bottles get the wine
+    // pricing, individual glasses the cocktail pricing).
+    const isBottle = !!x.shared;
     items.push({
-      d,
+      d: x.d,
       o: kronor(isBottle ? demoRandInt(495, 1495) : demoRandInt(35, 195)),
       c: "drink",
-      s: isBottle && Math.random() > 0.4,
+      s: x.shared,
     });
   }
-  // Desserts.
-  for (const d of demoPickAny(DEMO_POOL.desserts, demoRandInt(3, 7))) {
-    items.push({ d, o: kronor(demoRandInt(65, 135)), c: "dessert" });
+  for (const x of demoPickAny(DEMO_POOL.desserts, demoRandInt(3, 7))) {
+    items.push({ d: x.d, o: kronor(demoRandInt(65, 135)), c: "dessert", s: x.shared });
   }
   // Tricky items — leave category blank so the app has to derive it
   // from the description, which is where the bugs hide.
-  for (const d of demoPickUnique(DEMO_POOL.tricky, demoRandInt(3, 7))) {
-    items.push({ d, o: kronor(demoRandInt(45, 295)), c: "" });
+  for (const x of demoPickUnique(DEMO_POOL.tricky, demoRandInt(3, 7))) {
+    items.push({ d: x.d, o: kronor(demoRandInt(45, 295)), c: "", s: x.shared });
   }
   return items;
 }
