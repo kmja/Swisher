@@ -292,9 +292,23 @@ export class RoomDO extends DurableObject {
       state.payeeNumber = patch.number.slice(0, 20);
     }
     if (typeof patch.groupSize === "number" && Number.isFinite(patch.groupSize) && patch.groupSize >= 2) {
+      const oldGroupSize = state.groupSize ?? 0;
       state.groupSize = Math.min(50, Math.round(patch.groupSize));
+      // Items get their shareCount frozen at room-creation time so the
+      // host-only "1 person at the table" headcount doesn't divide
+      // shares 1-way. When the host re-tunes groupSize after the fact
+      // we want the *fully shared* items to follow — partial shares
+      // (a bottle for 2 of 4) keep their intent. "Fully shared" here
+      // means the shareCount matched the previous groupSize, or there
+      // was no shareCount (which already defaults to groupSize).
+      for (const it of state.items) {
+        if (!it.shared) continue;
+        if (it.shareCount == null || it.shareCount === oldGroupSize) {
+          it.shareCount = state.groupSize;
+        }
+      }
       // Re-evaluate fully-shared items: anyone in the room should be
-      // auto-claimed on items the whole table shares, but a bigger
+      // auto-claimed on items the whole table shares. A bigger
       // groupSize might mean a previously-fully-shared row is now only
       // partial — leave the existing claimedBy alone in that case
       // (partial-share state surfaces via isFullyShared on read).

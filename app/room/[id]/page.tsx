@@ -1317,36 +1317,41 @@ export default function RoomPage() {
           dialog), and host name / Swish number / group size as
           always-visible inputs for the host. Guests see the host row
           read-only. */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-        <div className="text-center">
-          <h1 className="truncate text-2xl font-bold text-ink">{state.place || "Kvitt"}</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
-        </div>
-        <div className="mt-4 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            aria-label={t.share}
-            className="block overflow-hidden rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/10 active:bg-gray-50"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/room/${code}/qr`} alt="" className="block h-32 w-32" />
-          </button>
-          <div className="flex w-full max-w-xs items-stretch gap-2">
+      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+        <div className="flex items-start gap-3">
+          {/* Title block. min-w-0 + truncate so a long restaurant name
+              can shrink instead of pushing the QR off the card. */}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h1 className="truncate text-xl font-bold text-ink">{state.place || "Kvitt"}</h1>
+            <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
             {state.imageCount > 0 && (
               <button
                 type="button"
                 onClick={openReceipt}
                 aria-label={t.showReceipt}
-                className="shrink-0 rounded-xl bg-white px-3.5 text-base shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-swish-dark active:bg-gray-200"
               >
-                🧾
+                🧾 {t.showReceipt}
               </button>
             )}
+          </div>
+          {/* QR + share — paired column on the right. QR is tappable;
+              the link CTA underneath matches its width so they read as
+              one control. */}
+          <div className="flex w-24 shrink-0 flex-col items-stretch gap-1.5">
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+              aria-label={t.share}
+              className="overflow-hidden rounded-lg bg-white p-1 shadow-sm ring-1 ring-black/10 active:bg-gray-50"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/room/${code}/qr`} alt="" className="block h-[88px] w-[88px]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
             >
               {t.share}
             </button>
