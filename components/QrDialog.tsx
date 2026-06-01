@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Props = {
   open: boolean;
@@ -13,6 +13,10 @@ type Props = {
   shareText?: string;
   /** When set, show a small "save image" link with this filename. */
   download?: string;
+  /** Bounding rect of the element the dialog should "grow out of" —
+   *  usually the share-trigger button. The panel animates from that
+   *  rect to its centred resting position on open. */
+  origin?: DOMRect | null;
   labels: {
     share: string;
     copied: string;
@@ -36,9 +40,12 @@ export default function QrDialog({
   shareTitle,
   shareText,
   download,
+  origin,
   labels,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +61,44 @@ export default function QrDialog({
       document.body.style.overflow = prev;
     };
   }, [open, onClose]);
+
+  /** Grow-from-origin animation: when the dialog mounts with an
+   *  `origin` rect we run the panel from that rect's position +
+   *  size to its centred resting frame. Backdrop fades in parallel
+   *  on its own curve. Without an `origin` we fall back to a plain
+   *  centred fade so old callers keep their previous look. */
+  useLayoutEffect(() => {
+    if (!open || !panelRef.current || typeof panelRef.current.animate !== "function") return;
+    if (backdropRef.current?.animate) {
+      backdropRef.current.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 220, easing: "ease-out", fill: "backwards" },
+      );
+    }
+    const panel = panelRef.current;
+    if (origin) {
+      const target = panel.getBoundingClientRect();
+      const scaleX = Math.max(0.04, origin.width / target.width);
+      const scaleY = Math.max(0.04, origin.height / target.height);
+      const dx = origin.left + origin.width / 2 - (target.left + target.width / 2);
+      const dy = origin.top + origin.height / 2 - (target.top + target.height / 2);
+      panel.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, opacity: 0 },
+          { transform: "translate(0, 0) scale(1, 1)", opacity: 1 },
+        ],
+        { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      );
+    } else {
+      panel.animate(
+        [
+          { transform: "scale(0.92)", opacity: 0 },
+          { transform: "scale(1)", opacity: 1 },
+        ],
+        { duration: 220, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      );
+    }
+  }, [open, origin]);
 
   if (!open) return null;
 
@@ -81,14 +126,16 @@ export default function QrDialog({
 
   return (
     <div
+      ref={backdropRef}
       role="dialog"
       aria-modal="true"
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
     >
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md origin-center rounded-3xl bg-white p-6 shadow-xl"
       >
         <button
           type="button"

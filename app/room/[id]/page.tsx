@@ -762,6 +762,31 @@ export default function RoomPage() {
       /* clipboard unavailable */
     }
   }
+
+  /** Page-enter pan: when the room page mounts the whole main slides
+   *  up a few px and fades in. Imperative via WAAPI on a stable ref
+   *  so it fires exactly once per mount and doesn't get re-played by
+   *  iOS Safari layout recalcs. */
+  const playRoomEnter = useCallback((el: HTMLElement | null) => {
+    if (!el || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { opacity: 0, transform: "translateY(14px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+    );
+  }, []);
+
+  /** Origin rect captured the moment the host taps any of the share /
+   *  QR / copy controls — passed to QrDialog so the dialog grows out
+   *  of that spot instead of just popping into the centre. */
+  const shareOriginRef = useRef<HTMLDivElement>(null);
+  const [shareOrigin, setShareOrigin] = useState<DOMRect | null>(null);
+  function openShare() {
+    setShareOrigin(shareOriginRef.current?.getBoundingClientRect() ?? null);
+    setShareOpen(true);
+  }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
     setEditingItemId(it.id);
     setEditDraft({
@@ -1297,7 +1322,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
+    <main ref={playRoomEnter} className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
       {/* Sticky nav. Solid backdrop-blur background + bottom border so the
           header reads as a fixed surface above the scrolling content. The
           KvittLogo drops out on the room page — three buttons in 28 rem
@@ -1354,11 +1379,14 @@ export default function RoomPage() {
           {/* QR + share / copy-link buttons. The QR opens the share
               dialog on tap; the two h-11 icon buttons under it are
               quicker grabs — share is primary (swish bg), copy is
-              secondary (gray). All three feed the same room URL. */}
-          <div className="flex shrink-0 items-start gap-2">
+              secondary (gray). All three feed the same room URL. The
+              ref on the wrapper feeds QrDialog so the dialog grows
+              out of this corner of the screen rather than just
+              popping into the centre. */}
+          <div ref={shareOriginRef} className="flex shrink-0 items-start gap-2">
             <button
               type="button"
-              onClick={() => setShareOpen(true)}
+              onClick={openShare}
               aria-label={t.share}
               className="overflow-hidden rounded-lg bg-white p-1 shadow-sm ring-1 ring-black/10 active:bg-gray-50"
             >
@@ -1368,7 +1396,7 @@ export default function RoomPage() {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => setShareOpen(true)}
+                onClick={openShare}
                 aria-label={t.share}
                 title={t.share}
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"
@@ -2034,6 +2062,7 @@ export default function RoomPage() {
       <QrDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
+        origin={shareOrigin}
         qrSrc={`/api/room/${code}/qr`}
         title={state.place || "Kvitt"}
         subtitle={`${t.scanToJoin} · ${code}`}
