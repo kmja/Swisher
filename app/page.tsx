@@ -134,6 +134,27 @@ function PhotoIcon({ size = 26 }: { size?: number }) {
   );
 }
 
+/** Monochrome lightning-bolt icon for the flashlight toggle. Matches
+ *  PhotoIcon's stroke weight + currentColor pattern so the two
+ *  bottom-corner controls read as a pair. */
+function FlashIcon({ size = 26 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M13 2 L5 13 h6 l-2 9 8-11 h-6 z" />
+    </svg>
+  );
+}
+
 /** 72 px iOS-camera-style shutter: solid white outer ring, a small
  *  gap, then a solid white disc inside. Tapping fires the capture.
  *  `count` paints a tiny swish badge on the inner disc so the host
@@ -799,13 +820,16 @@ export default function Page() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) return;
         stream = await navigator.mediaDevices.getUserMedia({
-          // Ask for an explicit 30 fps and a 720 p target — iOS Safari
-          // otherwise picks a conservative default that ends up around
-          // 15 fps on the rear camera. The constraints are `ideal`, so
-          // a device that can't meet them falls back gracefully.
+          // Ask for the smoothest preview the device will give us: an
+          // ideal 60 fps with 30 as the floor, plus a 720 p target.
+          // Both ends are `ideal`, so a device that can't match (or a
+          // browser that caps at 30) falls back gracefully without
+          // breaking the stream. Keeping the resolution at 720 p leaves
+          // headroom for the higher frame rate on phones whose rear
+          // cameras don't sustain 60 fps at full 1080 p.
           video: {
             facingMode: { ideal: "environment" },
-            frameRate: { ideal: 30, min: 24 },
+            frameRate: { ideal: 60, min: 30 },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -1493,23 +1517,23 @@ export default function Page() {
                   </div>
                 )}
                 {/* Flashlight: only surfaced when the browser exposes the
-                    torch constraint on this track. Sits at the bottom-
-                    right corner on the same baseline as the other
-                    action-row buttons, with the same h-11 w-11 size as
-                    the secondary slots so it visually belongs to that
-                    row. Icon stays 🔦 in both states; only the chip
-                    colour changes (amber when on). z-40 keeps it on
-                    top of the action row in case the right slot also
-                    has content. */}
+                    torch constraint on this track. Matches the choose-
+                    photo button visually: same h-14 w-14 footprint, a
+                    monochrome stroked SVG that inherits currentColor,
+                    same ring-1 / backdrop-blur surface. The chip
+                    colour swaps amber when on; the bolt glyph itself
+                    doesn't change. z-40 keeps it on top of the action
+                    row in case the right slot lands at the same
+                    corner. */}
                 {cameraActive && torchAvailable && !ocrLoading && (
                   <button
                     type="button"
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`pointer-events-auto absolute right-6 bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full text-xl shadow-lg ring-1 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/55 text-white ring-white/30 backdrop-blur"}`}
+                    className={`pointer-events-auto absolute right-6 bottom-6 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg ring-1 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/55 text-white ring-white/30 backdrop-blur"}`}
                   >
-                    🔦
+                    <FlashIcon />
                   </button>
                 )}
                 {/* Overlay: bottom 45 % of the last captured shot, anchored
