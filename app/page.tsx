@@ -1381,7 +1381,7 @@ export default function Page() {
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`absolute bottom-4 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
+                    className={`absolute right-4 top-4 z-10 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
                   >
                     {torchOn ? "🔦" : "💡"}
                   </button>
@@ -1537,28 +1537,25 @@ export default function Page() {
                 })()}
               </div>
             )}
-          </div>
-
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
-          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
-
-          {ocrError && <p className="mt-3 text-sm text-red-600">{ocrError}</p>}
-
-          <div className="mt-5 shrink-0 space-y-2">
-            {/* Once the setup card has taken focus, the photo / receipt
-                CTAs at the bottom of the capture step are noise — the
-                host's job is to finish the form, not pick a new picture.
-                Mute everything down here until either the scan flow is
-                fully done (handoff fires) or the host has bailed out of
-                it. */}
-            {ocrLoading || scanCount !== null || scanReady || hostReady ? null : (
-              <>
+            {/* Capture-step CTAs ride along the bottom of the viewfinder
+                so they're always visible regardless of viewport height.
+                Same gate as the setup card uses inverted — both are
+                mutually exclusive, so they never fight for the same
+                slot. shadow-lg on every button so they read against the
+                live video underneath. */}
+            {!(ocrLoading || scanCount !== null || scanReady || hostReady) && (
+              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 space-y-2">
+                {ocrError && (
+                  <p className="rounded-lg bg-red-600 px-3 py-2 text-center text-sm font-medium text-white shadow-lg">
+                    {ocrError}
+                  </p>
+                )}
                 {imageUrl ? (
                   <>
                     <button
                       type="button"
                       onClick={() => runOcr()}
-                      className="w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark"
+                      className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
                     >
                       {t.readReceipt}
                     </button>
@@ -1566,14 +1563,14 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={() => setImageUrl(null)}
-                        className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                        className="rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.takePhoto}
                       </button>
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                        className="rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.chooseLibrary}
                       </button>
@@ -1585,7 +1582,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={capturePhoto}
-                        className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
+                        className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
                       >
                         {t.scanCta}
                       </button>
@@ -1595,14 +1592,14 @@ export default function Page() {
                         <button
                           type="button"
                           onClick={finishCapture}
-                          className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
+                          className="w-full rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-lg active:bg-swish-dark"
                         >
                           {t.readReceipt}
                         </button>
                         <button
                           type="button"
                           onClick={() => setWantMoreShots(true)}
-                          className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                          className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-swish-dark shadow-lg ring-1 ring-swish/40 active:bg-swish/10"
                         >
                           {t.takeAnotherShot}
                         </button>
@@ -1613,14 +1610,14 @@ export default function Page() {
                         <button
                           type="button"
                           onClick={capturePhoto}
-                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                          className="rounded-xl bg-white px-3 py-3.5 text-sm font-semibold text-swish-dark shadow-lg ring-1 ring-swish/40 active:bg-swish/10"
                         >
                           {t.takeAnotherShot}
                         </button>
                         <button
                           type="button"
                           onClick={finishCapture}
-                          className="rounded-xl bg-swish px-4 py-3.5 text-sm font-semibold text-white active:bg-swish-dark"
+                          className="rounded-xl bg-swish px-4 py-3.5 text-sm font-semibold text-white shadow-lg active:bg-swish-dark"
                         >
                           {t.readReceiptN(pendingShots.length)}
                         </button>
@@ -1630,7 +1627,7 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={discardPendingShots}
-                        className="w-full rounded-xl bg-white px-4 py-2 text-xs font-medium text-gray-500 ring-1 ring-gray-200 active:bg-gray-100"
+                        className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-medium text-gray-600 shadow-lg ring-1 ring-gray-200 active:bg-gray-100"
                       >
                         {t.discardShots}
                       </button>
@@ -1639,16 +1636,19 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="w-full rounded-xl bg-gray-100 px-4 py-3 font-medium active:bg-gray-200"
+                        className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-ink shadow-lg ring-1 ring-black/10 active:bg-gray-100"
                       >
                         {t.chooseLibrary}
                       </button>
                     )}
                   </>
                 )}
-              </>
+              </div>
             )}
           </div>
+
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
+          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
         </section>
       )}
 
