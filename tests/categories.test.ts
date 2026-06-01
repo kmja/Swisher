@@ -69,6 +69,26 @@ describe("emojiFor", () => {
     expect(emojiFor("Tillbringare vatten")).toBe("ci:watercarafe");
   });
 
+  it("covers the long-tail menu items the keyword fallback used to drop", () => {
+    // Magret de canard / confit — the duck rule used to only know
+    // 'anka' and 'duck', so French menus dropped to the generic 🍽.
+    expect(emojiFor("Magret de canard")).toBe("🦆");
+    expect(emojiFor("Confit de canard")).toBe("🦆");
+    // Bouillabaisse / pho / cassoulet — all soup-family stews.
+    expect(emojiFor("Bouillabaisse")).toBe("🍲");
+    expect(emojiFor("Pho bo")).toBe("🍲");
+    // Snails: the starter category falls back to 🥗 which is wrong for
+    // sniglar / escargot specifically.
+    expect(emojiFor("Sniglar")).toBe("🐌");
+    expect(emojiFor("Escargots à la persillade")).toBe("🐌");
+    // Banh mi: Vietnamese sandwich, closest Unicode is 🥪.
+    expect(emojiFor("Banh mi")).toBe("🥪");
+    // Vegan plate has no dedicated icon, but it should at least
+    // categorise as food so it gets the plate-and-cutlery fallback
+    // instead of the receipt icon used for "other".
+    expect(emojiFor("Vegan plate")).toBe("🍽️");
+  });
+
   it("specialises pitchers/carafes by drink", () => {
     expect(emojiFor("Karaff rödvin")).toBe("ci:winecarafe");
     expect(emojiFor("Tillbringare öl")).toBe("ci:beerpitcher");

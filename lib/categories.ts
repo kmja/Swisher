@@ -104,6 +104,14 @@ const isFood = makeMatcher([
   "duxelle", "rödbeta", "brioche", "pastrami", "halloumi",
   "bao", "edamame", "samosa", "empanada", "tagine", "tajine", "hummus", "shakshuka", "risotto",
   "spring roll", "vårrulle", "pad thai", "curry", "tikka masala", "ceviche", "biryani",
+  // French / Mediterranean / world mains that the keyword fallback was
+  // silently dropping into "other": canard / magret (duck), the
+  // bouillabaisse / cassoulet / ratatouille family, banh mi, pho, and
+  // catch-all "plate" / "tallrik" / "vegan" so any "Vegan plate" / "Vegan
+  // tallrik" lands as a main rather than an unknown.
+  "canard", "magret", "confit", "bouillabaisse", "cassoulet", "ratatouille",
+  "banh mi", "banhmi", "bahn mi", "pho", "pho bo", "phở",
+  "vegan", "plate", "tallrik", "snail", "sniglar", "snigel", "escargot", "escargots",
 ]);
 
 const isStarter = makeMatcher([
@@ -251,14 +259,20 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   // Animal-specific meat icons (specific keywords first; generic "kött/stek" falls through to 🥩).
   [makeMatcher(["lamm", "lammracks", "lammkotlett", "lammstek", "lammgryta", "lammfilé", "lammkebab", "lammkött", "lammbog"]), "🐑"],
   [makeMatcher(["fläsk", "fläskfilé", "fläskkarré", "fläsklägg", "gris", "grisfilé", "griskind", "skinka", "prosciutto", "bacon"]), "🐖"],
-  [makeMatcher(["anka", "ankbröst", "anklever", "anklår", "duck"]), "🦆"],
+  [makeMatcher(["anka", "ankbröst", "anklever", "anklår", "duck", "canard", "magret", "confit de canard"]), "🦆"],
   [makeMatcher(["kalkon", "kalkonbröst", "kalkonfilé", "turkey"]), "🦃"],
   [makeMatcher(["biff", "entrecôte", "entrecote", "ryggbiff", "oxfilé", "oxrygg", "oxbringa", "oxkind", "oxsvans", "flankstek", "köttbullar", "wallenbergare", "kalv", "kalvkind", "kalvkött", "kalvfilé", "carpaccio"]), "🐄"],
   [makeMatcher(["plankstek", "stek", "kött", "schnitzel", "kotlett", "salami"]), "🥩"],
   [makeMatcher(["prosciutto", "salami", "skinka", "chark"]), "🥓"],
   [makeMatcher(["sallad", "salad", "nicoise", "niçoise"]), "🥗"],
   [makeMatcher(["kåldolmar", "kålpudding", "surkål", "grönkål", "vitkål"]), "🥬"],
-  [makeMatcher(["soppa", "soup", "gryta", "kalops", "ramen"]), "🍲"],
+  [makeMatcher(["soppa", "soup", "gryta", "kalops", "ramen", "bouillabaisse", "cassoulet", "ratatouille", "pho", "pho bo", "phở"]), "🍲"],
+  // Sniglar / escargots — French snail-shell delicacy. Match before any
+  // generic starter / "other" fallback so the row doesn't default to
+  // the leaf-salad 🥗 or the receipt 🧾.
+  [makeMatcher(["sniglar", "snigel", "escargot", "escargots", "snail", "snails"]), "🐌"],
+  // Vietnamese sandwich — closest Unicode is the generic sandwich.
+  [makeMatcher(["banh mi", "banhmi", "bahn mi", "bánh mì"]), "🥪"],
   [makeMatcher(["taco", "tacos", "burrito", "quesadilla", "nachos"]), "🌮"],
   [makeMatcher(["kebab", "falafel", "shawarma", "gyros", "wrap"]), "🥙"],
   [makeMatcher(["fralla", "macka", "mackor", "smörgås", "knäcke", "sandwich", "panini", "sub"]), "🥪"],
