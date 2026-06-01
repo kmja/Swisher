@@ -33,20 +33,54 @@ textarea {
   animation: scan-sweep 1.15s ease-in-out infinite;
 }
 
-/* Subtle scanner sweep on the LIVE viewfinder — a pinkish horizontal
-   line that travels top → bottom on a slow loop so the camera feed
-   reads like a real document scanner is at work, not just a video
-   preview. Driven through a tall (h-full) wrapper that translates via
-   GPU-friendly transform, so the live video's frame rate isn't held
-   back by per-frame layout on a `top` animation. */
-@keyframes vf-scan {
+/* Scanner sweep stack on the LIVE viewfinder — three independent
+   layers so the feed reads like a real document scanner is working,
+   not a screensaver:
+
+     1. vf-scan-y       horizontal beam travelling top → bottom,
+                        the loudest sweep, on a 3.4 s cadence.
+     2. vf-scan-y-back  a softer return beam moving bottom → top on a
+                        4.7 s cadence with a phase offset, so the two
+                        beams cross in the middle.
+     3. vf-scan-x       vertical beam travelling left → right on a
+                        slower 6.2 s cadence, low alpha — gives the
+                        feed a faint cross-hatched motion underneath
+                        the main beams.
+
+   Each wrapper is full-viewfinder size; the actual beam is pinned to
+   one edge and the wrapper's translate brings it across. All transforms
+   are translate3d + will-change so they stay on a compositor layer and
+   don't fight the live camera for paint cycles. */
+@keyframes vf-scan-y {
   0%   { transform: translate3d(0, 0, 0); opacity: 0; }
-  12%  { opacity: 0.65; }
-  88%  { opacity: 0.65; }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.7; }
   100% { transform: translate3d(0, calc(100% - 2px), 0); opacity: 0; }
 }
-.vf-scan {
-  animation: vf-scan 3.4s ease-in-out infinite;
+@keyframes vf-scan-y-back {
+  0%   { transform: translate3d(0, calc(100% - 2px), 0); opacity: 0; }
+  18%  { opacity: 0.45; }
+  82%  { opacity: 0.45; }
+  100% { transform: translate3d(0, 0, 0); opacity: 0; }
+}
+@keyframes vf-scan-x {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+  15%  { opacity: 0.3; }
+  85%  { opacity: 0.3; }
+  100% { transform: translate3d(calc(100% - 2px), 0, 0); opacity: 0; }
+}
+.vf-scan-y {
+  animation: vf-scan-y 3.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.vf-scan-y-back {
+  animation: vf-scan-y-back 4.7s ease-in-out infinite;
+  animation-delay: 0.8s;
+  will-change: transform, opacity;
+}
+.vf-scan-x {
+  animation: vf-scan-x 6.2s ease-in-out infinite;
+  animation-delay: 1.4s;
   will-change: transform, opacity;
 }
 @keyframes scan-pulse {

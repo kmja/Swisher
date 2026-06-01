@@ -603,6 +603,7 @@ export default function Page() {
   const [fxChanging, setFxChanging] = useState(false);
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -1377,7 +1378,7 @@ export default function Page() {
     <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-dvh overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
-          <div className="justify-self-start">
+          <div className="flex items-center gap-2 justify-self-start">
             {step === "capture" ? (
               <a
                 href="/history"
@@ -1388,6 +1389,19 @@ export default function Page() {
                 🕘
               </a>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setDebugOpen(true)}
+              aria-label="Debug"
+              title="Debug"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-500 active:bg-gray-200"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 8h.01" />
+                <path d="M11 12h1v5h1" />
+              </svg>
+            </button>
           </div>
           <KvittLogo className="justify-self-center" />
           <div className="justify-self-end">
@@ -1400,36 +1414,7 @@ export default function Page() {
 
       {step === "capture" && (
         <section key="capture" className="mt-3 flex min-h-0 flex-1 flex-col">
-          {/* Debug strip stays so we can read version / wipe state, but the
-              "Dela kvittot" heading is gone — the viewfinder is the actual
-              focal point of this step and the page header already signals
-              where we are. */}
-          <p className="text-[10px] text-gray-300">
-            {process.env.NEXT_PUBLIC_APP_VERSION && <>v{process.env.NEXT_PUBLIC_APP_VERSION} · </>}
-            {process.env.NEXT_PUBLIC_BUILD_ID && <>{process.env.NEXT_PUBLIC_BUILD_ID} · </>}
-            <a href="/debug/icons" className="underline">icons</a> ·{" "}
-            <a href="/?demo=1" className="underline">demo</a> ·{" "}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if (typeof window === "undefined") return;
-                if (!window.confirm("Reset all local Kvitt data?")) return;
-                // Every key we write is "swisher-" prefixed (host name/phone,
-                // language, room memberships, local splits, history) — sweep
-                // them all and reload so the app rehydrates first-run.
-                for (const k of Object.keys(window.localStorage)) {
-                  if (k.startsWith("swisher-")) window.localStorage.removeItem(k);
-                }
-                window.location.href = "/";
-              }}
-              className="underline"
-            >
-              reset
-            </a>
-          </p>
-
-          <div className="relative mt-2 flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="h-full w-full object-contain" />
@@ -1471,31 +1456,32 @@ export default function Page() {
                     className={`h-full w-full bg-black object-cover ${cameraActive ? "" : "invisible"}`}
                   />
                 )}
-                {/* Subtle scanner sweep: a pink horizontal beam travels
-                    top → bottom on a slow loop while the live camera is
-                    on, so the viewfinder reads like a real document
-                    scanner. The .vf-scan class is on the wrapper (full
-                    viewfinder height) so its transform: translateY(0 →
-                    100%) actually moves the line across the frame —
-                    putting it on the 2 px line itself would only shift
-                    it by 2 px. */}
+                {/* Scanner sweep stack: three independently-timed beams
+                    (loud horizontal top→bottom, softer return bottom→
+                    top, faint vertical left→right). Each .vf-scan-*
+                    wrapper is full-viewfinder so its transform actually
+                    travels — putting the animation on the beam itself
+                    would only shift it 2 px. */}
                 {cameraActive && !ocrLoading && (
-                  <div className="vf-scan pointer-events-none absolute inset-0">
-                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-swish/70 to-transparent shadow-[0_0_18px_4px_rgba(238,92,154,0.32)]" />
-                  </div>
+                  <>
+                    <div className="vf-scan-y pointer-events-none absolute inset-0">
+                      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-swish/80 to-transparent shadow-[0_0_22px_5px_rgba(238,92,154,0.4)]" />
+                    </div>
+                    <div className="vf-scan-y-back pointer-events-none absolute inset-0">
+                      <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-swish/55 to-transparent" />
+                    </div>
+                    <div className="vf-scan-x pointer-events-none absolute inset-0">
+                      <div className="absolute inset-y-0 left-0 w-[1.5px] bg-gradient-to-b from-transparent via-swish/50 to-transparent" />
+                    </div>
+                  </>
                 )}
                 {cameraActive && !ocrLoading && (
                   <div className="pointer-events-none absolute inset-5">
-                    <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-white/90" />
-                    <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-white/90" />
-                    <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
-                    <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-white/90" />
                     {/* Instruction card — translucent dark panel hanging
-                        below the corner brackets at the top of the
-                        viewfinder. Two lines: headline + a tip that
-                        explains long-receipt multi-shot. Swaps to the
-                        alignment hint once the host has opted into
-                        another shot. */}
+                        at the top of the viewfinder. Two lines: headline
+                        + a tip that explains long-receipt multi-shot.
+                        Swaps to the alignment hint once the host has
+                        opted into another shot. */}
                     <div className="absolute inset-x-0 top-0 mx-auto max-w-[20rem] rounded-2xl bg-black/55 px-3.5 py-2.5 text-center text-white shadow-lg backdrop-blur">
                       {lastShot && wantMoreShots ? (
                         <>
@@ -2295,6 +2281,82 @@ export default function Page() {
         </section>
       )}
 
+      {/* Debug dialog: small modal triggered by the (i) icon in the
+          header. Surfaces app + build version, deep links into the
+          icon explorer / demo mode, and the "wipe all local Kvitt
+          data" reset that used to live in the capture-step debug
+          strip. Hidden behind a tap so it doesn't crowd the live
+          camera view. */}
+      {debugOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDebugOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-bold text-ink">Debug</h2>
+              <button
+                type="button"
+                onClick={() => setDebugOpen(false)}
+                aria-label="Close"
+                className="-mr-1 -mt-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 active:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <dl className="space-y-2 text-sm">
+              {process.env.NEXT_PUBLIC_APP_VERSION && (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-gray-500">Version</dt>
+                  <dd className="font-mono text-ink">v{process.env.NEXT_PUBLIC_APP_VERSION}</dd>
+                </div>
+              )}
+              {process.env.NEXT_PUBLIC_BUILD_ID && (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-gray-500">Build</dt>
+                  <dd className="break-all font-mono text-xs text-ink">{process.env.NEXT_PUBLIC_BUILD_ID}</dd>
+                </div>
+              )}
+            </dl>
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href="/debug/icons"
+                className="rounded-xl bg-gray-100 px-3 py-2.5 text-center text-sm font-semibold text-ink active:bg-gray-200"
+              >
+                Icons
+              </a>
+              <a
+                href="/?demo=1"
+                className="rounded-xl bg-gray-100 px-3 py-2.5 text-center text-sm font-semibold text-ink active:bg-gray-200"
+              >
+                Demo
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window === "undefined") return;
+                if (!window.confirm("Reset all local Kvitt data?")) return;
+                // Every key we write is "swisher-" prefixed (host name/phone,
+                // language, room memberships, local splits, history) — sweep
+                // them all and reload so the app rehydrates first-run.
+                for (const k of Object.keys(window.localStorage)) {
+                  if (k.startsWith("swisher-")) window.localStorage.removeItem(k);
+                }
+                window.location.href = "/";
+              }}
+              className="w-full rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 ring-1 ring-red-200 active:bg-red-100"
+            >
+              Reset all local data
+            </button>
+          </div>
+        </div>
+      )}
       {receiptOpen && images.length > 0 && (
         <div
           role="dialog"
