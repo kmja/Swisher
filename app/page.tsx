@@ -305,41 +305,106 @@ function GroupVisual({ count }: { count: number }) {
   );
 }
 
-/** A sample dinner order for 8 (shared items, drinks, dessert) loaded via
- *  "/?demo=1" — handy for exercising the split flow without a real receipt. */
-const DEMO_ORDER: { d: string; o: number; c: string; s?: boolean }[] = [
-  { d: "Bröd & smör", o: 6500, c: "starter", s: true },
-  { d: "Charkbricka", o: 24500, c: "starter", s: true },
-  { d: "Skaldjursplateau", o: 89000, c: "starter", s: true },
-  { d: "Oliver", o: 7900, c: "starter", s: true },
-  { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
-  { d: "Flaska Barolo 75cl", o: 79500, c: "drink", s: true },
-  { d: "Entrecôte 250g", o: 32900, c: "food" },
-  { d: "Oxfilé", o: 36900, c: "food" },
-  { d: "Fläskkarré", o: 24900, c: "food" },
-  { d: "Wallenbergare", o: 26500, c: "food" },
-  { d: "Räkpasta", o: 23900, c: "food" },
-  { d: "Vegetarisk lasagne", o: 21900, c: "food" },
-  { d: "Stekt torsk", o: 27900, c: "food" },
-  { d: "Lammracks", o: 33900, c: "food" },
-  { d: "Flaska vatten", o: 4500, c: "drink" },
-  { d: "Stor stark", o: 8900, c: "drink" },
-  { d: "Stor stark", o: 8900, c: "drink" },
-  { d: "Stor stark", o: 8900, c: "drink" },
-  { d: "Glas rödvin", o: 11500, c: "drink" },
-  { d: "Glas rödvin", o: 11500, c: "drink" },
-  { d: "Coca-Cola", o: 4500, c: "drink" },
-  { d: "Alkoholfri öl", o: 6900, c: "drink" },
-  { d: "Bryggkaffe", o: 3900, c: "drink" },
-  { d: "Bryggkaffe", o: 3900, c: "drink" },
-  { d: "Bryggkaffe", o: 3900, c: "drink" },
-  { d: "Bryggkaffe", o: 3900, c: "drink" },
-  { d: "Crème brûlée", o: 9900, c: "dessert" },
-  { d: "Crème brûlée", o: 9900, c: "dessert" },
-  { d: "Kladdkaka med glass", o: 8900, c: "dessert" },
-  { d: "Glass", o: 6900, c: "dessert" },
-  { d: "Cheesecake", o: 9900, c: "dessert" },
-];
+/** Randomised demo orders for "/?demo=1" — picks from generous per-
+ *  category pools so the validation step looks different every reload,
+ *  AND throws in a deliberately tricky bucket of abbreviations, foreign
+ *  words and side-of-the-menu items that exercise the categorisation
+ *  and OCR-mismatch paths. The goal is to make obvious bugs visible
+ *  (wrong category, missing emoji, weird truncations, etc.) without
+ *  needing a real receipt. */
+const DEMO_POOL = {
+  starters: [
+    "Bröd & smör", "Charkbricka", "Skaldjursplateau", "Oliver",
+    "Burrata med tomat", "Carpaccio", "Toast Skagen", "Räkmacka",
+    "Löjromstoast", "Ostron", "Sniglar", "Hummus med pita",
+    "Caesar sallad", "Vitlöksbröd",
+  ],
+  mains: [
+    "Entrecôte 250g", "Oxfilé", "Fläskkarré", "Wallenbergare",
+    "Räkpasta", "Vegetarisk lasagne", "Stekt torsk", "Lammracks",
+    "Köttbullar med lingon", "Pad thai", "Risotto ai funghi",
+    "Tikka masala", "Schnitzel", "Magret de canard", "Bouillabaisse",
+    "Coq au vin", "Tagliatelle al ragù", "Janssons frestelse",
+  ],
+  drinks: [
+    "Flaska Barolo 75cl", "Flaska Chablis 75cl", "Karaff rödvin",
+    "Flaska vatten", "Stor stark", "Glas rödvin", "Glas vitt vin",
+    "Coca-Cola", "Alkoholfri öl", "Bryggkaffe", "Espresso",
+    "Cappuccino", "Aperol Spritz", "Negroni", "Gin & tonic",
+    "Mojito", "Margarita", "Old Fashioned", "Champagne Mumm",
+    "Glögg", "OP Anderson", "Hallands Fläder",
+  ],
+  desserts: [
+    "Crème brûlée", "Kladdkaka med glass", "Glass", "Cheesecake",
+    "Tiramisu", "Macarons", "Churros", "Cannoli", "Mochi",
+    "Baklava", "Prinsesstårta", "Semla", "Kanelbulle",
+    "Marängsviss", "Citronfromage",
+  ],
+  // Tricky pool — abbreviations the model would normally have to
+  // expand, foreign / ambiguous words, sides that could fall in any
+  // category, and one or two service-line items.
+  tricky: [
+    "BR KAFFE", "ENTRC 250G", "WALLENB", "CAPP DBL", "ESPR MARTINI",
+    "RÄKM SK", "FL VATTEN", "STR STARK", "GLAS RÖDV",
+    "Råbiff", "Steak tartare", "Vegan plate", "Antipasti misto",
+    "Pintxos", "Empanada", "Bao bun", "Pho bo", "Banh mi", "Ramen",
+    "Edamame", "Vårrulle", "Samosa", "Burrata caprese",
+    "Pommes frites", "Rostade rotsaker", "Sallad",
+    "Snaps", "Akvavit", "Dricks", "Couvert",
+  ],
+};
+
+function demoRandInt(min: number, max: number) {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
+function demoPickUnique<T>(arr: readonly T[], n: number): T[] {
+  const out: T[] = [];
+  const pool = [...arr];
+  for (let i = 0; i < n && pool.length > 0; i++) {
+    const idx = demoRandInt(0, pool.length - 1);
+    out.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+  return out;
+}
+function demoPickAny<T>(arr: readonly T[], n: number): T[] {
+  return Array.from({ length: n }, () => arr[demoRandInt(0, arr.length - 1)]);
+}
+
+/** Build a fresh randomised demo order. Prices are in öre and rounded
+ *  to whole kronor to match a real receipt's coarse-grained display. */
+function generateDemoOrder(): { d: string; o: number; c: string; s?: boolean }[] {
+  const items: { d: string; o: number; c: string; s?: boolean }[] = [];
+  const kronor = (k: number) => k * 100;
+  // Starters — mostly shared at the table.
+  for (const d of demoPickUnique(DEMO_POOL.starters, demoRandInt(2, 5))) {
+    items.push({ d, o: kronor(demoRandInt(60, 195)), c: "starter", s: Math.random() > 0.25 });
+  }
+  // Mains — roughly one per diner, with repeats allowed.
+  for (const d of demoPickAny(DEMO_POOL.mains, demoRandInt(6, 12))) {
+    items.push({ d, o: kronor(demoRandInt(195, 425)), c: "food" });
+  }
+  // Drinks — bottles get the shared treatment + a higher price band.
+  for (const d of demoPickAny(DEMO_POOL.drinks, demoRandInt(8, 16))) {
+    const isBottle = /flaska|75 ?cl|champagne|karaff/i.test(d);
+    items.push({
+      d,
+      o: kronor(isBottle ? demoRandInt(495, 1495) : demoRandInt(35, 195)),
+      c: "drink",
+      s: isBottle && Math.random() > 0.4,
+    });
+  }
+  // Desserts.
+  for (const d of demoPickAny(DEMO_POOL.desserts, demoRandInt(3, 7))) {
+    items.push({ d, o: kronor(demoRandInt(65, 135)), c: "dessert" });
+  }
+  // Tricky items — leave category blank so the app has to derive it
+  // from the description, which is where the bugs hide.
+  for (const d of demoPickUnique(DEMO_POOL.tricky, demoRandInt(3, 7))) {
+    items.push({ d, o: kronor(demoRandInt(45, 295)), c: "" });
+  }
+  return items;
+}
 
 /** Currencies the host can pick from when correcting a mis-detected receipt. */
 const COMMON_CURRENCIES = [
@@ -573,7 +638,7 @@ export default function Page() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (new URLSearchParams(window.location.search).get("demo") == null) return;
-    const demoItems: UiItem[] = DEMO_ORDER.map((x) => ({
+    const demoItems: UiItem[] = generateDemoOrder().map((x) => ({
       id: uid(),
       description: x.d,
       priceInput: formatOre(x.o),
