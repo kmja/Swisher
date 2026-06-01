@@ -763,6 +763,27 @@ export default function RoomPage() {
     }
   }
 
+  /** Same flow as the dialog's primary share button: hit
+   *  navigator.share when the browser supports it (opens the OS
+   *  share sheet), fall back to copy when it doesn't / the user
+   *  cancels. Lets the corner share icon be the fast path — the host
+   *  doesn't have to open the QR dialog just to send the invite. */
+  async function shareRoom() {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/room/${code}`;
+    const title = state?.place || "Kvitt";
+    const text = state ? t.inviteText(state.place ?? "", state.date ?? "") : url;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch {
+        /* user cancelled or unsupported — fall through to copy */
+      }
+    }
+    await copyShareLink();
+  }
+
   /** Page-enter pan: when the room page mounts the whole main slides
    *  up a few px and fades in. Imperative via WAAPI on a stable ref
    *  so it fires exactly once per mount and doesn't get re-played by
@@ -1396,7 +1417,7 @@ export default function RoomPage() {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={openShare}
+                onClick={shareRoom}
                 aria-label={t.share}
                 title={t.share}
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"

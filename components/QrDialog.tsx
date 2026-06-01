@@ -156,15 +156,30 @@ export default function QrDialog({
             <button
               type="button"
               onClick={doShare}
-              className="rounded-xl bg-swish px-4 py-3 text-sm font-semibold text-white active:bg-swish-dark"
+              className="flex items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3 text-sm font-semibold text-white active:bg-swish-dark"
             >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
               {labels.share}
             </button>
             <button
               type="button"
               onClick={doCopy}
-              className="rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-ink active:bg-gray-200"
+              className={`flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold shadow-sm active:bg-gray-200 ${copied ? "text-emerald-600" : "text-ink"}`}
             >
+              {copied ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <polyline points="5 12 10 17 19 7" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M9 4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H9Z" />
+                  <path d="M5 8H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1" />
+                </svg>
+              )}
               {copied ? labels.copied : labels.copyLink}
             </button>
           </div>
