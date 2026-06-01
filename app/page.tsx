@@ -1375,7 +1375,7 @@ export default function Page() {
       <Header step={step} t={t} />
 
       {step === "capture" && (
-        <section key="capture" className="mt-3 flex flex-1 flex-col">
+        <section key="capture" className="mt-3 flex min-h-0 flex-1 flex-col">
           {/* Debug strip stays so we can read version / wipe state, but the
               "Dela kvittot" heading is gone — the viewfinder is the actual
               focal point of this step and the page header already signals
