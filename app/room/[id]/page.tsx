@@ -33,7 +33,7 @@ const R = {
     join: "Gå med",
     joining: "Går med…",
     scanToJoin: "Skanna för att gå med",
-    share: "Dela inbjudan",
+    share: "Dela",
     copied: "Kopierad!",
     copyLink: "Kopiera länk",
     close: "Stäng",
@@ -1391,7 +1391,7 @@ export default function RoomPage() {
             <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
             <Money
               ore={state.items.reduce((sum, it) => sum + it.priceOre, 0) + (state.tipOre ?? 0)}
-              className="mt-0.5 block text-sm font-semibold text-ink"
+              className="mt-1 block text-base font-semibold text-ink"
               nativeClassName="ml-1 text-[11px] font-normal text-gray-400"
             />
             {state.imageCount > 0 && (
