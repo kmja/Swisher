@@ -82,6 +82,98 @@ const CHIP_TINTS = [
 const CHIP_LIFTS = [0, -3, 2, -1, 3, -2, 1, -3, 2, -1];
 const CHIP_ROTATIONS = [-3, 2, 0, -2, 3, -1, 0, -3, 1, 2];
 
+/** Round 44 px secondary button styled like the side controls in a
+ *  native camera app — translucent dark surface, white icon, soft
+ *  outline so it sits comfortably over the live video. */
+function CaptureIconButton({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-lg text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:scale-95 transition-transform"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** 72 px iOS-camera-style shutter: solid white outer ring, a small
+ *  gap, then a solid white disc inside. Tapping fires the capture.
+ *  `count` paints a tiny swish badge on the inner disc so the host
+ *  can see how many shots have stacked while in multi-shot mode. */
+function CaptureShutterButton({
+  onClick,
+  label,
+  disabled,
+  count,
+}: {
+  onClick: () => void;
+  label: string;
+  disabled?: boolean;
+  count?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="pointer-events-auto relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-[3px] border-white/95 shadow-2xl active:scale-95 transition-transform disabled:opacity-40"
+    >
+      <span aria-hidden className="block h-[54px] w-[54px] rounded-full bg-white shadow-inner" />
+      {typeof count === "number" && count > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-swish px-1.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** 72 px swish-coloured commit button — same chassis as the shutter
+ *  but solid swish-pink with a white checkmark, used to advance from
+ *  the preview / multi-shot state into OCR. */
+function CaptureCommitButton({
+  onClick,
+  label,
+  compact,
+  count,
+}: {
+  onClick: () => void;
+  label: string;
+  compact?: boolean;
+  count?: number;
+}) {
+  const size = compact ? "h-12 w-12 text-xl" : "h-[72px] w-[72px] text-3xl";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`pointer-events-auto relative flex items-center justify-center rounded-full bg-swish font-bold text-white shadow-2xl ring-[3px] ring-white/95 active:bg-swish-dark active:scale-95 transition-transform ${size}`}
+    >
+      ✓
+      {typeof count === "number" && count > 0 && !compact && (
+        <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-bold text-swish shadow-md ring-2 ring-swish/30">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 function GroupVisual({ count }: { count: number }) {
   const visible = Math.max(0, Math.min(count, 10));
   const overflow = Math.max(0, count - visible);
@@ -1544,105 +1636,54 @@ export default function Page() {
                 slot. shadow-lg on every button so they read against the
                 live video underneath. */}
             {!(ocrLoading || scanCount !== null || scanReady || hostReady) && (
-              <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 space-y-1.5">
+              <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 px-6">
                 {ocrError && (
-                  <p className="rounded-lg bg-red-600 px-3 py-1.5 text-center text-xs font-medium text-white shadow-md">
+                  <p className="pointer-events-auto mx-auto mb-3 max-w-xs rounded-lg bg-red-600 px-3 py-1.5 text-center text-xs font-medium text-white shadow-lg">
                     {ocrError}
                   </p>
                 )}
-                {imageUrl ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => runOcr()}
-                      className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
-                    >
-                      {t.readReceipt}
-                    </button>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setImageUrl(null)}
-                        className="rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
-                      >
-                        {t.takePhoto}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        className="rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
-                      >
-                        {t.chooseLibrary}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {cameraActive && pendingShots.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={capturePhoto}
-                        className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
-                      >
-                        {t.scanCta}
-                      </button>
+                {/* iOS-camera style action row: a big shutter / commit
+                    circle in the centre, with state-specific 44 px
+                    secondaries to either side. pointer-events on the
+                    wrapper are off; each individual button opts back in. */}
+                <div className="grid grid-cols-3 items-center">
+                  {/* LEFT slot ---------------------------------------- */}
+                  <div className="justify-self-start">
+                    {imageUrl ? (
+                      <CaptureIconButton onClick={() => setImageUrl(null)} label={t.takePhoto}>📷</CaptureIconButton>
+                    ) : pendingShots.length === 0 ? (
+                      <CaptureIconButton onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>📁</CaptureIconButton>
+                    ) : !wantMoreShots ? (
+                      <CaptureIconButton onClick={() => setWantMoreShots(true)} label={t.takeAnotherShot}>
+                        <span className="text-2xl leading-none">+</span>
+                      </CaptureIconButton>
+                    ) : (
+                      <CaptureIconButton onClick={discardPendingShots} label={t.discardShots}>✕</CaptureIconButton>
                     )}
-                    {pendingShots.length > 0 && !wantMoreShots && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={finishCapture}
-                          className="w-full rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-md active:bg-swish-dark"
-                        >
-                          {t.readReceipt}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setWantMoreShots(true)}
-                          className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-semibold text-swish-dark shadow-md ring-1 ring-swish/40 active:bg-swish/10"
-                        >
-                          {t.takeAnotherShot}
-                        </button>
-                      </>
+                  </div>
+                  {/* CENTER (primary) --------------------------------- */}
+                  <div className="justify-self-center">
+                    {imageUrl ? (
+                      <CaptureCommitButton onClick={() => runOcr()} label={t.readReceipt} />
+                    ) : pendingShots.length === 0 ? (
+                      <CaptureShutterButton onClick={capturePhoto} label={t.scanCta} disabled={!cameraActive} />
+                    ) : !wantMoreShots ? (
+                      <CaptureCommitButton onClick={finishCapture} label={t.readReceipt} />
+                    ) : (
+                      <CaptureShutterButton onClick={capturePhoto} label={t.scanCta} disabled={!cameraActive} count={pendingShots.length} />
                     )}
-                    {cameraActive && pendingShots.length > 0 && wantMoreShots && (
-                      <div className="grid grid-cols-[1fr_1.4fr] gap-1.5">
-                        <button
-                          type="button"
-                          onClick={capturePhoto}
-                          className="rounded-xl bg-white/95 px-3 py-2.5 text-xs font-semibold text-swish-dark shadow-md ring-1 ring-swish/40 active:bg-swish/10"
-                        >
-                          {t.takeAnotherShot}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={finishCapture}
-                          className="rounded-xl bg-swish px-4 py-2.5 text-xs font-semibold text-white shadow-md active:bg-swish-dark"
-                        >
-                          {t.readReceiptN(pendingShots.length)}
-                        </button>
-                      </div>
+                  </div>
+                  {/* RIGHT slot --------------------------------------- */}
+                  <div className="justify-self-end">
+                    {imageUrl ? (
+                      <CaptureIconButton onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>📁</CaptureIconButton>
+                    ) : pendingShots.length === 0 ? null : !wantMoreShots ? (
+                      <CaptureIconButton onClick={discardPendingShots} label={t.discardShots}>✕</CaptureIconButton>
+                    ) : (
+                      <CaptureCommitButton onClick={finishCapture} label={t.readReceiptN(pendingShots.length)} compact count={pendingShots.length} />
                     )}
-                    {pendingShots.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={discardPendingShots}
-                        className="w-full rounded-xl bg-white/95 px-4 py-1.5 text-[11px] font-medium text-gray-600 shadow-md ring-1 ring-gray-200 active:bg-gray-100"
-                      >
-                        {t.discardShots}
-                      </button>
-                    )}
-                    {pendingShots.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        className="w-full rounded-xl bg-white/95 px-4 py-2 text-xs font-semibold text-ink shadow-md ring-1 ring-black/10 active:bg-gray-100"
-                      >
-                        {t.chooseLibrary}
-                      </button>
-                    )}
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
