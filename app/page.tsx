@@ -1493,16 +1493,23 @@ export default function Page() {
                   </div>
                 )}
                 {/* Flashlight: only surfaced when the browser exposes the
-                    torch constraint on this track. */}
+                    torch constraint on this track. Sits at the bottom-
+                    right corner on the same baseline as the other
+                    action-row buttons, with the same h-11 w-11 size as
+                    the secondary slots so it visually belongs to that
+                    row. Icon stays 🔦 in both states; only the chip
+                    colour changes (amber when on). z-40 keeps it on
+                    top of the action row in case the right slot also
+                    has content. */}
                 {cameraActive && torchAvailable && !ocrLoading && (
                   <button
                     type="button"
                     onClick={toggleTorch}
                     aria-label={torchOn ? t.torchOff : t.torchOn}
                     aria-pressed={torchOn}
-                    className={`absolute right-5 bottom-28 z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-xl ring-2 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/60 text-white ring-white/40 backdrop-blur"}`}
+                    className={`pointer-events-auto absolute right-6 bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full text-xl shadow-lg ring-1 transition-colors ${torchOn ? "bg-amber-300 text-black ring-amber-200" : "bg-black/55 text-white ring-white/30 backdrop-blur"}`}
                   >
-                    {torchOn ? "🔦" : "💡"}
+                    🔦
                   </button>
                 )}
                 {/* Overlay: bottom 45 % of the last captured shot, anchored
