@@ -746,6 +746,22 @@ export default function RoomPage() {
     if (clamped === (state.groupSize ?? 0)) return;
     await postAction({ action: "editPayee", groupSize: clamped });
   }
+
+  /** Quick "copied!" feedback for the link-copy icon button next to
+   *  the QR. Briefly swaps the icon for a ✓ via the linkCopied flag
+   *  and clears it after 1.5 s, matching the QrCard pattern. */
+  const [linkCopied, setLinkCopied] = useState(false);
+  async function copyShareLink() {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/room/${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
     setEditingItemId(it.id);
     setEditDraft({
@@ -1335,9 +1351,10 @@ export default function RoomPage() {
               </button>
             )}
           </div>
-          {/* QR + share-icon row. The QR opens the share dialog on tap;
-              the icon button is a quicker grab for the same thing —
-              both feed setShareOpen so the host doesn't have to pick. */}
+          {/* QR + share / copy-link buttons. The QR opens the share
+              dialog on tap; the two h-11 icon buttons under it are
+              quicker grabs — share is primary (swish bg), copy is
+              secondary (gray). All three feed the same room URL. */}
           <div className="flex shrink-0 items-start gap-2">
             <button
               type="button"
@@ -1348,19 +1365,39 @@ export default function RoomPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/room/${code}/qr`} alt="" className="block h-[88px] w-[88px]" />
             </button>
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              aria-label={t.share}
-              title={t.share}
-              className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                aria-label={t.share}
+                title={t.share}
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={copyShareLink}
+                aria-label={t.copyLink}
+                title={linkCopied ? t.copied : t.copyLink}
+                className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 shadow-sm transition active:bg-gray-200 ${linkCopied ? "text-emerald-600" : "text-ink"}`}
+              >
+                {linkCopied ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <polyline points="5 12 10 17 19 7" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M9 4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H9Z" />
+                    <path d="M5 8H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
         {isPayee ? (
