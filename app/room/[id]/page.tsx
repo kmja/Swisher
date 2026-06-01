@@ -175,9 +175,15 @@ export default function RoomPage() {
   const [joining, setJoining] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [payeeEditing, setPayeeEditing] = useState(false);
+  // Host's name / Swish number / group-size are always-visible input
+  // fields in the top section now. Drafts mirror the server state but
+  // we only push them downstream when the corresponding input isn't
+  // focused, so a guest-side state push doesn't yank a char out from
+  // under the host mid-typing.
   const [payeeNameDraft, setPayeeNameDraft] = useState("");
   const [payeeNumberDraft, setPayeeNumberDraft] = useState("");
+  const payeeNameInputRef = useRef<HTMLInputElement>(null);
+  const payeeNumberInputRef = useRef<HTMLInputElement>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptImages, setReceiptImages] = useState<string[] | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -212,6 +218,20 @@ export default function RoomPage() {
   const [pendingUndo, setPendingUndo] = useState<RemovedSnapshot | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
+  // Sync the payee name / number drafts FROM the server state, but
+  // only when the input isn't focused — otherwise a live update from
+  // another client (or the guest list mutating, which triggers a
+  // state refresh) would clobber whatever the host is typing.
+  useEffect(() => {
+    if (!state) return;
+    if (payeeNameInputRef.current !== document.activeElement) {
+      setPayeeNameDraft(state.payeeName ?? "");
+    }
+    if (payeeNumberInputRef.current !== document.activeElement) {
+      setPayeeNumberDraft(state.payeeNumber ?? "");
+    }
+  }, [state?.payeeName, state?.payeeNumber]);
 
   // Positive toast surfaced when an edit flips an item from
   // not-fully-shared → fully-shared. Auto-dismisses after ~4 s so it
@@ -707,18 +727,24 @@ export default function RoomPage() {
   function editItem(itemId: string, patch: { description?: string; priceOre?: number; shared?: boolean; shareCount?: number }) {
     return postAction({ action: "edit", itemId, ...patch });
   }
-  function openPayeeEdit() {
-    setPayeeNameDraft(state?.payeeName ?? "");
-    setPayeeNumberDraft(state?.payeeNumber ?? "");
-    setPayeeEditing(true);
-  }
-  async function savePayeeEdit() {
+  /** Push the current name + number drafts to the server. Called on
+   *  blur of either input so the host doesn't need an explicit save
+   *  step. */
+  async function savePayeeDrafts() {
     if (!state) return;
     const name = payeeNameDraft.trim();
     const number = payeeNumberDraft.trim();
-    setPayeeEditing(false);
     if (name === state.payeeName && number === state.payeeNumber) return;
     await postAction({ action: "editPayee", name, number });
+  }
+  /** Bump / drop group size by 1. We post a separate editPayee patch
+   *  rather than batching with the name/number so the server's
+   *  re-share sweep (which has its own side effects) runs cleanly. */
+  async function updateGroupSize(next: number) {
+    if (!state) return;
+    const clamped = Math.max(2, Math.min(50, Math.round(next)));
+    if (clamped === (state.groupSize ?? 0)) return;
+    await postAction({ action: "editPayee", groupSize: clamped });
   }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
     setEditingItemId(it.id);
@@ -1285,22 +1311,51 @@ export default function RoomPage() {
         </nav>
       </header>
 
-      {/* Share / invite — restacked so the title gets the full width, the
-          room code drops out (it lives in the share dialog anyway), and the
-          🧾 / Share buttons run as a proper action row at the bottom of
-          the card instead of fighting the title for the right rail. */}
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-        <div className="min-w-0">
-          <p className="truncate text-lg font-bold">{state.place || "Kvitt"}</p>
-          <p className="text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
+      {/* Share / invite — top of the room reads as a header / title now:
+          place name as the hero, date subtitle, a small live QR with the
+          share CTA underneath (tap either to open the full share
+          dialog), and host name / Swish number / group size as
+          always-visible inputs for the host. Guests see the host row
+          read-only. */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <div className="text-center">
+          <h1 className="truncate text-2xl font-bold text-ink">{state.place || "Kvitt"}</h1>
+          <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
         </div>
-        {/* Host info — read-only for guests, tap-to-edit for the host
-            themselves. The Swish QR and payment messages all key off
-            payeeName/payeeNumber, so this is the single source of truth
-            and any edit needs to propagate via the editPayee action. */}
-        {payeeEditing && isPayee ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[10rem] flex-1">
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            aria-label={t.share}
+            className="block overflow-hidden rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/10 active:bg-gray-50"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/room/${code}/qr`} alt="" className="block h-32 w-32" />
+          </button>
+          <div className="flex w-full max-w-xs items-stretch gap-2">
+            {state.imageCount > 0 && (
+              <button
+                type="button"
+                onClick={openReceipt}
+                aria-label={t.showReceipt}
+                className="shrink-0 rounded-xl bg-white px-3.5 text-base shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
+              >
+                🧾
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
+            >
+              {t.share}
+            </button>
+          </div>
+        </div>
+        {isPayee ? (
+          <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">
+            {/* Host's name. */}
+            <div className="relative">
               <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="8" r="4" />
@@ -1308,17 +1363,17 @@ export default function RoomPage() {
                 </svg>
               </span>
               <input
+                ref={payeeNameInputRef}
                 value={payeeNameDraft}
                 onChange={(e) => setPayeeNameDraft(e.target.value)}
+                onBlur={savePayeeDrafts}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                 placeholder={tx.yourName}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                  else if (e.key === "Escape") setPayeeEditing(false);
-                }}
-                className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
+                className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
               />
             </div>
-            <div className="relative min-w-[10rem] flex-1">
+            {/* Host's Swish number. */}
+            <div className="relative">
               <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <rect x="6" y="2" width="12" height="20" rx="2.5" />
@@ -1326,28 +1381,44 @@ export default function RoomPage() {
                 </svg>
               </span>
               <input
+                ref={payeeNumberInputRef}
                 value={payeeNumberDraft}
                 onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                onBlur={savePayeeDrafts}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                 inputMode="tel"
                 placeholder={tx.swishNumber}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                  else if (e.key === "Escape") setPayeeEditing(false);
-                }}
-                className="w-full rounded-xl bg-gray-50 py-2.5 pl-10 pr-3 text-base outline-none ring-1 ring-swish/40"
+                className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
               />
             </div>
-            <button
-              type="button"
-              onClick={savePayeeEdit}
-              aria-label={t.save}
-              className="shrink-0 rounded-xl bg-swish px-3.5 py-2.5 text-base font-semibold text-white active:bg-swish-dark"
-            >
-              ✓
-            </button>
+            {/* Group size — +/− stepper in the same input surface. */}
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-2 shadow-sm ring-1 ring-black/5">
+              <span className="text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="−"
+                  onClick={() => updateGroupSize(groupSize - 1)}
+                  disabled={groupSize <= 2 || groupSize <= state.people.length}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-lg font-bold tabular-nums text-ink">{groupSize}</span>
+                <button
+                  type="button"
+                  aria-label="+"
+                  onClick={() => updateGroupSize(groupSize + 1)}
+                  disabled={groupSize >= 50}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
-          <p className="flex items-center gap-1.5 text-sm text-gray-500">
+          <p className="mt-4 flex items-center justify-center gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-500">
             <span aria-hidden className="text-gray-400">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="8" r="4" />
@@ -1356,47 +1427,16 @@ export default function RoomPage() {
             </span>
             <span className="min-w-0 truncate">
               {state.payeeName}
-              {state.payeeNumber && (
-                <span className="text-gray-400"> · {state.payeeNumber}</span>
-              )}
+              {state.payeeNumber && <span className="text-gray-400"> · {state.payeeNumber}</span>}
             </span>
-            {isPayee && (
-              <button
-                type="button"
-                onClick={openPayeeEdit}
-                aria-label={t.editRow}
-                className="-my-1 shrink-0 p-1 text-gray-300 active:text-swish-dark"
-              >
-                <PencilIcon />
-              </button>
-            )}
           </p>
         )}
         {roomFx && (
-          <p className="text-xs text-gray-400">
+          <p className="mt-3 text-center text-xs text-gray-400">
             {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
             {`1 ${roomFx.currency} ≈ ${formatOre(Math.round(roomFx.rate * 100))} SEK`}
           </p>
         )}
-        <div className="flex items-stretch gap-2 pt-0.5">
-          {state.imageCount > 0 && (
-            <button
-              type="button"
-              onClick={openReceipt}
-              aria-label={t.showReceipt}
-              className="shrink-0 rounded-xl bg-white px-3.5 text-base shadow-sm ring-1 ring-gray-200 active:bg-gray-100"
-            >
-              🧾
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${isPayee || !personId ? "bg-swish text-white active:bg-swish-dark" : "bg-swish/10 text-swish-dark ring-1 ring-swish/30 active:bg-swish/20"}`}
-          >
-            {t.share}
-          </button>
-        </div>
       </section>
 
       {/* Host's primary view: a focused collection summary + diner list at

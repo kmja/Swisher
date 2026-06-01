@@ -456,6 +456,31 @@ function demoPickAny<T>(arr: readonly T[], n: number): T[] {
   return Array.from({ length: n }, () => arr[demoRandInt(0, arr.length - 1)]);
 }
 
+/** Plausible-but-fake restaurant names so each "/?demo=1" reload looks
+ *  like a different night out. Mix of Swedish bistros, French / Italian,
+ *  Asian fusion and pubs so the categorisation pool gets exercised
+ *  against a variety of contexts. */
+const DEMO_RESTAURANTS = [
+  "Bistro Bohème", "Häktet", "Hantverket", "Rolf's Kök",
+  "Vassa Eggen", "Konst & Klang", "Café Saturnus", "Tjoget",
+  "Brasserie Bobonne", "Trattoria Romana", "L'Atelier",
+  "Roxy", "Vrå", "Misshumasshu", "Imouto",
+  "Pelikan", "Tennstopet", "Riche",
+  "Sticks'n'Sushi", "Burger Söder", "Pickled", "Aira",
+  "Köket på Hornsgatan", "Lilla Nygatan 7", "Operahyllan",
+];
+
+/** Pick a random restaurant name + a random date in the past six
+ *  months. Date is ISO YYYY-MM-DD so the date input + the receipt-
+ *  date formatter both handle it cleanly. */
+function randomDemoMeta(today: string): { place: string; date: string } {
+  const place = DEMO_RESTAURANTS[demoRandInt(0, DEMO_RESTAURANTS.length - 1)];
+  const offsetDays = demoRandInt(0, 180);
+  const ms = new Date(`${today}T00:00:00`).getTime() - offsetDays * 24 * 60 * 60 * 1000;
+  const date = new Date(ms).toISOString().slice(0, 10);
+  return { place, date };
+}
+
 /** Build a fresh randomised demo order. Items are picked at random
  *  from each pool, but each item's shared flag is fixed in the pool
  *  itself — the same dish always behaves the same way across reloads.
@@ -735,7 +760,9 @@ export default function Page() {
       imgIndex: -1,
     }));
     setItems(sortByCategory(demoItems));
-    setMealLabel("Demomiddag");
+    const meta = randomDemoMeta(today);
+    setMealLabel(meta.place);
+    setEventDate(meta.date);
     setStep("items");
     // Pre-fill the host so the demo can run all the way through to room
     // creation without the user having to type a name + Swish number. Only

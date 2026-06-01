@@ -45,6 +45,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     index?: number;
     /** editPayee patch */
     number?: string;
+    groupSize?: number;
   };
   try {
     body = await req.json();
@@ -92,6 +93,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const state = await stub.editPayee(String(body.personId ?? ""), {
         name: typeof body.name === "string" ? body.name : undefined,
         number: typeof body.number === "string" ? body.number : undefined,
+        groupSize: typeof body.groupSize === "number" ? body.groupSize : undefined,
       });
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });

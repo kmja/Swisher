@@ -275,7 +275,7 @@ export class RoomDO extends DurableObject {
    *  payment messages and QRs the diners scan are pinned to those. */
   async editPayee(
     actorId: string,
-    patch: { name?: string; number?: string },
+    patch: { name?: string; number?: string; groupSize?: number },
   ): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;
@@ -290,6 +290,22 @@ export class RoomDO extends DurableObject {
     }
     if (typeof patch.number === "string") {
       state.payeeNumber = patch.number.slice(0, 20);
+    }
+    if (typeof patch.groupSize === "number" && Number.isFinite(patch.groupSize) && patch.groupSize >= 2) {
+      state.groupSize = Math.min(50, Math.round(patch.groupSize));
+      // Re-evaluate fully-shared items: anyone in the room should be
+      // auto-claimed on items the whole table shares, but a bigger
+      // groupSize might mean a previously-fully-shared row is now only
+      // partial — leave the existing claimedBy alone in that case
+      // (partial-share state surfaces via isFullyShared on read).
+      for (const it of state.items) {
+        if (!it.shared) continue;
+        if (isFullyShared(it, state.groupSize)) {
+          for (const p of state.people) {
+            if (!it.claimedBy.includes(p.id)) it.claimedBy.push(p.id);
+          }
+        }
+      }
     }
     await this.save(state);
     return state;
