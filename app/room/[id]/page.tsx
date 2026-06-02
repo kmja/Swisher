@@ -1192,25 +1192,30 @@ export default function RoomPage() {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="mt-0.5 flex items-center justify-between gap-1">
-                      <button
-                        type="button"
-                        aria-label="−"
-                        onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                      >
-                        −
-                      </button>
-                      <span className="text-xs font-semibold tabular-nums text-gray-500">{dv}/{groupSize}</span>
-                      <button
-                        type="button"
-                        aria-label="+"
-                        disabled={dv >= groupSize}
-                        onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                      >
-                        +
-                      </button>
+                    {/* Same vertical stepper layout as the items
+                        page: N/M on top (bigger again), − / + side-
+                        by-side below in the same w-20 column. */}
+                    <div className="mt-1 flex flex-col items-stretch gap-1">
+                      <span className="text-center text-xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          aria-label="−"
+                          onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
+                          className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="+"
+                          disabled={dv >= groupSize}
+                          onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                          className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

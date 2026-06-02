@@ -514,7 +514,23 @@ function GroupVisual({ count }: { count: number }) {
                     transform: `translateX(-50%) rotate(${lean}deg)`,
                     transformOrigin: "50% 0",
                   }}
-                />
+                >
+                  {/* Cute little foot at the bottom of each leg.
+                      Doubles the leg width with a rounded-full
+                      ellipse, sits tucked into the leg's bottom
+                      curve. Its OWN rotation matches the leg's
+                      lean direction (and is doubled up) so the
+                      foot reads as "pointing outward" — straight
+                      down for the centre leg, tilted out for the
+                      side legs. */}
+                  <div
+                    className="absolute left-1/2 top-full h-1.5 w-3 rounded-full bg-[#e6e8ed] shadow-sm ring-1 ring-black/5 dark:bg-[#5e5e6c]"
+                    style={{
+                      transform: `translate(-50%, -2px) rotate(${lean}deg)`,
+                      transformOrigin: "50% 50%",
+                    }}
+                  />
+                </div>
               );
             })}
             {/* Bottom rim ellipse — the table's side / thickness.
@@ -2761,25 +2777,32 @@ export default function Page() {
                             }`}
                           >
                             <div className="overflow-hidden">
-                              <div className="mt-0.5 flex items-center justify-between gap-1">
-                                <button
-                                  type="button"
-                                  aria-label="−"
-                                  onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                                >
-                                  −
-                                </button>
-                                <span className="text-xs font-semibold tabular-nums text-gray-500">{d}/{groupSize}</span>
-                                <button
-                                  type="button"
-                                  aria-label="+"
-                                  disabled={d >= groupSize}
-                                  onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                                >
-                                  +
-                                </button>
+                              {/* N/M on top, larger again; − + below in a
+                                  side-by-side pair so the column reads as
+                                  "this many ways" with the controls tucked
+                                  underneath instead of flanking a tiny
+                                  caption. */}
+                              <div className="mt-1 flex flex-col items-stretch gap-1">
+                                <span className="text-center text-xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    aria-label="−"
+                                    onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                                  >
+                                    −
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label="+"
+                                    disabled={d >= groupSize}
+                                    onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                                  >
+                                    +
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
