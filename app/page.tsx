@@ -1607,6 +1607,45 @@ export default function Page() {
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
   // Soft-delete: move to the removed list (kept out of the totals/shares), with
   // a transient undo and a persistent collapsed list to restore from.
+  // Remember each removed row's original index in items[] so undo can
+  // drop the row back where it came from instead of always at the
+  // end. Kept as a ref so this state doesn't itself trigger renders.
+  const removedIndicesRef = useRef<Map<string, number>>(new Map());
+  // FLIP slot for the validation row list — rememberRowPositions()
+  // captures every visible row's top BEFORE a state change, then the
+  // useLayoutEffect below measures the new tops and slides each row
+  // from its old position to its new one. Without this, deleting /
+  // restoring a row would just snap the rest of the list into place.
+  const rowFlipRef = useRef<Map<string, number> | null>(null);
+  function rememberRowPositions(skipId?: string) {
+    if (typeof document === "undefined") return;
+    const positions = new Map<string, number>();
+    for (const it of items) {
+      if (skipId && it.id === skipId) continue;
+      const el = document.querySelector(`[data-row-id="${it.id}"]`);
+      if (el instanceof HTMLElement) positions.set(it.id, el.getBoundingClientRect().top);
+    }
+    rowFlipRef.current = positions;
+  }
+  useLayoutEffect(() => {
+    const old = rowFlipRef.current;
+    if (!old) return;
+    rowFlipRef.current = null;
+    for (const [id, oldTop] of old) {
+      const el = document.querySelector(`[data-row-id="${id}"]`);
+      if (!(el instanceof HTMLElement) || typeof el.animate !== "function") continue;
+      const dy = oldTop - el.getBoundingClientRect().top;
+      if (Math.abs(dy) < 1) continue;
+      el.animate(
+        [
+          { transform: `translateY(${dy}px)` },
+          { transform: "translateY(0)" },
+        ],
+        { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
+      );
+    }
+  }, [items]);
+
   const removeItem = async (id: string) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
@@ -1631,6 +1670,12 @@ export default function Page() {
         /* animation cancelled — fall through to the state update */
       }
     }
+    // Capture sibling positions BEFORE the splice so the FLIP effect
+    // above can slide them up to close the gap. Original index is
+    // stashed so restore can put the row back in the same slot.
+    const originalIndex = items.findIndex((x) => x.id === id);
+    if (originalIndex >= 0) removedIndicesRef.current.set(id, originalIndex);
+    rememberRowPositions(id);
     setItems((prev) => prev.filter((x) => x.id !== id));
     setRemovedItems((r) => [it, ...r.filter((x) => x.id !== id)]);
     setUndoItem(it);
@@ -1640,8 +1685,16 @@ export default function Page() {
   const restoreItem = (id: string) => {
     const it = removedItems.find((x) => x.id === id);
     if (!it) return;
+    const at = removedIndicesRef.current.get(id);
+    removedIndicesRef.current.delete(id);
+    rememberRowPositions();
     setRemovedItems((r) => r.filter((x) => x.id !== id));
-    setItems((prev) => [...prev, it]);
+    setItems((prev) => {
+      const next = [...prev];
+      const insertAt = at != null ? Math.min(Math.max(0, at), next.length) : next.length;
+      next.splice(insertAt, 0, it);
+      return next;
+    });
     setUndoItem((u) => (u?.id === id ? null : u));
   };
 
@@ -2948,6 +3001,31 @@ export default function Page() {
               >
                 Demo
               </a>
+            </div>
+            {/* Theme override. Writes to localStorage via the
+                __kvittSetTheme global the boot script installed in
+                <head>, which also flips the .dark class on <html>
+                and swaps the manifest link href so the system
+                stays consistent. "Auto" wipes the pin and falls
+                back to prefers-color-scheme. */}
+            <div className="border-t border-gray-100 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Theme</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["light", "dark", "auto"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      type SetTheme = (theme: "light" | "dark" | "auto") => void;
+                      const w = window as Window & { __kvittSetTheme?: SetTheme };
+                      w.__kvittSetTheme?.(t);
+                    }}
+                    className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold capitalize text-ink active:bg-gray-200"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
             {/* Dialog / overlay shortcuts. Each button flips the state
                 that triggers the modal or banner, with a quick

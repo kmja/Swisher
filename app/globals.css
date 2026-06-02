@@ -43,8 +43,14 @@ textarea {
 }
 
 /* ---------------------------------------------------------------- *
- *  Dark mode (follows the system preference)                       *
+ *  Dark mode                                                       *
  * ---------------------------------------------------------------- *
+ *  Activated by a `.dark` class on <html>, set by the inline boot
+ *  script in app/layout.tsx. The script defaults to the system
+ *  prefers-color-scheme but a `kvitt-theme` localStorage key can
+ *  pin it to "light" or "dark" — the debug panel writes that key
+ *  so we can flip between modes without restarting the OS theme.
+ *
  *  We don't sprinkle `dark:` variants across hundreds of className
  *  strings — there are too many of them. Instead we override the
  *  small handful of Tailwind utilities the app actually uses for
@@ -52,104 +58,102 @@ textarea {
  *  Brand swish pink and bright button text-white are deliberately
  *  left alone so the swish CTAs stay legible against the dim
  *  backdrops. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-ink: #f4f4f5;
-    /* Each layer is intentionally a noticeable tonal step above
-     * the one below it so the body / card / button hierarchy
-     * still reads as three distinct surfaces in dark mode.
-     * Same vertical order as light: page (darkest) < surface <
-     * surface-muted (lightest, used for buttons / chips).
-     * Surface-2 sits between page and surface for bg-gray-50. */
-    --color-page: #161618;
-    --color-surface: #2f2f37;
-    --color-surface-muted: #4a4a55;
-    --color-surface-2: #3c3c45;
-  }
+.dark {
+  --color-ink: #f4f4f5;
+  /* Each layer is intentionally a noticeable tonal step above
+   * the one below it so the body / card / button hierarchy
+   * still reads as three distinct surfaces in dark mode.
+   * Same vertical order as light: page (darkest) < surface <
+   * surface-muted (lightest, used for buttons / chips).
+   * Surface-2 sits between page and surface for bg-gray-50. */
+  --color-page: #161618;
+  --color-surface: #2f2f37;
+  --color-surface-muted: #4a4a55;
+  --color-surface-2: #3c3c45;
+}
 
-  /* Body backdrop already references --color-page so it follows
-     automatically; same for text-ink consumers. */
+/* Body backdrop already references --color-page so it follows
+   automatically; same for text-ink consumers. */
 
-  /* Solid white surfaces (cards, inputs, the round table) flip to
-     the lifted dark surface. Also handle the common /opacity
-     variants used as backdrop-blur headers and toast surfaces. */
-  .bg-white { background-color: var(--color-surface); }
-  .bg-white\/95 { background-color: rgb(47 47 55 / 0.95); }
-  .bg-white\/90 { background-color: rgb(47 47 55 / 0.90); }
-  .bg-white\/80 { background-color: rgb(47 47 55 / 0.80); }
-  .bg-white\/60 { background-color: rgb(47 47 55 / 0.60); }
-  .bg-white\/15 { background-color: rgb(255 255 255 / 0.15); }
-  .bg-white\/25 { background-color: rgb(255 255 255 / 0.25); }
-  .bg-gray-50 { background-color: var(--color-surface-2); }
-  .bg-gray-100 { background-color: var(--color-surface-muted); }
-  .bg-gray-200 { background-color: #5d5d6a; }
-  .bg-gray-300 { background-color: #6f6f7d; }
-  .bg-amber-50,
-  .bg-amber-50\/95,
-  .bg-amber-50\/70 { background-color: rgb(58 38 9 / 0.95); }
-  .bg-amber-100 { background-color: rgb(76 50 12 / 0.95); }
-  .bg-amber-300 { background-color: #fbbf24; }
-  .bg-red-50 { background-color: rgb(58 18 18 / 0.95); }
-  .bg-red-100 { background-color: rgb(76 25 25 / 0.95); }
-  .bg-red-600 { background-color: #dc2626; }
-  .bg-emerald-50 { background-color: rgb(7 38 23 / 0.95); }
-  /* Shared-row swish tint. Light mode's bg-swish/5 (5 % swish on
-     a white card) lands at ~#fbf0f6, but on the dark surface it
-     blends down to almost nothing — shared rows lost their pink
-     identity. Repaint it as the same deep plum the claimed-row
-     bg-[#f4e6ee] override uses, so the validation step's shared
-     fill matches the room page's claimed-by-host fill. */
-  .bg-swish\/5 { background-color: #3b1f2d; }
-  /* Skeleton screen's bg (#f0f0f4 — the same colour as --color-page
-     in light mode) needs to track the dark backdrop too. */
-  .bg-\[\#f0f0f4\] { background-color: var(--color-page); }
-  /* Claimed-item row background. Light mode freezes a faint swish
-     tint (#f4e6ee — bg-swish/10 over white). In dark mode the
-     equivalent tint is a deep plum that still reads as "swish-y"
-     but has enough contrast for the light text on top. */
-  .bg-\[\#f4e6ee\] { background-color: #3b1f2d; }
+/* Solid white surfaces (cards, inputs, the round table) flip to
+   the lifted dark surface. Also handle the common /opacity
+   variants used as backdrop-blur headers and toast surfaces. */
+.dark .bg-white { background-color: var(--color-surface); }
+.dark .bg-white\/95 { background-color: rgb(47 47 55 / 0.95); }
+.dark .bg-white\/90 { background-color: rgb(47 47 55 / 0.90); }
+.dark .bg-white\/80 { background-color: rgb(47 47 55 / 0.80); }
+.dark .bg-white\/60 { background-color: rgb(47 47 55 / 0.60); }
+.dark .bg-white\/15 { background-color: rgb(255 255 255 / 0.15); }
+.dark .bg-white\/25 { background-color: rgb(255 255 255 / 0.25); }
+.dark .bg-gray-50 { background-color: var(--color-surface-2); }
+.dark .bg-gray-100 { background-color: var(--color-surface-muted); }
+.dark .bg-gray-200 { background-color: #5d5d6a; }
+.dark .bg-gray-300 { background-color: #6f6f7d; }
+.dark .bg-amber-50,
+.dark .bg-amber-50\/95,
+.dark .bg-amber-50\/70 { background-color: rgb(58 38 9 / 0.95); }
+.dark .bg-amber-100 { background-color: rgb(76 50 12 / 0.95); }
+.dark .bg-amber-300 { background-color: #fbbf24; }
+.dark .bg-red-50 { background-color: rgb(58 18 18 / 0.95); }
+.dark .bg-red-100 { background-color: rgb(76 25 25 / 0.95); }
+.dark .bg-red-600 { background-color: #dc2626; }
+.dark .bg-emerald-50 { background-color: rgb(7 38 23 / 0.95); }
+/* Shared-row swish tint. Light mode's bg-swish/5 (5 % swish on
+   a white card) lands at ~#fbf0f6, but on the dark surface it
+   blends down to almost nothing — shared rows lost their pink
+   identity. Repaint it as the same deep plum the claimed-row
+   bg-[#f4e6ee] override uses, so the validation step's shared
+   fill matches the room page's claimed-by-host fill. */
+.dark .bg-swish\/5 { background-color: #3b1f2d; }
+/* Skeleton screen's bg (#f0f0f4 — the same colour as --color-page
+   in light mode) needs to track the dark backdrop too. */
+.dark .bg-\[\#f0f0f4\] { background-color: var(--color-page); }
+/* Claimed-item row background. Light mode freezes a faint swish
+   tint (#f4e6ee — bg-swish/10 over white). In dark mode the
+   equivalent tint is a deep plum that still reads as "swish-y"
+   but has enough contrast for the light text on top. */
+.dark .bg-\[\#f4e6ee\] { background-color: #3b1f2d; }
 
-  /* Greys for secondary text. Tailwind's gray-* are mid-tone lights
-     in default theme; we dim them down so they don't burn against
-     a dark surface. */
-  .text-gray-400 { color: #71717a; }
-  .text-gray-500 { color: #a1a1aa; }
-  .text-gray-600 { color: #d4d4d8; }
-  .text-gray-700 { color: #e4e4e7; }
-  .text-amber-600,
-  .text-amber-700,
-  .text-amber-800,
-  .text-amber-900 { color: #fde68a; }
-  .text-red-500,
-  .text-red-600,
-  .text-red-700 { color: #fca5a5; }
-  .text-emerald-600 { color: #34d399; }
+/* Greys for secondary text. Tailwind's gray-* are mid-tone lights
+   in default theme; we dim them down so they don't burn against
+   a dark surface. */
+.dark .text-gray-400 { color: #71717a; }
+.dark .text-gray-500 { color: #a1a1aa; }
+.dark .text-gray-600 { color: #d4d4d8; }
+.dark .text-gray-700 { color: #e4e4e7; }
+.dark .text-amber-600,
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-900 { color: #fde68a; }
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700 { color: #fca5a5; }
+.dark .text-emerald-600 { color: #34d399; }
 
-  /* Hairline borders — invert from black-tinted to white-tinted.
-     Bumped past the literal 5 % / 10 % alpha numbers because
-     5 % white on a dark surface barely registers; inputs and
-     cards lost their carved-out outline. Settled on values that
-     read as a clear edge against --color-surface without ever
-     looking like a heavy stroke. */
-  .ring-black\/5 { --tw-ring-color: rgb(255 255 255 / 0.16); }
-  .ring-black\/10 { --tw-ring-color: rgb(255 255 255 / 0.22); }
-  .ring-gray-200 { --tw-ring-color: #3f3f46; }
-  .ring-amber-200 { --tw-ring-color: rgb(180 140 50 / 0.30); }
-  .ring-red-200 { --tw-ring-color: rgb(200 110 110 / 0.30); }
-  .border-gray-100 { border-color: var(--color-surface-muted); }
-  .border-gray-200 { border-color: #3f3f46; }
-  .border-gray-300 { border-color: #52525b; }
-  .border-gray-300\/80 { border-color: rgb(63 63 70 / 0.80); }
-  .border-black\/5 { border-color: rgb(255 255 255 / 0.08); }
+/* Hairline borders — invert from black-tinted to white-tinted.
+   Bumped past the literal 5 % / 10 % alpha numbers because
+   5 % white on a dark surface barely registers; inputs and
+   cards lost their carved-out outline. Settled on values that
+   read as a clear edge against --color-surface without ever
+   looking like a heavy stroke. */
+.dark .ring-black\/5 { --tw-ring-color: rgb(255 255 255 / 0.16); }
+.dark .ring-black\/10 { --tw-ring-color: rgb(255 255 255 / 0.22); }
+.dark .ring-gray-200 { --tw-ring-color: #3f3f46; }
+.dark .ring-amber-200 { --tw-ring-color: rgb(180 140 50 / 0.30); }
+.dark .ring-red-200 { --tw-ring-color: rgb(200 110 110 / 0.30); }
+.dark .border-gray-100 { border-color: var(--color-surface-muted); }
+.dark .border-gray-200 { border-color: #3f3f46; }
+.dark .border-gray-300 { border-color: #52525b; }
+.dark .border-gray-300\/80 { border-color: rgb(63 63 70 / 0.80); }
+.dark .border-black\/5 { border-color: rgb(255 255 255 / 0.08); }
 
-  /* Scanner-grid pink gridlines were tuned for a white background.
-     Bump the alpha so they stay visible on the dark viewfinder
-     backdrop. */
-  .scan-grid {
-    background-image:
-      repeating-linear-gradient(0deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px),
-      repeating-linear-gradient(90deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px);
-  }
+/* Scanner-grid pink gridlines were tuned for a white background.
+   Bump the alpha so they stay visible on the dark viewfinder
+   backdrop. */
+.dark .scan-grid {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px);
 }
 
 /* Receipt "scanning" sweep + glow while OCR runs. */

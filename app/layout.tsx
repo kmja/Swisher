@@ -43,10 +43,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             sync if the user toggles their OS theme after the page
             has loaded. */}
         <link rel="manifest" href="/manifest.webmanifest" id="kvitt-manifest" />
+        {/* Boot script. Runs before the body renders so the .dark
+            class lands on <html> before the first paint (no FOUC),
+            and the manifest <link> is rewritten to its dark variant
+            so the Install dialog / PWA splash uses the right colour
+            family. Source of truth:
+              1. localStorage "kvitt-theme" → "light" / "dark" pin
+                 (set by the debug panel toggle)
+              2. otherwise, prefers-color-scheme
+            The matchMedia change listener keeps the page in sync if
+            the OS theme flips, but defers to a localStorage pin so
+            the debug override sticks. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){var l=document.getElementById('kvitt-manifest');if(!l)return;var m=window.matchMedia('(prefers-color-scheme: dark)');var set=function(d){l.href=d?'/manifest-dark.webmanifest':'/manifest.webmanifest';};set(m.matches);try{m.addEventListener('change',function(e){set(e.matches);});}catch(e){m.addListener(function(e){set(e.matches);});}})();",
+              "(function(){var d=document.documentElement,l=document.getElementById('kvitt-manifest'),m=window.matchMedia('(prefers-color-scheme: dark)');function apply(dark){d.classList.toggle('dark',dark);if(l)l.href=dark?'/manifest-dark.webmanifest':'/manifest.webmanifest';}function pin(){try{return localStorage.getItem('kvitt-theme');}catch(e){return null;}}var p=pin();apply(p==='dark'||(p!=='light'&&m.matches));try{m.addEventListener('change',function(e){if(pin())return;apply(e.matches);});}catch(e){m.addListener(function(e){if(pin())return;apply(e.matches);});}window.__kvittSetTheme=function(t){try{if(t==='dark'||t==='light')localStorage.setItem('kvitt-theme',t);else localStorage.removeItem('kvitt-theme');}catch(e){}apply(t==='dark'||(t!=='light'&&m.matches));};window.__kvittGetTheme=function(){return pin();};})();",
           }}
         />
       </head>
