@@ -1105,14 +1105,6 @@ export default function RoomPage() {
                 placeholder={t.pricePh}
                 className="w-20 shrink-0 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
               />
-              <button
-                type="button"
-                onClick={() => { removeItemRow(it.id); cancelEdit(); }}
-                aria-label={t.removeRow}
-                className="px-1 text-gray-400 active:text-red-500"
-              >
-                ✕
-              </button>
             </div>
             <div className="mt-2 text-sm text-gray-500">
               {/* Shared toggle on the right, below the price column —
@@ -1183,21 +1175,37 @@ export default function RoomPage() {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={cancelEdit}
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 active:bg-gray-100"
+              onClick={() => { removeItemRow(it.id); cancelEdit(); }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-200 active:bg-red-100"
             >
-              {t.cancel}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+              {t.removeRow}
             </button>
-            <button
-              type="button"
-              onClick={() => saveEdit(it.id)}
-              className="rounded-xl bg-swish px-4 py-2 text-sm font-semibold text-white active:bg-swish-dark"
-            >
-              {t.save}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 active:bg-gray-100"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => saveEdit(it.id)}
+                className="rounded-xl bg-swish px-4 py-2 text-sm font-semibold text-white active:bg-swish-dark"
+              >
+                {t.save}
+              </button>
+            </div>
           </div>
         </div>
       );
