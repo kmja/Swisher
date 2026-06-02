@@ -333,6 +333,11 @@ export default function RoomPage() {
   //    translateY animation on every render after a scroll. Gate on a
   //    signature of item ids in order so unrelated state updates skip it.
   const rowPositionsRef = useRef<Map<string, number>>(new Map());
+  // Signature ("description|priceOre") of an item that was just undone
+  // via the undo-toast — the FLIP effect below swipes that item in
+  // from the right on its next appearance so the motion mirrors the
+  // left-swipe that deleted it.
+  const pendingRestoreRef = useRef<string | null>(null);
   // Include shared / shareCount in the signature so the FLIP effect
   // also re-measures when an item flips into / out of the "shared by
   // everyone" section — the row's id is unchanged but its DOM slot
@@ -354,7 +359,32 @@ export default function RoomPage() {
     }
     for (const [id, newTop] of next) {
       const oldTop = rowPositionsRef.current.get(id);
-      if (oldTop == null) continue; // first appearance — no animation
+      if (oldTop == null) {
+        // First appearance for this row. If it matches the
+        // pendingRestoreRef signature (an item the host just
+        // un-deleted via the undo toast), swipe it in from the
+        // right — the mirror of the left-swipe that removed it.
+        // Plain newcomers (e.g., addItem from the + form or
+        // another user in the room) still just appear in place.
+        const sig = pendingRestoreRef.current;
+        if (sig) {
+          const it = state.items.find((x) => x.id === id);
+          if (it && `${it.description}|${it.priceOre}` === sig) {
+            pendingRestoreRef.current = null;
+            const el = document.querySelector(`[data-item-id="${id}"]`);
+            if (el instanceof HTMLElement && typeof el.animate === "function") {
+              el.animate(
+                [
+                  { transform: "translateX(120%)", opacity: 0 },
+                  { transform: "translateX(0)", opacity: 1 },
+                ],
+                { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
+              );
+            }
+          }
+        }
+        continue;
+      }
       const dy = oldTop - newTop;
       if (Math.abs(dy) < 1) continue; // didn't move
       const el = document.querySelector(`[data-item-id="${id}"]`);
@@ -1018,6 +1048,13 @@ export default function RoomPage() {
     const snap = pendingUndo;
     setPendingUndo(null);
     if (undoTimer.current) clearTimeout(undoTimer.current);
+    // Mark the next-appearing item that matches (description, priceOre)
+    // so the FLIP effect can swipe it in from the right — visually the
+    // reverse of the left-swipe that removed it. addItem hands us a
+    // brand-new id on the server side so we can't address the row
+    // ahead of time; matching on the descriptor pair is good enough
+    // in practice.
+    pendingRestoreRef.current = `${snap.description}|${snap.priceOre}`;
     await postAction({
       action: "addItem",
       description: snap.description,
