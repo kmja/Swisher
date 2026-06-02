@@ -2490,20 +2490,20 @@ export default function Page() {
                             onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
                             aria-checked={rep.shared}
                             aria-label={t.sharedToggle}
-                            className="inline-flex items-center gap-2"
+                            className="-m-2 inline-flex items-center gap-2.5 p-2"
                           >
-                            <span className={`text-xs font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                            <span className={`text-sm font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
                               {t.sharedLabel}
                             </span>
                             <span
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
                                 rep.shared ? "bg-swish" : "bg-gray-300"
                               }`}
                             >
                               <span
                                 aria-hidden
-                                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                                  rep.shared ? "translate-x-4" : "translate-x-0.5"
+                                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                  rep.shared ? "translate-x-6" : "translate-x-1"
                                 }`}
                               />
                             </span>
