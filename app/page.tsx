@@ -1480,22 +1480,34 @@ export default function Page() {
         return;
       }
       setScanCount(0);
-      let c = 0;
-      const delay = Math.max(45, Math.min(160, Math.round(750 / n)));
-      const iv = setInterval(() => {
-        c += 1;
-        setScanCount(c);
-        if (c >= n) {
-          clearInterval(iv);
+      // Run the count-up off requestAnimationFrame instead of
+      // setInterval. iOS Safari throttles setInterval aggressively
+      // when the camera is live and the device is mildly busy —
+      // ticks can collapse into a single render and the host sees
+      // "0 rätter tillagda" the whole way through. rAF runs on the
+      // compositor's clock so we get one update per visible frame,
+      // and the eased progress lands exactly on n at the duration
+      // boundary.
+      const targetCount = n;
+      const duration = Math.max(450, Math.min(900, targetCount * 90));
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        setScanCount(Math.round(eased * targetCount));
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
           setTimeout(() => {
             setScanCount(null);
-            // Hand off to the useEffect below: it advances to "items" only
-            // once the host has typed a name and a valid phone, so a host
-            // mid-typing isn't yanked off this screen.
+            // Hand off to the useEffect below: it advances to "items"
+            // only once the host has typed a name and a valid phone, so
+            // a host mid-typing isn't yanked off this screen.
             setScanReady(true);
           }, 500);
         }
-      }, delay);
+      };
+      requestAnimationFrame(step);
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "OCR failed.");
       setOcrFailed(true);
@@ -2107,8 +2119,8 @@ export default function Page() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-ink">{t.groupSizeLabel}</p>
-                  <div className="mt-3 flex items-center justify-center gap-3">
+                  <p className="text-base font-bold text-ink">{t.groupSizeLabel}</p>
+                  <div className="mt-1 flex items-center justify-center gap-3">
                     <button
                       type="button"
                       aria-label="−"
