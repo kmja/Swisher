@@ -408,16 +408,32 @@ function GroupVisual({ count }: { count: number }) {
       className="relative"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
-      {/* Round "table" the chips sit around. Light swish-pink fill
-          with a 2-px pink ring so it actually reads as a tangible
-          surface, not the white card it sits on. Sized just under
-          the chip orbit's inner edge so the chips visually perch
-          on the table's rim. */}
+      {/* Round dining table the chips gather around. Borrows the
+          input-field chrome (bg-white + shadow-sm + ring-1
+          ring-black/5) so it reads as part of the setup card's
+          surface family. Squashed into an ellipse to look like the
+          table is tipped forward toward the viewer, with two
+          stubby little legs hanging from the visible front edge
+          for a friendly stool-ish silhouette. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-swish/[0.07] ring-2 ring-swish/35"
-        style={{ width: "108px", height: "108px" }}
-      />
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      >
+        <div
+          className="rounded-[50%] bg-white shadow-sm ring-1 ring-black/5"
+          style={{ width: "120px", height: "80px" }}
+        />
+        {/* Stubby legs — inset from the sides of the table and
+            tucked slightly up into its bottom curve so they look
+            attached rather than floating. */}
+        <div
+          className="absolute left-1/2 flex -translate-x-1/2 gap-14"
+          style={{ top: "70px" }}
+        >
+          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5" />
+          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5" />
+        </div>
+      </div>
       {/* Big count number at the centre of the table. tabular-nums
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
