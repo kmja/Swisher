@@ -2308,39 +2308,37 @@ export default function Page() {
                 mid-typing isn't kicked off the screen. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && !hostCardDismissed && (
               <div className="scan-card-rise pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {ocrLoading ? t.scanning : t.itemsFound(scanCount ?? 0)}
-                  </p>
-                  {ocrLoading && (
-                    <span className="scan-pulse inline-block h-2 w-2 rounded-full bg-swish" aria-hidden />
+                {/* "Under tiden…" / "In the meantime…" is the section
+                    header now — the prior "0 rätter tillagda" status
+                    line was noisy (the ✓ on the items list itself is
+                    a better source of truth), and "Vem la ut för
+                    notan?" was redundant once the input placeholders
+                    spell out what each field is. Contact Picker
+                    shortcut on the far right of the header row,
+                    icon-only — only mounts when the API is present
+                    (Android Chromium) so iOS / desktop don't see a
+                    dead button. */}
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 text-base font-bold text-ink">{t.inTheMeantime}</p>
+                  {contactsApi && (
+                    <button
+                      type="button"
+                      onClick={pickContactInfo}
+                      aria-label={t.useMyContact}
+                      title={t.useMyContact}
+                      className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-gray-500 active:bg-gray-100 active:text-ink"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <circle cx="12" cy="10" r="2.5" />
+                        <path d="M8 17a4 4 0 0 1 8 0" />
+                        <line x1="3" y1="8" x2="6" y2="8" />
+                        <line x1="3" y1="12" x2="6" y2="12" />
+                        <line x1="3" y1="16" x2="6" y2="16" />
+                      </svg>
+                    </button>
                   )}
                 </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400">{t.inTheMeantime}</p>
-                  <p className="mt-0.5 text-base font-bold text-ink">{t.payerTitle}</p>
-                </div>
-                {/* One-tap shortcut on Android Chromium — opens the
-                    system contact picker so the host can pick
-                    their own card and have both name + Swish
-                    number filled in. Only rendered when the
-                    Contact Picker API exists; iOS / desktop
-                    Safari fall back to the keyboard's own
-                    AutoFill bar. */}
-                {contactsApi && (
-                  <button
-                    type="button"
-                    onClick={pickContactInfo}
-                    className="-mt-1 inline-flex items-center gap-1.5 self-start rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-semibold text-ink active:bg-gray-200"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <rect x="4" y="4" width="16" height="16" rx="3" />
-                      <circle cx="12" cy="10" r="3" />
-                      <path d="M7 19a5 5 0 0 1 10 0" />
-                    </svg>
-                    {t.useMyContact}
-                  </button>
-                )}
                 <div>
                   <div className="relative">
                     <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">
