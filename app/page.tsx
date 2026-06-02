@@ -446,19 +446,26 @@ function GroupVisual({ count }: { count: number }) {
       className="relative"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
-      {/* Round dining table the chips gather around. Borrows the
-          input-field chrome (bg-white + shadow-sm + ring-1
-          ring-black/5) so it reads as part of the setup card's
-          surface family. Squashed into an ellipse to look like the
-          table is tipped forward, with two stubby legs computed
-          per chip count so they always land in gaps between the
-          guests rather than getting hidden behind them. Legs are
-          rendered BEFORE the tabletop so the tabletop occludes
-          their upper portion — they appear to attach UNDER the
-          table edge instead of in front of it. */}
+      {/* Round dining table. Built from TWO stacked ellipses so the
+          tipped-forward disc actually looks like it has a finished
+          edge with thickness:
+            1. RIM  — sits underneath, offset 5 px DOWN; the
+                      visible sliver at the bottom is the "side"
+                      of the tabletop. Slightly darker than the
+                      surface so it reads as the wood's shadow
+                      side.
+            2. TOP  — wears the setup card's input chrome (bg-
+                      white + shadow-sm + ring-1 ring-black/5).
+                      This is what the chips perch on; chips and
+                      legs use the same surface family.
+          Legs ride along the rim's bottom edge so they appear to
+          extend down from the table's side, not from the surface.
+          The whole stack lives in the same wrapper the chips
+          orbit so positioning maths stays simple. */}
       {(() => {
         const tableW = TABLE_RADIUS_X * 2;
         const tableH = TABLE_RADIUS_Y * 2;
+        const RIM_DEPTH = 5;
         const [legA, legB] = tableLegAngles(visibleChips.length);
         const legPositions = [legA, legB].map((deg) => {
           const rad = (deg * Math.PI) / 180;
@@ -474,28 +481,30 @@ function GroupVisual({ count }: { count: number }) {
             {legPositions.map((pos, i) => (
               <div
                 key={i}
-                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-white shadow-sm ring-1 ring-black/5"
+                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-[#d0d3da] shadow-sm dark:bg-[#16161a]"
                 style={{
-                  // Offset by TABLE_RADIUS_* so the leg's top edge
-                  // tucks just inside the ellipse rim at the
-                  // chosen angle; the leg then extends down past
-                  // the tabletop and the rim covers its top few
-                  // pixels.
+                  // Offset by TABLE_RADIUS_* + RIM_DEPTH so legs
+                  // hang from the rim's bottom edge (not the top
+                  // surface's). The -4 tucks the leg's top edge a
+                  // few pixels into the rim so it looks attached
+                  // rather than floating.
                   left: `${TABLE_RADIUS_X + pos.x}px`,
-                  top: `${TABLE_RADIUS_Y + pos.y - 4}px`,
+                  top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
                 }}
               />
             ))}
+            {/* Bottom rim ellipse — the table's side / thickness. */}
+            <div
+              className="absolute inset-0 rounded-[50%] bg-[#d0d3da] dark:bg-[#16161a]"
+              style={{ transform: `translateY(${RIM_DEPTH}px)` }}
+            />
+            {/* Top surface ellipse — input-field chrome. */}
             <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5">
-              {/* Inset bottom shadow lives on its OWN child so the
-                  parent's Tailwind ring + drop shadow keep working
-                  — a custom inline boxShadow on the parent would
-                  replace the ring (ring is implemented as a box-
-                  shadow under the hood). With this split the table
-                  wears the same chrome as the setup card's input
-                  fields (bg-white shadow-sm ring-1 ring-black/5),
-                  plus a soft bottom-inset hint of depth for the
-                  tipped-forward ellipse. */}
+              {/* Inset bottom shadow on a child div so the parent's
+                  Tailwind ring + drop shadow aren't clobbered (ring
+                  is implemented as a box-shadow under the hood;
+                  a custom inline boxShadow on the parent would
+                  replace it). */}
               <div
                 className="pointer-events-none absolute inset-0 rounded-[50%]"
                 style={{ boxShadow: "inset 0 -4px 8px rgba(0, 0, 0, 0.06)" }}
