@@ -357,27 +357,37 @@ export default function RoomPage() {
       // Skip rows that are mid-swipe (transform is being driven by the
       // pointer handlers) so we don't clobber their slide-out.
       if (el.style.transform && el.style.transform.includes("translateX")) continue;
-      // First / Last / Invert / Play.
-      el.style.transition = "none";
-      el.style.transform = `translateY(${dy}px)`;
-      // Force a reflow so the browser commits the snapped-back position
-      // before we start the play transition.
-      void el.getBoundingClientRect();
-      el.style.transition = "transform 260ms cubic-bezier(0.32, 0.72, 0.36, 1)";
-      el.style.transform = "translateY(0)";
+      // WAAPI instead of CSS transition. The DO polling triggers
+      // setState every 2.5 s, so this effect re-fires on each poll;
+      // if a previous CSS transition was still mid-flight, the
+      // transition:none / reflow / transition:resume dance would jerk
+      // the row into a partial frame and then re-animate from there —
+      // the jitter the host saw when deleting. WAAPI cancels the
+      // in-flight animation cleanly and the next animation starts
+      // from the current visual position.
+      for (const a of el.getAnimations()) {
+        if (a.id === "kvitt-flip") a.cancel();
+      }
+      const anim = el.animate(
+        [
+          { transform: `translateY(${dy}px)` },
+          { transform: "translateY(0)" },
+        ],
+        { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "none" },
+      );
+      anim.id = "kvitt-flip";
     }
     rowPositionsRef.current = next;
-    // editingItemId + addingItem are in the dep array so any state
-    // change that swaps a row for its edit form (or a "+ add" form,
-    // or back again) re-runs the FLIP — rows below the new tall row
-    // slide down to make room instead of snapping into place. The
-    // dedicated height-morph effect that used to grow the row's own
-    // height has been removed: it ran in parallel with the FLIP on
-    // the rows below and the two animations interfered, which read
-    // as the jitter you saw on edit / save / mark-shared. With just
-    // the FLIP, every row movement is the same single transform
-    // transition.
-  }, [itemIdsSig, state, editingItemId, addingItem]);
+    // Deps only include the items signature + editing / adding flags.
+    // `state` itself is NOT a dep on purpose: server polling brings
+    // back a fresh state object every 2.5 s with the exact same
+    // items, and including it here re-fired the FLIP on each poll —
+    // when a delete had just kicked off its animation, the second
+    // fire mid-animation produced visible jitter on the rows below.
+    // itemIdsSig already changes whenever ids / shared / shareCount
+    // shift, and editingItemId / addingItem cover the edit-form
+    // height swap.
+  }, [itemIdsSig, editingItemId, addingItem]);
 
   // After the items state lands with a freshly promoted row, look up
   // the shared section header's position and seed flyingItem with both

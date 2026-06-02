@@ -2563,31 +2563,41 @@ export default function Page() {
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
                         {/* Compact split-ways stepper directly under the
-                            price input when the row is shared. No "≈"
-                            readout next to it any more — the price
-                            input above already shows the per-person
-                            share, so the stepper just needs to convey
-                            how many ways. */}
-                        {rep.shared && !rep.isTip && (
-                          <div className="mt-0.5 flex items-center justify-between gap-1">
-                            <button
-                              type="button"
-                              aria-label="−"
-                              onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                            >
-                              −
-                            </button>
-                            <span className="text-xs font-semibold tabular-nums text-gray-500">{d}/{groupSize}</span>
-                            <button
-                              type="button"
-                              aria-label="+"
-                              disabled={d >= groupSize}
-                              onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                            >
-                              +
-                            </button>
+                            price input when the row is shared. Sits in
+                            a grid-rows-[0fr]→[1fr] reveal so the price
+                            column grows / shrinks smoothly when DELAT
+                            flips, instead of snapping the row into a
+                            taller layout. No "≈" readout next to it any
+                            more — the price input above already shows
+                            the per-person share. */}
+                        {!rep.isTip && (
+                          <div
+                            className={`grid transition-[grid-template-rows] duration-220 ease-out ${
+                              rep.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                            }`}
+                          >
+                            <div className="overflow-hidden">
+                              <div className="mt-0.5 flex items-center justify-between gap-1">
+                                <button
+                                  type="button"
+                                  aria-label="−"
+                                  onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                                >
+                                  −
+                                </button>
+                                <span className="text-xs font-semibold tabular-nums text-gray-500">{d}/{groupSize}</span>
+                                <button
+                                  type="button"
+                                  aria-label="+"
+                                  disabled={d >= groupSize}
+                                  onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
