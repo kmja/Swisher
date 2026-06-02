@@ -1433,7 +1433,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main ref={playRoomEnter} className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
       {/* Sticky nav. Three-column grid (matches the home page) keeps
           the wordmark dead-centre while the + and history / language
           controls stay pinned to their corners. */}
@@ -1467,6 +1467,11 @@ export default function RoomPage() {
           the items page renders so the host's mental model of "where
           am I in the flow" carries over. */}
       <StepHeader step="share" t={tx} />
+
+      {/* Wizard slide-in target. Only the body content slides in from
+          the right; the sticky nav and step strip above stay anchored
+          so the wizard chrome feels continuous between steps. */}
+      <div ref={playRoomEnter} className="flex flex-col gap-4">
 
       {/* Share / invite — top of the room reads as a header / title now:
           place name as the hero, date subtitle, a small live QR with the
@@ -2175,6 +2180,7 @@ export default function RoomPage() {
           </div>
         </div>
       )}
+      </div>
       <QrDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}

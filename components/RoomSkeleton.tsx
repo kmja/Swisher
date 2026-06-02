@@ -50,10 +50,7 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
   );
 
   return (
-    <main
-      ref={playEnter}
-      className="fixed inset-0 z-40 mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-y-auto bg-[#f0f0f4] px-4 pb-32"
-    >
+    <main className="fixed inset-0 z-40 mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-y-auto bg-[#f0f0f4] px-4 pb-32">
       {/* Real nav — three-col grid matching the room page so the swap
           when state loads doesn't redraw the header. */}
       <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
@@ -83,6 +80,11 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
 
       {/* Real step strip — the host's "Share" pill is active. */}
       <StepHeader step="share" t={t} />
+
+      {/* Slide-in wrapper. Only the body (placeholder cards + item
+          rows) slides in; the nav + step strip above stay anchored
+          so the wizard chrome reads as continuous between steps. */}
+      <div ref={playEnter} className="flex flex-col gap-4">
 
       {/* Top section — placeholder bars for place / date / QR / share
           buttons. Shape matches the live top section so the layout
@@ -119,6 +121,7 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
           </div>
         ))}
       </section>
+      </div>
     </main>
   );
 }
