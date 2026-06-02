@@ -547,6 +547,20 @@ export default function RoomPage() {
   // that's still translating in from the right. 320 ms = the
   // playRoomEnter duration (280) + a small visual buffer. We also
   // strip the query upfront so a refresh doesn't reopen it.
+  // When the host lands here from createRoom (?invite=1), pop the
+  // share dialog AFTER the page is actually rendered so openShare()
+  // can capture the QR-button rect for the grow/shrink animation.
+  // Two effects:
+  //   1. On mount: read invite + prewarmed from the URL and strip
+  //      them. We stash wantsInvite in a ref because window.history.
+  //      replaceState can make useSearchParams re-emit, which would
+  //      otherwise lose the flag on the second run.
+  //   2. When status flips to "ok": the real <main> with shareOriginRef
+  //      attached is now in the DOM, so we can schedule openShare()
+  //      and have it capture the origin rect — which is what feeds
+  //      the dialog's growing-from / shrinking-back-into animation.
+  const inviteOnMountRef = useRef(false);
+  const prewarmedOnMountRef = useRef(false);
   useEffect(() => {
     const wantsInvite = searchParams.get("invite") === "1";
     const wasPrewarmed = searchParams.get("prewarmed") === "1";
@@ -557,20 +571,19 @@ export default function RoomPage() {
       url.searchParams.delete("prewarmed");
       window.history.replaceState(null, "", url.pathname + url.search);
     }
-    if (!wantsInvite) return;
-    // Pop the share dialog after the room-enter slide settles. When the
-    // host came in via the skeleton (prewarmed) there's no slide to wait
-    // on, so a shorter delay lets the dialog appear right away.
-    //
-    // No cleanup on the timer: window.history.replaceState above can
-    // cause useSearchParams to re-emit, which would re-run this effect
-    // and trigger the cleanup. On the second run the stripped URL says
-    // wantsInvite=false, so we'd never re-schedule — and the dialog
-    // would never open. Letting the timer fire even if the effect re-
-    // runs is harmless (setShareOpen is idempotent).
-    const delay = wasPrewarmed ? 80 : 320;
-    setTimeout(() => setShareOpen(true), delay);
+    if (wantsInvite) inviteOnMountRef.current = true;
+    if (wasPrewarmed) prewarmedOnMountRef.current = true;
   }, [searchParams]);
+  useEffect(() => {
+    if (status !== "ok" || !inviteOnMountRef.current) return;
+    inviteOnMountRef.current = false;
+    // Prewarmed hosts come in with no slide-in to wait for, so the
+    // dialog can pop almost immediately. Direct-nav guests get the
+    // longer delay so the slide settles first.
+    const delay = prewarmedOnMountRef.current ? 80 : 320;
+    const id = setTimeout(() => openShare(), delay);
+    return () => clearTimeout(id);
+  }, [status]);
 
   // Trap iOS' edge-swipe-back (and the system back button) so a live room
   // can't be accidentally navigated away from — leaving via the Kvitt UI
