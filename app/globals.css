@@ -4,14 +4,26 @@
   --color-swish: #ee5c9a;
   --color-swish-dark: #d6457f;
   --color-ink: #1b1b1f;
+  /* Semantic surface tokens. Light values here; the dark-mode
+     media query at the bottom swaps them for their dim equivalents.
+     `bg-page` is the body backdrop, `bg-surface` is a card / input
+     surface. text-* variants flow off --color-ink so plain
+     `text-ink` keeps working unchanged. */
+  --color-page: #f0f0f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f4f6;
+  --color-surface-2: #fafafa;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Tell the UA so native form controls / scrollbars / overlays
+     also follow the system theme without us styling each one. */
+  color-scheme: light dark;
 }
 
 body {
-  background: #f0f0f4;
+  background: var(--color-page);
   color: var(--color-ink);
   overscroll-behavior-y: none;
   /* Wizard slide-out animations push body content to translateX(-100%),
@@ -28,6 +40,93 @@ select,
 button,
 textarea {
   font-size: 16px;
+}
+
+/* ---------------------------------------------------------------- *
+ *  Dark mode (follows the system preference)                       *
+ * ---------------------------------------------------------------- *
+ *  We don't sprinkle `dark:` variants across hundreds of className
+ *  strings — there are too many of them. Instead we override the
+ *  small handful of Tailwind utilities the app actually uses for
+ *  surfaces, text and borders, plus the semantic --color-* tokens.
+ *  Brand swish pink and bright button text-white are deliberately
+ *  left alone so the swish CTAs stay legible against the dim
+ *  backdrops. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #f4f4f5;
+    --color-page: #0c0c0e;
+    --color-surface: #18181b;
+    --color-surface-muted: #27272a;
+    --color-surface-2: #1f1f23;
+  }
+
+  /* Body backdrop already references --color-page so it follows
+     automatically; same for text-ink consumers. */
+
+  /* Solid white surfaces (cards, inputs, the round table) flip to
+     a dark zinc surface. Also handle the common /opacity variants
+     used as backdrop-blur headers and toast surfaces. */
+  .bg-white { background-color: var(--color-surface); }
+  .bg-white\/95 { background-color: rgb(24 24 27 / 0.95); }
+  .bg-white\/90 { background-color: rgb(24 24 27 / 0.90); }
+  .bg-white\/80 { background-color: rgb(24 24 27 / 0.80); }
+  .bg-white\/60 { background-color: rgb(24 24 27 / 0.60); }
+  .bg-white\/15 { background-color: rgb(255 255 255 / 0.15); }
+  .bg-white\/25 { background-color: rgb(255 255 255 / 0.25); }
+  .bg-gray-50 { background-color: var(--color-surface-2); }
+  .bg-gray-100 { background-color: var(--color-surface-muted); }
+  .bg-gray-200 { background-color: #3f3f46; }
+  .bg-gray-300 { background-color: #52525b; }
+  .bg-amber-50,
+  .bg-amber-50\/95,
+  .bg-amber-50\/70 { background-color: rgb(58 38 9 / 0.95); }
+  .bg-amber-100 { background-color: rgb(76 50 12 / 0.95); }
+  .bg-amber-300 { background-color: #fbbf24; }
+  .bg-red-50 { background-color: rgb(58 18 18 / 0.95); }
+  .bg-red-100 { background-color: rgb(76 25 25 / 0.95); }
+  .bg-red-600 { background-color: #dc2626; }
+  .bg-emerald-50 { background-color: rgb(7 38 23 / 0.95); }
+  /* Skeleton screen's bg (#f0f0f4 — the same colour as --color-page
+     in light mode) needs to track the dark backdrop too. */
+  .bg-\[\#f0f0f4\] { background-color: var(--color-page); }
+
+  /* Greys for secondary text. Tailwind's gray-* are mid-tone lights
+     in default theme; we dim them down so they don't burn against
+     a dark surface. */
+  .text-gray-400 { color: #71717a; }
+  .text-gray-500 { color: #a1a1aa; }
+  .text-gray-600 { color: #d4d4d8; }
+  .text-gray-700 { color: #e4e4e7; }
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-800,
+  .text-amber-900 { color: #fde68a; }
+  .text-red-500,
+  .text-red-600,
+  .text-red-700 { color: #fca5a5; }
+  .text-emerald-600 { color: #34d399; }
+
+  /* Hairline borders — invert from black-tinted to white-tinted. */
+  .ring-black\/5 { --tw-ring-color: rgb(255 255 255 / 0.08); }
+  .ring-black\/10 { --tw-ring-color: rgb(255 255 255 / 0.12); }
+  .ring-gray-200 { --tw-ring-color: #3f3f46; }
+  .ring-amber-200 { --tw-ring-color: rgb(180 140 50 / 0.30); }
+  .ring-red-200 { --tw-ring-color: rgb(200 110 110 / 0.30); }
+  .border-gray-100 { border-color: var(--color-surface-muted); }
+  .border-gray-200 { border-color: #3f3f46; }
+  .border-gray-300 { border-color: #52525b; }
+  .border-gray-300\/80 { border-color: rgb(63 63 70 / 0.80); }
+  .border-black\/5 { border-color: rgb(255 255 255 / 0.08); }
+
+  /* Scanner-grid pink gridlines were tuned for a white background.
+     Bump the alpha so they stay visible on the dark viewfinder
+     backdrop. */
+  .scan-grid {
+    background-image:
+      repeating-linear-gradient(0deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(90deg, rgba(238, 92, 154, 0.36) 0 1px, transparent 1px 22px);
+  }
 }
 
 /* Receipt "scanning" sweep + glow while OCR runs. */
