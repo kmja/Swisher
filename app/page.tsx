@@ -7,6 +7,7 @@ import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
+import RoomSkeleton from "@/components/RoomSkeleton";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
@@ -1489,7 +1490,10 @@ export default function Page() {
       // "New receipt" in the room nav is the way to start fresh.
       // ?invite=1 tells the room page to pop the QR/share dialog straight away
       // — the host's first job is to invite the table, not to scroll items.
-      router.replace(`/room/${data.id}?invite=1`);
+      // ?prewarmed=1 tells the room page to skip its own slide-in animation —
+      // the skeleton overlay below has already slid into place, a second
+      // slide on top would feel like a glitch.
+      router.replace(`/room/${data.id}?invite=1&prewarmed=1`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
       setCreatingRoom(false);
@@ -1575,6 +1579,13 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <FxProvider value={fx}>
+    {/* Skeleton overlay shown the moment "Skapa rum" is tapped. Slides
+        in from the right (matching the room page's own playRoomEnter)
+        so the host sees the room-shaped chrome instantly while the
+        create-room POST is still in flight. router.replace below adds
+        ?prewarmed=1 so the real room page skips its slide-in and the
+        swap from skeleton → live content has no visible jump. */}
+    {creatingRoom && <RoomSkeleton play />}
     <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-dvh overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">

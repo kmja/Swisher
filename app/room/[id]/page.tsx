@@ -12,6 +12,7 @@ import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
 import KvittLogo from "@/components/KvittLogo";
+import RoomSkeleton from "@/components/RoomSkeleton";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
@@ -546,13 +547,21 @@ export default function RoomPage() {
   // playRoomEnter duration (280) + a small visual buffer. We also
   // strip the query upfront so a refresh doesn't reopen it.
   useEffect(() => {
-    if (searchParams.get("invite") !== "1") return;
+    const wantsInvite = searchParams.get("invite") === "1";
+    const wasPrewarmed = searchParams.get("prewarmed") === "1";
+    if (!wantsInvite && !wasPrewarmed) return;
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("invite");
+      url.searchParams.delete("prewarmed");
       window.history.replaceState(null, "", url.pathname + url.search);
     }
-    const id = setTimeout(() => setShareOpen(true), 320);
+    if (!wantsInvite) return;
+    // Pop the share dialog after the room-enter slide settles. When the
+    // host came in via the skeleton (prewarmed) there's no slide to wait
+    // on, so a shorter delay lets the dialog appear right away.
+    const delay = wasPrewarmed ? 80 : 320;
+    const id = setTimeout(() => setShareOpen(true), delay);
     return () => clearTimeout(id);
   }, [searchParams]);
 
@@ -818,9 +827,14 @@ export default function RoomPage() {
    *  in from the right + fades up. Matches the items-step entrance in
    *  app/page.tsx so scan → verify → room reads as one flow rather
    *  than a hard cut. Imperative via WAAPI on a stable ref so it
-   *  fires exactly once per mount. */
+   *  fires exactly once per mount.
+   *
+   *  Skipped when ?prewarmed=1 — the host is arriving from the items
+   *  page's createRoom skeleton, which already slid into place; a
+   *  second slide on top would feel like a glitch. */
+  const prewarmed = searchParams.get("prewarmed") === "1";
   const playRoomEnter = useCallback((el: HTMLElement | null) => {
-    if (!el || typeof el.animate !== "function") return;
+    if (prewarmed || !el || typeof el.animate !== "function") return;
     el.animate(
       [
         { opacity: 0, transform: "translateX(36px)" },
@@ -828,7 +842,7 @@ export default function RoomPage() {
       ],
       { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
     );
-  }, []);
+  }, [prewarmed]);
 
   /** Edit form mount: the row morphs into the edit form when the host
    *  taps the pencil. Gentle scale + fade on the wrapper so the form
@@ -992,10 +1006,10 @@ export default function RoomPage() {
   const isPayee = !!state && personId === state.payeePersonId;
   const nameById = useMemo(() => new Map((state?.people ?? []).map((p) => [p.id, p.name])), [state]);
 
-  if (status === "loading") return <Centered>{t.loading}</Centered>;
+  if (status === "loading") return <RoomSkeleton />;
   if (status === "notfound") return <Centered><p>{t.notFound}</p><HomeLink label={t.toStart} /></Centered>;
   if (status === "unavailable") return <Centered><p>{t.unavailable}</p><HomeLink label={t.toStart} /></Centered>;
-  if (!state) return <Centered>{t.loading}</Centered>;
+  if (!state) return <RoomSkeleton />;
 
   const roomFx: Fx =
     state.currency && state.currency !== "SEK" && state.rate > 0
@@ -1405,22 +1419,21 @@ export default function RoomPage() {
   return (
     <FxProvider value={roomFx}>
     <main ref={playRoomEnter} className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
-      {/* Sticky nav. Solid backdrop-blur background + bottom border so the
-          header reads as a fixed surface above the scrolling content. The
-          KvittLogo drops out on the room page — three buttons in 28 rem
-          want every pixel — but it still appears on the home + history
-          pages. */}
+      {/* Sticky nav. Three-column grid (matches the home page) keeps
+          the wordmark dead-centre while the + and history / language
+          controls stay pinned to their corners. */}
       <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
-        <nav className="flex items-center justify-between gap-2">
+        <div className="grid grid-cols-3 items-center gap-2">
           <a
             href="/"
             aria-label={t.newReceipt}
             title={t.newReceipt}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark justify-self-start"
           >
             +
           </a>
-          <div className="flex items-center gap-2">
+          <KvittLogo className="justify-self-center" />
+          <div className="flex items-center gap-2 justify-self-end">
             <a
               href="/history"
               aria-label={t.history}
@@ -1431,7 +1444,7 @@ export default function RoomPage() {
             </a>
             <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
           </div>
-        </nav>
+        </div>
       </header>
 
       {/* Share / invite — top of the room reads as a header / title now:
@@ -1443,17 +1456,10 @@ export default function RoomPage() {
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start gap-3">
           {/* Title block. min-w-0 + truncate so a long restaurant name
-              can shrink instead of pushing the QR off the card. The
-              total-bill line under the date is the receipt's headline
-              number — items + tip, no diner-share math. */}
+              can shrink instead of pushing the QR off the card. */}
           <div className="min-w-0 flex-1 pt-0.5">
             <h1 className="truncate text-xl font-bold text-ink">{state.place || "Kvitt"}</h1>
             <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
-            <Money
-              ore={state.items.reduce((sum, it) => sum + it.priceOre, 0) + (state.tipOre ?? 0)}
-              className="mt-1 block text-base font-semibold text-ink"
-              nativeClassName="ml-1 text-[11px] font-normal text-gray-400"
-            />
             {state.imageCount > 0 && (
               <button
                 type="button"
