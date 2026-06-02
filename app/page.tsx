@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
+import QrDialog from "@/components/QrDialog";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
@@ -942,6 +943,11 @@ export default function Page() {
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
+  // Debug-only state. The buttons in the Dialogs section of the
+  // debug panel flip these so we can preview each modal / banner
+  // without having to walk through the live capture / scan / share
+  // flow to trigger it.
+  const [debugShareOpen, setDebugShareOpen] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
@@ -2878,6 +2884,67 @@ export default function Page() {
                 Demo
               </a>
             </div>
+            {/* Dialog / overlay shortcuts. Each button flips the state
+                that triggers the modal or banner, with a quick
+                step+placeholder setup so the preview actually has
+                something behind it (the OCR-failed banner and the
+                quality chip only render in the capture step against
+                a captured photo). Useful for iterating on visual
+                tweaks without scanning a real receipt every time. */}
+            <div className="border-t border-gray-100 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Dialogs</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setReceiptOpen(true); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Receipt viewer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setDebugShareOpen(true); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Share QR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setStep("capture"); setOcrFailed(true); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  OCR failed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setStep("capture"); setImageQuality({ blur: 50, contrast: 60, brightness: 140, warning: "blur" }); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Quality: blur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setStep("capture"); setImageQuality({ blur: 200, contrast: 18, brightness: 140, warning: "contrast" }); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Quality: contrast
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setStep("capture"); setImageQuality({ blur: 200, contrast: 40, brightness: 40, warning: "dark" }); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Quality: dark
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDebugOpen(false); setStep("capture"); setImageQuality({ blur: 200, contrast: 40, brightness: 240, warning: "bright" }); }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Quality: bright
+                </button>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -2898,6 +2965,28 @@ export default function Page() {
           </div>
         </div>
       )}
+      {/* Debug-only share dialog preview. Renders QrDialog the same
+          way the room page does, but with a static sample QR and
+          hardcoded labels so we can iterate on its visual without
+          having to actually create a room. Not user-reachable —
+          only the debug panel flips debugShareOpen. */}
+      <QrDialog
+        open={debugShareOpen}
+        onClose={() => setDebugShareOpen(false)}
+        origin={null}
+        qrSrc="/api/qr?payee=0701234567&amountOre=10000&message=test"
+        title="Sample restaurant"
+        subtitle="Scan to join · TEST01"
+        shareUrl="https://kvitt.eu/TEST01"
+        shareTitle="Kvitt — Sample restaurant"
+        shareText="Join my Kvitt: https://kvitt.eu/TEST01"
+        download="kvitt-test01.png"
+        labels={
+          lang === "sv"
+            ? { share: "Dela", copied: "Kopierat!", copyLink: "Kopiera länk", close: "Stäng", save: "Spara" }
+            : { share: "Share", copied: "Copied!", copyLink: "Copy link", close: "Close", save: "Save" }
+        }
+      />
       {receiptOpen && images.length > 0 && (
         <div
           role="dialog"
