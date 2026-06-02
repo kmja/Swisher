@@ -280,7 +280,7 @@ const CIRCLE_SIZE = 200;
 // X-radius stays close to the old 72; Y-radius shrinks to ~48 so the
 // orbit's aspect roughly matches the tabletop's.
 const CIRCLE_RADIUS_X = 72;
-const CIRCLE_RADIUS_Y = 48;
+const CIRCLE_RADIUS_Y = 56;
 
 function slotPosition(slot: number, total: number) {
   // 12 o'clock seat at slot 0, walking clockwise. If only one chip
@@ -429,18 +429,18 @@ function GroupVisual({ count }: { count: number }) {
         className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
       >
         <div
-          className="rounded-[50%] bg-white shadow-sm ring-1 ring-black/5"
-          style={{ width: "120px", height: "80px" }}
+          className="rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
+          style={{ width: "120px", height: "94px" }}
         />
         {/* Stubby legs — inset from the sides of the table and
             tucked slightly up into its bottom curve so they look
             attached rather than floating. */}
         <div
           className="absolute left-1/2 flex -translate-x-1/2 gap-14"
-          style={{ top: "70px" }}
+          style={{ top: "84px" }}
         >
-          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5" />
-          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5" />
+          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100" />
+          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100" />
         </div>
       </div>
       {/* Big count number at the centre of the table. tabular-nums
@@ -1605,6 +1605,25 @@ export default function Page() {
   };
   const addItem = () =>
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
+  // When a row is shared we display the per-share price in its price
+  // input (with the stepper sitting just below it), but priceInput
+  // itself still stores the row TOTAL — every downstream calculation
+  // (room POST, computeShares, billOre, …) keeps treating it as the
+  // total. This draft buffers the user's keystrokes while they're
+  // editing so partial / decimal-point inputs don't get re-formatted
+  // mid-stroke; commit happens on blur, converting share → total via
+  // the current divisor.
+  const [priceDraft, setPriceDraft] = useState<{ id: string; value: string } | null>(null);
+  function commitPriceDraft(rep: UiItem) {
+    if (!priceDraft || priceDraft.id !== rep.id) return;
+    const parsed = parseAmountToOre(priceDraft.value);
+    if (parsed != null) {
+      const divisor = itemDivisorFor(rep);
+      const newTotal = rep.shared ? parsed * divisor : parsed;
+      updateGroup(rep, { priceInput: formatOre(newTotal) });
+    }
+    setPriceDraft(null);
+  }
   // Soft-delete: move to the removed list (kept out of the totals/shares), with
   // a transient undo and a persistent collapsed list to restore from.
   // Remember each removed row's original index in items[] so undo can
@@ -2509,10 +2528,17 @@ export default function Page() {
                       {copies.length > 1 && (
                         <span className="shrink-0 text-sm font-semibold text-gray-400">×{copies.length}</span>
                       )}
-                      <div className="flex w-20 shrink-0 flex-col items-stretch">
+                      <div className="flex w-20 shrink-0 flex-col items-stretch gap-1">
                         <input
-                          value={rep.priceInput}
-                          onChange={(e) => updateGroup(rep, { priceInput: e.target.value })}
+                          value={
+                            priceDraft?.id === rep.id
+                              ? priceDraft.value
+                              : rep.shared
+                              ? formatOre(Math.floor(rowOre / Math.max(1, d)))
+                              : rep.priceInput
+                          }
+                          onChange={(e) => setPriceDraft({ id: rep.id, value: e.target.value })}
+                          onBlur={() => commitPriceDraft(rep)}
                           inputMode="decimal"
                           placeholder={t.pricePlaceholder}
                           className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
@@ -2520,74 +2546,67 @@ export default function Page() {
                         {fx && rowOre > 0 && (
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
+                        {/* Compact split-ways stepper directly under the
+                            price input when the row is shared. No "≈"
+                            readout next to it any more — the price
+                            input above already shows the per-person
+                            share, so the stepper just needs to convey
+                            how many ways. */}
+                        {rep.shared && !rep.isTip && (
+                          <div className="mt-0.5 flex items-center justify-between gap-1">
+                            <button
+                              type="button"
+                              aria-label="−"
+                              onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                            >
+                              −
+                            </button>
+                            <span className="text-xs font-semibold tabular-nums text-gray-500">{d}/{groupSize}</span>
+                            <button
+                              type="button"
+                              aria-label="+"
+                              disabled={d >= groupSize}
+                              onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {!rep.isTip && (
                       <div className="mt-2 text-sm text-gray-500">
-                        {/* Shared toggle pinned to the right edge of the
-                            row so it sits directly under the price
-                            input column — gives the row a tidier
-                            left-text / right-control split. */}
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            role="switch"
-                            onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
-                            aria-checked={rep.shared}
-                            aria-label={t.sharedToggle}
-                            className="-m-2 inline-flex items-center gap-2.5 p-2"
-                          >
-                            <span className={`text-sm font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                              {t.sharedLabel}
-                            </span>
-                            <span
-                              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                                rep.shared ? "bg-swish" : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                aria-hidden
-                                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                                  rep.shared ? "translate-x-6" : "translate-x-1"
-                                }`}
-                              />
-                            </span>
-                          </button>
-                        </div>
-                        {/* Stepper / maybeShared sit in grid-rows reveals
-                            so the row grows / shrinks smoothly when the
-                            shared toggle flips, instead of snapping
-                            between heights. */}
-                        <div
-                          className={`grid transition-[grid-template-rows] duration-220 ease-out ${
-                            rep.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                          }`}
+                        {/* DELAT toggle, left-aligned. The stepper has
+                            moved into the price column above so this
+                            row only needs the toggle itself; the
+                            maybeShared hint stays in its grid-rows
+                            reveal below. */}
+                        <button
+                          type="button"
+                          role="switch"
+                          onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
+                          aria-checked={rep.shared}
+                          aria-label={t.sharedToggle}
+                          className="-m-2 inline-flex items-center gap-2.5 p-2"
                         >
-                          <div className="overflow-hidden">
-                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                              <span>{t.splitWays}</span>
-                              <button
-                                type="button"
-                                aria-label="−"
-                                onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                              >
-                                −
-                              </button>
-                              <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
-                              <button
-                                type="button"
-                                aria-label="+"
-                                disabled={d >= groupSize}
-                                onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                              >
-                                +
-                              </button>
-                              <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
-                            </div>
-                          </div>
-                        </div>
+                          <span
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                              rep.shared ? "bg-swish" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                rep.shared ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </span>
+                          <span className={`text-sm font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                            {t.sharedLabel}
+                          </span>
+                        </button>
                         <div
                           className={`grid transition-[grid-template-rows] duration-220 ease-out ${
                             !rep.shared && sharedSuggestion(rep.description) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"

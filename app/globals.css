@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Switch Tailwind's dark: variant from "prefers-color-scheme" to a
+   .dark class on <html> (set by the boot script in layout.tsx).
+   Lets us hand-write a `dark:bg-gray-100` on the few elements where
+   the global CSS overrides don't carry enough nuance — e.g., the
+   round-table widget needs a distinct fill that's NOT the same as
+   the card it sits on. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-swish: #ee5c9a;
   --color-swish-dark: #d6457f;
