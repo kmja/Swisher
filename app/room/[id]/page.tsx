@@ -560,9 +560,15 @@ export default function RoomPage() {
     // Pop the share dialog after the room-enter slide settles. When the
     // host came in via the skeleton (prewarmed) there's no slide to wait
     // on, so a shorter delay lets the dialog appear right away.
+    //
+    // No cleanup on the timer: window.history.replaceState above can
+    // cause useSearchParams to re-emit, which would re-run this effect
+    // and trigger the cleanup. On the second run the stripped URL says
+    // wantsInvite=false, so we'd never re-schedule — and the dialog
+    // would never open. Letting the timer fire even if the effect re-
+    // runs is harmless (setShareOpen is idempotent).
     const delay = wasPrewarmed ? 80 : 320;
-    const id = setTimeout(() => setShareOpen(true), delay);
-    return () => clearTimeout(id);
+    setTimeout(() => setShareOpen(true), delay);
   }, [searchParams]);
 
   // Trap iOS' edge-swipe-back (and the system back button) so a live room
