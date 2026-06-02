@@ -486,22 +486,21 @@ function GroupVisual({ count }: { count: number }) {
                 }}
               />
             ))}
-            <div
-              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5"
-              style={{
-                // Soft inset shadow at the bottom hints at depth so
-                // the tipped-forward ellipse doesn't read as a
-                // plain disc. The rest of the chrome — the bg, the
-                // shadow-sm drop and the ring-1 ring-black/5
-                // outline — is borrowed verbatim from the host-
-                // setup card's input fields, so the table reads
-                // as part of the same surface family in both
-                // light and dark modes (globals.css overrides
-                // bg-white / ring-black/5 to their dark-mode
-                // equivalents automatically).
-                boxShadow: "inset 0 -4px 8px rgba(0, 0, 0, 0.05)",
-              }}
-            />
+            <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5">
+              {/* Inset bottom shadow lives on its OWN child so the
+                  parent's Tailwind ring + drop shadow keep working
+                  — a custom inline boxShadow on the parent would
+                  replace the ring (ring is implemented as a box-
+                  shadow under the hood). With this split the table
+                  wears the same chrome as the setup card's input
+                  fields (bg-white shadow-sm ring-1 ring-black/5),
+                  plus a soft bottom-inset hint of depth for the
+                  tipped-forward ellipse. */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[50%]"
+                style={{ boxShadow: "inset 0 -4px 8px rgba(0, 0, 0, 0.06)" }}
+              />
+            </div>
           </div>
         );
       })()}
@@ -967,6 +966,37 @@ export default function Page() {
   // effect handles the handoff to the verify step.
   const [hostDoneFlash, setHostDoneFlash] = useState(false);
   const [hostCardDismissed, setHostCardDismissed] = useState(false);
+
+  // Contact Picker shortcut — Chromium on Android exposes
+  // navigator.contacts.select() which pops a native sheet for the
+  // host to pick their own contact card without typing. iOS Safari
+  // has no equivalent (their AutoFill bar is the closest, and only
+  // appears after the keyboard is open). Detect on mount and only
+  // render the button when the API is actually usable so iOS hosts
+  // don't see a dead button.
+  type ContactsManager = { select(props: string[], opts?: { multiple?: boolean }): Promise<Array<{ name?: string[]; tel?: string[] }>> };
+  const [contactsApi, setContactsApi] = useState<ContactsManager | null>(null);
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const nav = navigator as Navigator & { contacts?: ContactsManager };
+    if (nav.contacts && typeof nav.contacts.select === "function") {
+      setContactsApi(nav.contacts);
+    }
+  }, []);
+  async function pickContactInfo() {
+    if (!contactsApi) return;
+    try {
+      const result = await contactsApi.select(["name", "tel"], { multiple: false });
+      const pick = result[0];
+      if (!pick) return;
+      const name = pick.name?.find((n) => n.trim().length > 0)?.trim();
+      const tel = pick.tel?.find((t) => t.trim().length > 0)?.trim();
+      if (name && diners[0]?.id) updateDiner(diners[0].id, name);
+      if (tel) setPayerPhone(tel);
+    } catch {
+      /* host cancelled or picker errored — ignore */
+    }
+  }
   // Tick "1 → 2 → 3 → 1" every 400 ms so the "Reading" label has a live
   // ellipsis while the host waits for OCR to catch up. Only ticks when
   // the button is in its "host committed, scan still working" state.
@@ -2281,6 +2311,27 @@ export default function Page() {
                   <p className="text-[11px] uppercase tracking-wide text-gray-400">{t.inTheMeantime}</p>
                   <p className="mt-0.5 text-base font-bold text-ink">{t.payerTitle}</p>
                 </div>
+                {/* One-tap shortcut on Android Chromium — opens the
+                    system contact picker so the host can pick
+                    their own card and have both name + Swish
+                    number filled in. Only rendered when the
+                    Contact Picker API exists; iOS / desktop
+                    Safari fall back to the keyboard's own
+                    AutoFill bar. */}
+                {contactsApi && (
+                  <button
+                    type="button"
+                    onClick={pickContactInfo}
+                    className="-mt-1 inline-flex items-center gap-1.5 self-start rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-semibold text-ink active:bg-gray-200"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <rect x="4" y="4" width="16" height="16" rx="3" />
+                      <circle cx="12" cy="10" r="3" />
+                      <path d="M7 19a5 5 0 0 1 10 0" />
+                    </svg>
+                    {t.useMyContact}
+                  </button>
+                )}
                 <div>
                   <div className="relative">
                     <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-gray-400">

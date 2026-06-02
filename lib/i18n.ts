@@ -99,6 +99,8 @@ export interface Strings {
   /** Playful fallback used as the host-name placeholder AND as the
    *  actual name on the room if the host doesn't type anything. */
   genericHostName: string;
+  /** Label on the Android Contact-Picker shortcut button. */
+  useMyContact: string;
   swishNumber: string;
   invalidPhone: string;
   whoElse: string;
@@ -271,6 +273,7 @@ const sv: Strings = {
   payerTitle: "Vem la ut för notan?",
   yourName: "Ditt namn",
   genericHostName: "Notans hjälte",
+  useMyContact: "Använd dina kontaktuppgifter",
   swishNumber: "Swish-nummer (07XXXXXXXX)",
   invalidPhone: "Ange ett giltigt svenskt mobilnummer.",
   whoElse: "Vilka fler var med?",
@@ -432,6 +435,7 @@ const en: Strings = {
   payerTitle: "Who paid the bill?",
   yourName: "Your name",
   genericHostName: "Tab hero",
+  useMyContact: "Use my contact info",
   swishNumber: "Swish number (07XXXXXXXX)",
   invalidPhone: "Enter a valid Swedish mobile number.",
   whoElse: "Who else was there?",
