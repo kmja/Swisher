@@ -1158,13 +1158,24 @@ export default function Page() {
   const lastShot = pendingShots[pendingShots.length - 1];
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
     setOcrError(null);
     try {
-      const dataUrl = await fileToCompressedDataUrl(file);
-      setImageUrl(dataUrl);
-      runOcr(dataUrl); // scan automatically — no extra confirm tap
+      // First file becomes the primary image; any extra files (host
+      // picked multiple pages from the gallery in one go) get fed in
+      // as appended frames so the OCR sees the whole multi-page
+      // receipt at once.
+      const [first, ...rest] = files;
+      const primary = await fileToCompressedDataUrl(first);
+      setImageUrl(primary);
+      if (rest.length === 0) {
+        runOcr(primary);
+        return;
+      }
+      const restUrls = await Promise.all(rest.map(fileToCompressedDataUrl));
+      runOcr(primary, { frames: [primary, ...restUrls] });
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "Could not read the image.");
     }
@@ -1317,12 +1328,16 @@ export default function Page() {
   }
 
   async function onAppendFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     try {
-      const dataUrl = await fileToCompressedDataUrl(file);
-      runOcr(dataUrl, { append: true });
+      // Multiple-page receipt picked from the gallery: append each
+      // page in order so the OCR sees the whole thing.
+      for (const file of files) {
+        const dataUrl = await fileToCompressedDataUrl(file);
+        await runOcr(dataUrl, { append: true });
+      }
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "Could not read the image.");
     }
@@ -2008,7 +2023,12 @@ export default function Page() {
           </div>
 
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
-          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
+          {/* `multiple` lets the host grab several pages of a long
+              receipt from their gallery in one go; on iOS it also
+              nudges Safari toward opening the Photos picker directly
+              instead of the generic Photo Library / Take Photo /
+              Choose File action sheet for the library button. */}
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={onFile} className="hidden" />
         </section>
       )}
 
@@ -2259,7 +2279,7 @@ export default function Page() {
                 {ocrLoading ? t.addingPhoto : t.addPhoto}
               </button>
             </div>
-            <input ref={addMoreRef} type="file" accept="image/*" onChange={onAppendFile} className="hidden" />
+            <input ref={addMoreRef} type="file" accept="image/*" multiple onChange={onAppendFile} className="hidden" />
 
             <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-black/5">
               <div className="flex justify-between">
