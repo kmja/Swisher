@@ -1114,37 +1114,41 @@ export default function RoomPage() {
                 ✕
               </button>
             </div>
-            <div className="mt-2 pl-1 text-sm text-gray-500">
-              <button
-                type="button"
-                role="switch"
-                onClick={() =>
-                  setEditDraft({
-                    ...editDraft,
-                    shared: !editDraft.shared,
-                    shareCount: editDraft.shared ? undefined : editDraft.shareCount,
-                  })
-                }
-                aria-checked={editDraft.shared}
-                aria-label={tx.sharedToggle}
-                className="inline-flex items-center gap-2"
-              >
-                <span
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    editDraft.shared ? "bg-swish" : "bg-gray-300"
-                  }`}
+            <div className="mt-2 text-sm text-gray-500">
+              {/* Shared toggle on the right, below the price column —
+                  matches the validation step's row layout. */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  role="switch"
+                  onClick={() =>
+                    setEditDraft({
+                      ...editDraft,
+                      shared: !editDraft.shared,
+                      shareCount: editDraft.shared ? undefined : editDraft.shareCount,
+                    })
+                  }
+                  aria-checked={editDraft.shared}
+                  aria-label={tx.sharedToggle}
+                  className="inline-flex items-center gap-2"
                 >
+                  <span className={`text-xs font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                    {tx.sharedLabel}
+                  </span>
                   <span
-                    aria-hidden
-                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                      editDraft.shared ? "translate-x-4" : "translate-x-0.5"
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      editDraft.shared ? "bg-swish" : "bg-gray-300"
                     }`}
-                  />
-                </span>
-                <span className={`text-xs font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                  {tx.sharedLabel}
-                </span>
-              </button>
+                  >
+                    <span
+                      aria-hidden
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        editDraft.shared ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
+                </button>
+              </div>
               {/* Stepper sits in a grid-rows reveal so the card grows
                   / shrinks smoothly when the shared toggle flips. */}
               <div

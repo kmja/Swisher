@@ -2478,31 +2478,37 @@ export default function Page() {
                       </button>
                     </div>
                     {!rep.isTip && (
-                      <div className="mt-2 pl-1 text-sm text-gray-500">
-                        <button
-                          type="button"
-                          role="switch"
-                          onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
-                          aria-checked={rep.shared}
-                          aria-label={t.sharedToggle}
-                          className="inline-flex items-center gap-2"
-                        >
-                          <span
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                              rep.shared ? "bg-swish" : "bg-gray-300"
-                            }`}
+                      <div className="mt-2 text-sm text-gray-500">
+                        {/* Shared toggle pinned to the right edge of the
+                            row so it sits directly under the price
+                            input column — gives the row a tidier
+                            left-text / right-control split. */}
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            role="switch"
+                            onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
+                            aria-checked={rep.shared}
+                            aria-label={t.sharedToggle}
+                            className="inline-flex items-center gap-2"
                           >
+                            <span className={`text-xs font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                              {t.sharedLabel}
+                            </span>
                             <span
-                              aria-hidden
-                              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                                rep.shared ? "translate-x-4" : "translate-x-0.5"
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                rep.shared ? "bg-swish" : "bg-gray-300"
                               }`}
-                            />
-                          </span>
-                          <span className={`text-xs font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                            {t.sharedLabel}
-                          </span>
-                        </button>
+                            >
+                              <span
+                                aria-hidden
+                                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                  rep.shared ? "translate-x-4" : "translate-x-0.5"
+                                }`}
+                              />
+                            </span>
+                          </button>
+                        </div>
                         {/* Stepper / maybeShared sit in grid-rows reveals
                             so the row grows / shrinks smoothly when the
                             shared toggle flips, instead of snapping
