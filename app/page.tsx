@@ -274,14 +274,23 @@ function buildInitialChips(n: number): ChipSlot[] {
 // chip never changes appearance once it's seated; only its angle
 // around the ring updates as the table grows or shrinks.
 const CIRCLE_SIZE = 200;
-const CIRCLE_RADIUS = 72; // distance from centre to a chip's centre
+// The table is squashed into a 3 : 2 ellipse (120 × 80), so the chip
+// orbit is squashed to match — otherwise the top / bottom chips
+// floated way off the table while the side chips sat right on it.
+// X-radius stays close to the old 72; Y-radius shrinks to ~48 so the
+// orbit's aspect roughly matches the tabletop's.
+const CIRCLE_RADIUS_X = 72;
+const CIRCLE_RADIUS_Y = 48;
 
 function slotPosition(slot: number, total: number) {
   // 12 o'clock seat at slot 0, walking clockwise. If only one chip
   // is at the table, just centre it (no orbit).
   if (total <= 0) return { x: 0, y: 0 };
   const angle = -Math.PI / 2 + (slot / total) * 2 * Math.PI;
-  return { x: Math.cos(angle) * CIRCLE_RADIUS, y: Math.sin(angle) * CIRCLE_RADIUS };
+  return {
+    x: Math.cos(angle) * CIRCLE_RADIUS_X,
+    y: Math.sin(angle) * CIRCLE_RADIUS_Y,
+  };
 }
 
 function GroupVisual({ count }: { count: number }) {
