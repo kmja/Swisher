@@ -44,12 +44,11 @@ export interface Strings {
   itemsFound: (n: number) => string;
   /** Soft intro for the host setup card overlaid on the live scan. */
   inTheMeantime: string;
-  /** Tiny captions under each setup-card input explaining why we ask. */
+  /** Explanations behind the setup-card "Why do we need this?" disclosure. */
+  whyTooltipTitle: string;
   whyName: string;
   whyNumber: string;
   whyGroup: string;
-  /** Reassurance footer for the setup card. */
-  stayLocal: string;
   /** CTA on the setup card; only after this tap (and scan completion) is the
    *  host moved to the items step. */
   setupDone: string;
@@ -220,10 +219,10 @@ const sv: Strings = {
   scanPhrases: ["Läser av rätter…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
   itemsFound: (n) => `${n} rätter tillagda`,
   inTheMeantime: "Under tiden…",
-  whyName: "Visas för dina gäster så de vet vem de Swishar till.",
-  whyNumber: "Används bara här i mobilen för att skapa en Swish-QR — vi sparar inget på en server.",
-  whyGroup: "Hjälper appen dela rätt om något står på notan att dela på.",
-  stayLocal: "Allt stannar på din telefon.",
+  whyTooltipTitle: "Varför behöver vi det här?",
+  whyName: "Visas i rummet så att gästerna ser vem de Swishar till.",
+  whyNumber: "Används för att bygga Swish-QR-koden som gästerna skannar för att betala dig.",
+  whyGroup: "Används för att dela rätter som är markerade som delade lika mellan alla.",
   setupDone: "Klar",
   readReceipt: "Läs av kvittot",
   chooseOther: "Välj annan bild",
@@ -380,10 +379,10 @@ const en: Strings = {
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],
   itemsFound: (n) => `${n} items added`,
   inTheMeantime: "In the meantime…",
-  whyName: "Shown to your guests so they know who they're paying.",
-  whyNumber: "Used right here on your phone to build the Swish QR — nothing is sent to a server.",
-  whyGroup: "Lets the app split shared items evenly across the group.",
-  stayLocal: "Everything stays on your phone.",
+  whyTooltipTitle: "Why do we need this?",
+  whyName: "Shown in the room so guests know who they're paying.",
+  whyNumber: "Used to build the Swish QR your guests scan to pay you.",
+  whyGroup: "Used to split items marked as shared evenly across everyone.",
   setupDone: "Done",
   readReceipt: "Scan receipt",
   chooseOther: "Choose another image",

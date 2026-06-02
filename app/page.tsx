@@ -2071,7 +2071,6 @@ export default function Page() {
                       className="w-full rounded-xl bg-white py-3.5 pl-11 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                     />
                   </div>
-                  <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyName}</p>
                 </div>
                 <div>
                   <div className="relative">
@@ -2100,10 +2099,9 @@ export default function Page() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1.5 px-1 text-[11px] leading-snug text-gray-500">{t.whyNumber}</p>
                 </div>
                 <div>
-                  <p className="text-center text-sm font-medium text-ink">{t.groupSizeLabel}</p>
+                  <p className="text-sm font-medium text-ink">{t.groupSizeLabel}</p>
                   <div className="mt-3 flex items-center justify-center gap-3">
                     <button
                       type="button"
@@ -2123,12 +2121,28 @@ export default function Page() {
                       +
                     </button>
                   </div>
-                  <p className="mt-2 px-1 text-center text-[11px] leading-snug text-gray-500">{t.whyGroup}</p>
                 </div>
-                <p className="flex items-center gap-1.5 border-t border-gray-100 pt-2.5 text-[11px] text-gray-400">
-                  <span aria-hidden>🔒</span>
-                  {t.stayLocal}
-                </p>
+                {/* "Why do we need this?" disclosure — the three per-
+                    field captions used to live directly under each
+                    input but bloated the card vertically; folding
+                    them behind a one-line summary keeps the form
+                    compact while the explanations stay one tap
+                    away. The earlier "Everything stays on your
+                    phone" line was removed: it wasn't accurate
+                    anymore — we do spin up an online room. */}
+                <details className="group border-t border-gray-100 pt-2.5 text-[11px] leading-snug text-gray-500 [&[open]>summary>svg]:rotate-90">
+                  <summary className="flex cursor-pointer items-center gap-1.5 text-gray-600 marker:hidden [&::-webkit-details-marker]:hidden">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="transition-transform" aria-hidden>
+                      <polyline points="9 6 15 12 9 18" />
+                    </svg>
+                    {t.whyTooltipTitle}
+                  </summary>
+                  <ul className="mt-2 space-y-1.5 pl-1">
+                    <li><span className="font-medium text-ink">{t.yourName}.</span> {t.whyName}</li>
+                    <li><span className="font-medium text-ink">{t.swishNumber}.</span> {t.whyNumber}</li>
+                    <li><span className="font-medium text-ink">{t.groupSizeLabel}.</span> {t.whyGroup}</li>
+                  </ul>
+                </details>
                 {(() => {
                   const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
                   const hasPhone = isValidPhone(payerPhone);
