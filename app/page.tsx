@@ -478,10 +478,10 @@ function GroupVisual({ count }: { count: number }) {
         const tableW = TABLE_RADIUS_X * 2;
         const tableH = TABLE_RADIUS_Y * 2;
         const RIM_DEPTH = 5;
-        const legPositions = tableLegAngles(visibleChips.length).map((deg) => {
-          const rad = (deg * Math.PI) / 180;
+        const legPositions = tableLegAngles(visibleChips.length).map((angle) => {
+          const rad = (angle * Math.PI) / 180;
           // x / y are offsets from the table's centre, in px.
-          return { x: TABLE_RADIUS_X * Math.sin(rad), y: -TABLE_RADIUS_Y * Math.cos(rad) };
+          return { angle, x: TABLE_RADIUS_X * Math.sin(rad), y: -TABLE_RADIUS_Y * Math.cos(rad) };
         });
         return (
           <div
@@ -489,21 +489,34 @@ function GroupVisual({ count }: { count: number }) {
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: `${tableW}px`, height: `${tableH}px` }}
           >
-            {legPositions.map((pos, i) => (
-              <div
-                key={i}
-                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-[#e6e8ed] shadow-sm dark:bg-[#5e5e6c]"
-                style={{
-                  // Offset by TABLE_RADIUS_* + RIM_DEPTH so legs
-                  // hang from the rim's bottom edge (not the top
-                  // surface's). The -4 tucks the leg's top edge a
-                  // few pixels into the rim so it looks attached
-                  // rather than floating.
-                  left: `${TABLE_RADIUS_X + pos.x}px`,
-                  top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
-                }}
-              />
-            ))}
+            {legPositions.map((pos, i) => {
+              // Lean each leg slightly outward from 6 o'clock —
+              // the further the leg is from 180° the more it
+              // tilts away from the table's centreline, with the
+              // pivot pinned to the leg's TOP edge so only the
+              // bottom swings. ~9° at 150° / 210°, 0° dead-centre.
+              const lean = (180 - pos.angle) * 0.3;
+              return (
+                <div
+                  key={i}
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#e6e8ed] shadow-sm ring-1 ring-black/5 dark:bg-[#5e5e6c]"
+                  style={{
+                    // Position the leg's TOP-CENTER at the
+                    // computed rim attachment point. translateX
+                    // does the horizontal centring (so we can't
+                    // use Tailwind's -translate-x-1/2 — the
+                    // rotate would replace it); the rotate
+                    // pivots around the top of the leg via
+                    // transform-origin so the foot swings out
+                    // while the attachment stays put.
+                    left: `${TABLE_RADIUS_X + pos.x}px`,
+                    top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
+                    transform: `translateX(-50%) rotate(${lean}deg)`,
+                    transformOrigin: "50% 0",
+                  }}
+                />
+              );
+            })}
             {/* Bottom rim ellipse — the table's side / thickness.
                 Sits one tone below the lit top so the rim reads as
                 the shadow side of the same piece of wood. Pushed
@@ -2327,18 +2340,17 @@ export default function Page() {
                 mid-typing isn't kicked off the screen. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && !hostCardDismissed && (
               <div className="scan-card-rise pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
-                {/* "Under tiden…" / "In the meantime…" is the section
-                    header now — the prior "0 rätter tillagda" status
-                    line was noisy (the ✓ on the items list itself is
-                    a better source of truth), and "Vem la ut för
-                    notan?" was redundant once the input placeholders
-                    spell out what each field is. Contact Picker
-                    shortcut on the far right of the header row,
-                    icon-only — only mounts when the API is present
-                    (Android Chromium) so iOS / desktop don't see a
-                    dead button. */}
+                {/* Section header. "Under tiden…" is the loud bold
+                    headline; "Vem la ut för notan?" returns as the
+                    subhead under it (was removed last pass — turns
+                    out the placeholders alone weren't enough
+                    context). Contact Picker icon button on the
+                    far right, only mounts on Android Chromium. */}
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 text-base font-bold text-ink">{t.inTheMeantime}</p>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold leading-tight text-ink">{t.inTheMeantime}</p>
+                    <p className="mt-1 text-sm text-gray-500">{t.payerTitle}</p>
+                  </div>
                   {contactsApi && (
                     <button
                       type="button"
