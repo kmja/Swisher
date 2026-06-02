@@ -1534,6 +1534,90 @@ export default function RoomPage() {
                 {t.showReceipt}
               </button>
             )}
+            {/* Host's name / Swish number / group-size stepper sit
+                stacked in the same left column as the place name +
+                date — the section used to wrap them in its own
+                horizontal row below the top card, which doubled the
+                top section's height. Three full-width rows here
+                share the space the QR + share buttons own to the
+                right. Guests get a compact read-only host line in
+                this slot instead. */}
+            {isPayee ? (
+              <div className="mt-3 space-y-2">
+                <div className="relative">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                    </svg>
+                  </span>
+                  <input
+                    ref={payeeNameInputRef}
+                    value={payeeNameDraft}
+                    onChange={(e) => setPayeeNameDraft(e.target.value)}
+                    onBlur={savePayeeDrafts}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    placeholder={tx.yourName}
+                    className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                  />
+                </div>
+                <div className="relative">
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                      <path d="M12 18h.01" />
+                    </svg>
+                  </span>
+                  <input
+                    ref={payeeNumberInputRef}
+                    value={payeeNumberDraft}
+                    onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                    onBlur={savePayeeDrafts}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    inputMode="tel"
+                    placeholder={tx.swishNumber}
+                    className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-1.5 shadow-sm ring-1 ring-black/5">
+                  <span className="min-w-0 truncate text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="−"
+                      onClick={() => updateGroupSize(groupSize - 1)}
+                      disabled={groupSize <= 2 || groupSize <= state.people.length}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-base font-bold tabular-nums text-ink">{groupSize}</span>
+                    <button
+                      type="button"
+                      aria-label="+"
+                      onClick={() => updateGroupSize(groupSize + 1)}
+                      disabled={groupSize >= 50}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-500">
+                <span aria-hidden className="text-gray-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                  </svg>
+                </span>
+                <span className="min-w-0 truncate">
+                  {state.payeeName}
+                  {state.payeeNumber && <span className="text-gray-400"> · {state.payeeNumber}</span>}
+                </span>
+              </p>
+            )}
           </div>
           {/* QR + share / copy buttons. QR opens the dialog on tap;
               the two icon buttons UNDERNEATH the QR are quicker
@@ -1587,88 +1671,6 @@ export default function RoomPage() {
             </div>
           </div>
         </div>
-        {isPayee ? (
-          <div className="mt-5 space-y-2 border-t border-gray-100 pt-3">
-            {/* Name + number share a row now. Number column is fixed at
-                w-40 — enough for "0701234567" without forcing the name
-                column to shrink awkwardly on most viewports. */}
-            <div className="flex items-stretch gap-2">
-              <div className="relative min-w-0 flex-1">
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                  </svg>
-                </span>
-                <input
-                  ref={payeeNameInputRef}
-                  value={payeeNameDraft}
-                  onChange={(e) => setPayeeNameDraft(e.target.value)}
-                  onBlur={savePayeeDrafts}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                  placeholder={tx.yourName}
-                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
-                />
-              </div>
-              <div className="relative w-40 shrink-0">
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="6" y="2" width="12" height="20" rx="2.5" />
-                    <path d="M12 18h.01" />
-                  </svg>
-                </span>
-                <input
-                  ref={payeeNumberInputRef}
-                  value={payeeNumberDraft}
-                  onChange={(e) => setPayeeNumberDraft(e.target.value)}
-                  onBlur={savePayeeDrafts}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                  inputMode="tel"
-                  placeholder={tx.swishNumber}
-                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-2 text-base shadow-sm ring-1 ring-black/5 outline-none"
-                />
-              </div>
-            </div>
-            {/* Group size — +/− stepper in the same input surface. */}
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-2 shadow-sm ring-1 ring-black/5">
-              <span className="text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label="−"
-                  onClick={() => updateGroupSize(groupSize - 1)}
-                  disabled={groupSize <= 2 || groupSize <= state.people.length}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center text-lg font-bold tabular-nums text-ink">{groupSize}</span>
-                <button
-                  type="button"
-                  aria-label="+"
-                  onClick={() => updateGroupSize(groupSize + 1)}
-                  disabled={groupSize >= 50}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-4 flex items-center justify-center gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-500">
-            <span aria-hidden className="text-gray-400">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-              </svg>
-            </span>
-            <span className="min-w-0 truncate">
-              {state.payeeName}
-              {state.payeeNumber && <span className="text-gray-400"> · {state.payeeNumber}</span>}
-            </span>
-          </p>
-        )}
         {roomFx && (
           <p className="mt-3 text-center text-xs text-gray-400">
             {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}

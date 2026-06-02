@@ -1098,11 +1098,27 @@ export default function Page() {
   const rateMissing = isForeign && !fxRate;
   // SEPA/EPC settles in euros, so it's only offered for euro receipts.
   const sepaAvailable = currency === "EUR" && !!fxRate;
-  const method: "swish" | "sepa" = sepaAvailable && payMethod === "sepa" ? "sepa" : "swish";
+  const phoneValid = isValidPhone(payerPhone);
   const ibanValid = isValidIban(payeeIban);
   const ibanCc = payeeIban.slice(0, 2);
   const ibanCountryLabel = /^[A-Z]{2}$/.test(ibanCc) ? `${flagEmoji(ibanCc)} ${regionName(ibanCc, lang)}` : "";
-  const payDestOk = method === "sepa" ? ibanValid : isValidPhone(payerPhone);
+  // Pick the actual payment method from whatever the host has typed.
+  // SEPA wins if (a) EUR receipt + IBAN on hand, and either the host
+  // explicitly toggled to SEPA via payMethod or they haven't supplied
+  // a Swish number. Otherwise Swish — which works for EUR receipts
+  // too: every amount is stored in SEK öre under the hood (the FX
+  // rate is captured from the receipt), so the per-person Swish
+  // links pay the host in SEK at the rate the receipt was scanned at.
+  const method: "swish" | "sepa" =
+    sepaAvailable && ibanValid && (payMethod === "sepa" || !phoneValid)
+      ? "sepa"
+      : "swish";
+  // The invite gate is "the host can be paid somehow" — either a
+  // valid Swish number OR a valid IBAN (only counts on EUR receipts
+  // where SEPA is actually usable). Old logic forced IBAN once the
+  // receipt currency landed on EUR, which disabled the invite for
+  // Swedish hosts who only have a phone.
+  const payDestOk = phoneValid || (sepaAvailable && ibanValid);
   const eurCentsFor = (ore: number) => (fxRate ? Math.round(ore / fxRate) : 0);
   const currencyOptions = Array.from(new Set([currency, ...COMMON_CURRENCIES]));
 
