@@ -281,6 +281,9 @@ const CIRCLE_SIZE = 200;
 // orbit's aspect roughly matches the tabletop's.
 const CIRCLE_RADIUS_X = 72;
 const CIRCLE_RADIUS_Y = 56;
+// Tabletop ellipse radii (the white disc the chips perch on).
+const TABLE_RADIUS_X = 60;
+const TABLE_RADIUS_Y = 47;
 
 function slotPosition(slot: number, total: number) {
   // 12 o'clock seat at slot 0, walking clockwise. If only one chip
@@ -291,6 +294,32 @@ function slotPosition(slot: number, total: number) {
     x: Math.cos(angle) * CIRCLE_RADIUS_X,
     y: Math.sin(angle) * CIRCLE_RADIUS_Y,
   };
+}
+
+/** Pick two angles for the table legs that fall in gaps BETWEEN
+ *  chips around the lower half of the orbit — at 6 the chip ring is
+ *  spaced just right that the default 150° / 210° works, but at 3-5
+ *  chips the bottom of the table is either covered or sitting in a
+ *  single wide gap, so we shift to whatever gap angles actually
+ *  exist below the equator. Falls back to 150°/210° for N < 2.
+ *  Angle convention: degrees clockwise from 12 o'clock. */
+function tableLegAngles(n: number): [number, number] {
+  if (n < 2) return [150, 210];
+  const gaps: number[] = [];
+  for (let i = 0; i < n; i++) gaps.push(((i + 0.5) * 360) / n);
+  const lower = gaps.filter((a) => a > 90 && a < 270);
+  if (lower.length >= 2) {
+    const left = lower.filter((a) => a < 180).sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
+    const right = lower.filter((a) => a > 180).sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
+    if (left != null && right != null) return [left, right];
+  }
+  if (lower.length === 1) {
+    // Single bottom gap (e.g., N = 3 has a gap at 180°); split into two
+    // legs offset to either side so we still get a left + right pair.
+    const c = lower[0];
+    return [c - 22, c + 22];
+  }
+  return [150, 210];
 }
 
 function GroupVisual({ count }: { count: number }) {
@@ -421,28 +450,56 @@ function GroupVisual({ count }: { count: number }) {
           input-field chrome (bg-white + shadow-sm + ring-1
           ring-black/5) so it reads as part of the setup card's
           surface family. Squashed into an ellipse to look like the
-          table is tipped forward toward the viewer, with two
-          stubby little legs hanging from the visible front edge
-          for a friendly stool-ish silhouette. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      >
-        <div
-          className="rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
-          style={{ width: "120px", height: "94px" }}
-        />
-        {/* Stubby legs — inset from the sides of the table and
-            tucked slightly up into its bottom curve so they look
-            attached rather than floating. */}
-        <div
-          className="absolute left-1/2 flex -translate-x-1/2 gap-14"
-          style={{ top: "84px" }}
-        >
-          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100" />
-          <div className="h-3 w-1.5 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100" />
-        </div>
-      </div>
+          table is tipped forward, with two stubby legs computed
+          per chip count so they always land in gaps between the
+          guests rather than getting hidden behind them. Legs are
+          rendered BEFORE the tabletop so the tabletop occludes
+          their upper portion — they appear to attach UNDER the
+          table edge instead of in front of it. */}
+      {(() => {
+        const tableW = TABLE_RADIUS_X * 2;
+        const tableH = TABLE_RADIUS_Y * 2;
+        const [legA, legB] = tableLegAngles(visibleChips.length);
+        const legPositions = [legA, legB].map((deg) => {
+          const rad = (deg * Math.PI) / 180;
+          // x / y are offsets from the table's centre, in px.
+          return { x: TABLE_RADIUS_X * Math.sin(rad), y: -TABLE_RADIUS_Y * Math.cos(rad) };
+        });
+        return (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ width: `${tableW}px`, height: `${tableH}px` }}
+          >
+            {legPositions.map((pos, i) => (
+              <div
+                key={i}
+                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
+                style={{
+                  // Offset by TABLE_RADIUS_* so the leg's top edge
+                  // tucks just inside the ellipse rim at the
+                  // chosen angle; the leg then extends down past
+                  // the tabletop and the rim covers its top few
+                  // pixels.
+                  left: `${TABLE_RADIUS_X + pos.x}px`,
+                  top: `${TABLE_RADIUS_Y + pos.y - 4}px`,
+                }}
+              />
+            ))}
+            <div
+              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
+              style={{
+                // Inset shadow paints a faint rim INSIDE the
+                // ellipse — reads as a finished table edge and
+                // gives the tabletop a hint of depth so it
+                // doesn't look like a plain disc.
+                boxShadow:
+                  "inset 0 0 0 3px rgba(238, 92, 154, 0.05), inset 0 -4px 8px rgba(0, 0, 0, 0.04)",
+              }}
+            />
+          </div>
+        );
+      })()}
       {/* Big count number at the centre of the table. tabular-nums
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
