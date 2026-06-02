@@ -548,6 +548,20 @@ function GroupVisual({ count }: { count: number }) {
                 the entire table reads as a lit object floating
                 above the (still-darker) card backdrop. */}
             <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
+              {/* Faint wood-grain rings on the tabletop —
+                  repeating-radial-gradient paints concentric
+                  half-pixel arcs every 7 px out from the centre.
+                  Alpha is intentionally low (~4 % light / 5 %
+                  dark) so the rings only register as a hint of
+                  surface texture and don't compete with the
+                  count number sitting on top. */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[50%]"
+                style={{
+                  backgroundImage:
+                    "repeating-radial-gradient(ellipse at center, transparent 0 7px, var(--table-grain) 7px 7.5px)",
+                }}
+              />
               {/* Inset bottom shadow on a child div so the parent's
                   Tailwind ring + drop shadow aren't clobbered (ring
                   is implemented as a box-shadow under the hood;
@@ -565,7 +579,7 @@ function GroupVisual({ count }: { count: number }) {
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="text-5xl font-bold tabular-nums text-ink">{count || "–"}</span>
+        <span className="text-4xl font-medium tabular-nums text-gray-700">{count || "–"}</span>
       </div>
       {visibleChips.map((chip, i) => {
         const look = chipLook(chip.addIndex);
