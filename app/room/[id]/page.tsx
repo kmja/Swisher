@@ -1072,54 +1072,88 @@ export default function RoomPage() {
   // each category section.
   function claimItemRow(it: RoomState["items"][number]) {
     if (editingItemId === it.id && editDraft) {
-      // Match the host-setup edit row: icon · description · price ·
-      // remove-X all on the card top, share stepper inline when shared,
-      // vertical share toggle on the right, and a Save / Cancel pair below.
+      // Mirror the validation step's row chrome exactly so editing in
+      // the room feels like editing back on the items page — single
+      // column card (icon · description · price · ✕), inline shared
+      // toggle below the row, stepper grid-rows reveal, Save / Cancel
+      // pair sitting under the card. The room flow still needs the
+      // Save / Cancel because edits buffer in editDraft until the
+      // host commits (the validation step writes through immediately).
       const dv = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
       const draftOre = parseAmountToOre(editDraft.priceInput) ?? 0;
       return (
         <div ref={playEditOpen} key={it.id} data-item-id={it.id} className="origin-top space-y-2">
-          <div className="flex items-stretch gap-2">
-            <div
-              className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${
-                editDraft.shared ? "bg-swish/5 ring-swish/40" : "bg-white ring-swish/40"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span aria-hidden className="pl-1 text-3xl leading-none">
-                  <ItemEmoji description={editDraft.description} hint={it.category} modelEmoji={it.emoji} />
-                </span>
-                <input
-                  value={editDraft.description}
-                  onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
-                  placeholder={t.descPh}
-                  className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                />
-                <input
-                  value={editDraft.priceInput}
-                  onChange={(e) => setEditDraft({ ...editDraft, priceInput: e.target.value })}
-                  inputMode="decimal"
-                  placeholder={t.pricePh}
-                  className="w-20 shrink-0 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => { removeItemRow(it.id); cancelEdit(); }}
-                  aria-label={t.removeRow}
-                  className="px-1 text-gray-400 active:text-red-500"
+          <div
+            className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 ${
+              editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-swish/30"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="pl-1 text-3xl leading-none">
+                <ItemEmoji description={editDraft.description} hint={it.category} modelEmoji={it.emoji} />
+              </span>
+              <input
+                value={editDraft.description}
+                onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+                placeholder={t.descPh}
+                className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
+              />
+              <input
+                value={editDraft.priceInput}
+                onChange={(e) => setEditDraft({ ...editDraft, priceInput: e.target.value })}
+                inputMode="decimal"
+                placeholder={t.pricePh}
+                className="w-20 shrink-0 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => { removeItemRow(it.id); cancelEdit(); }}
+                aria-label={t.removeRow}
+                className="px-1 text-gray-400 active:text-red-500"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-2 pl-1 text-sm text-gray-500">
+              <button
+                type="button"
+                role="switch"
+                onClick={() =>
+                  setEditDraft({
+                    ...editDraft,
+                    shared: !editDraft.shared,
+                    shareCount: editDraft.shared ? undefined : editDraft.shareCount,
+                  })
+                }
+                aria-checked={editDraft.shared}
+                aria-label={tx.sharedToggle}
+                className="inline-flex items-center gap-2"
+              >
+                <span
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    editDraft.shared ? "bg-swish" : "bg-gray-300"
+                  }`}
                 >
-                  ✕
-                </button>
-              </div>
-              {/* Stepper sits in a grid-rows reveal so the edit card
-                  grows / shrinks smoothly when the shared toggle flips. */}
+                  <span
+                    aria-hidden
+                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                      editDraft.shared ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </span>
+                <span className={`text-xs font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                  {tx.sharedLabel}
+                </span>
+              </button>
+              {/* Stepper sits in a grid-rows reveal so the card grows
+                  / shrinks smoothly when the shared toggle flips. */}
               <div
                 className={`grid transition-[grid-template-rows] duration-220 ease-out ${
                   editDraft.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                 }`}
               >
                 <div className="overflow-hidden">
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                     <span>{tx.splitWays}</span>
                     <button
                       type="button"
@@ -1144,41 +1178,6 @@ export default function RoomPage() {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              onClick={() =>
-                setEditDraft({
-                  ...editDraft,
-                  shared: !editDraft.shared,
-                  shareCount: editDraft.shared ? undefined : editDraft.shareCount,
-                })
-              }
-              aria-checked={editDraft.shared}
-              aria-label={tx.sharedToggle}
-              title={tx.sharedToggle}
-              className="flex w-14 shrink-0 flex-col items-center justify-center gap-1.5"
-            >
-              <span
-                className={`text-[11px] font-semibold uppercase tracking-wide ${
-                  editDraft.shared ? "text-swish-dark" : "text-gray-500"
-                }`}
-              >
-                {tx.sharedLabel}
-              </span>
-              <span
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  editDraft.shared ? "bg-swish" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  aria-hidden
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
-                    editDraft.shared ? "translate-x-5" : "translate-x-0.5"
-                  }`}
-                />
-              </span>
-            </button>
           </div>
           <div className="flex justify-end gap-2">
             <button
