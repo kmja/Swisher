@@ -59,6 +59,14 @@ export interface Strings {
   takePhoto: string;
   chooseLibrary: string;
   skipManual: string;
+  retakePhoto: string;
+  ocrFailedTitle: string;
+  ocrFailedBody: string;
+  enterManually: string;
+  qualityBlur: string;
+  qualityContrast: string;
+  qualityDark: string;
+  qualityBright: string;
 
   // items
   itemsTitle: string;
@@ -223,6 +231,14 @@ const sv: Strings = {
   takePhoto: "Ta foto",
   chooseLibrary: "Välj från galleri",
   skipManual: "Hoppa över – skriv in själv",
+  retakePhoto: "Ta nytt foto",
+  ocrFailedTitle: "Kunde inte läsa kvittot",
+  ocrFailedBody: "Försök igen med bättre ljus eller en stadigare bild.",
+  enterManually: "Skriv in själv",
+  qualityBlur: "Bilden ser suddig ut",
+  qualityContrast: "Svag kontrast – prova bättre ljus",
+  qualityDark: "Bilden är för mörk",
+  qualityBright: "För ljus / blänkande bild",
 
   itemsTitle: "Stämmer det här?",
   itemsHint: "Vi har försökt läsa av varje rätt från kvittot — gå igenom listan, rätta det som blivit fel, och markera vilka rätter som ska delas. Priser inkl. moms.",
@@ -375,6 +391,14 @@ const en: Strings = {
   takePhoto: "Take photo",
   chooseLibrary: "Choose from library",
   skipManual: "Skip – enter manually",
+  retakePhoto: "Retake",
+  ocrFailedTitle: "Couldn't read this receipt",
+  ocrFailedBody: "Try again with better lighting or a steadier shot.",
+  enterManually: "Enter manually",
+  qualityBlur: "Photo looks blurry",
+  qualityContrast: "Low contrast — try better lighting",
+  qualityDark: "Photo is too dark",
+  qualityBright: "Too bright / glare",
 
   itemsTitle: "Does this look right?",
   itemsHint: "We've tried to read every line from the receipt — go through the list, fix anything that came out wrong, and mark which rows are shared. Prices include VAT.",

@@ -16,6 +16,7 @@ import ItemEmoji from "@/components/ItemEmoji";
 import { Money, FxProvider } from "@/components/Money";
 import { currencyFlag, flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
+import { analyzeImageQuality, type ImageQuality } from "@/lib/imageQuality";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import LangToggle from "@/components/LangToggle";
 import type { Diner, LineItem } from "@/lib/types";
@@ -855,6 +856,14 @@ export default function Page() {
   const [ocrModel, setOcrModel] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
+  // Pre-scan quality hint. Filled by analyzeImageQuality whenever a
+  // new shot is committed to imageUrl, cleared when the host retakes
+  // or commits to OCR. Surfaces as a non-blocking warning chip above
+  // the "Read receipt" button.
+  const [imageQuality, setImageQuality] = useState<ImageQuality | null>(null);
+  // Set when OCR returns no items / no total, OR the API answered 502.
+  // Triggers the full retake banner over the capture preview.
+  const [ocrFailed, setOcrFailed] = useState(false);
   const [scanPhase, setScanPhase] = useState(0);
   // True between OCR-complete and host-info-complete: the scan overlay keeps
   // its setup card up so the host can finish typing their name & phone
@@ -1266,6 +1275,12 @@ export default function Page() {
     }
   }
 
+  function retakeShot() {
+    setImageUrl(null);
+    setOcrError(null);
+    setOcrFailed(false);
+    setImageQuality(null);
+  }
   function capturePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
@@ -1279,10 +1294,16 @@ export default function Page() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     enhanceForScan(ctx, canvas.width, canvas.height);
     setOcrError(null);
+    setOcrFailed(false);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     // Stack the new shot; the camera stays live so the user can either
     // take another (long receipt) or tap "Read receipt" to commit.
     setPendingShots((prev) => [...prev, dataUrl]);
+    // Fast Laplacian-variance / std-dev check on a 200-px sample.
+    // Non-blocking — fires after the shutter so the capture itself
+    // stays snappy, then surfaces a hint chip above the bottom row
+    // before the host taps "Read receipt".
+    void analyzeImageQuality(dataUrl).then(setImageQuality);
   }
   async function finishCapture() {
     if (pendingShots.length === 0 || ocrLoading) return;
@@ -1316,6 +1337,7 @@ export default function Page() {
     e.target.value = "";
     if (files.length === 0) return;
     setOcrError(null);
+    setOcrFailed(false);
     try {
       // First file becomes the primary image; any extra files (host
       // picked multiple pages from the gallery in one go) get fed in
@@ -1324,6 +1346,7 @@ export default function Page() {
       const [first, ...rest] = files;
       const primary = await fileToCompressedDataUrl(first);
       setImageUrl(primary);
+      void analyzeImageQuality(primary).then(setImageQuality);
       if (rest.length === 0) {
         runOcr(primary);
         return;
@@ -1349,6 +1372,7 @@ export default function Page() {
     const imgIndex = append ? images.length : 0;
     setOcrLoading(true);
     setOcrError(null);
+    setOcrFailed(false);
     setScanCount(null);
     try {
       const res = await fetch("/api/ocr", {
@@ -1453,9 +1477,13 @@ export default function Page() {
       // Tick a counter through the found rows, then move on.
       const n = mapped.length;
       if (n === 0) {
-        // Skip the tick but still hand off to the "host info ready?" gate
-        // before advancing — same effect via setScanReady.
-        setScanReady(true);
+        // OCR returned without line items — either the model genuinely
+        // couldn't find any (poor photo) or the response was a partial
+        // success (just a total). Treat both as "need to retake" so
+        // the host doesn't land on a blank items list wondering what
+        // happened.
+        setOcrLoading(false);
+        setOcrFailed(true);
         return;
       }
       setScanCount(0);
@@ -1477,6 +1505,7 @@ export default function Page() {
       }, delay);
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "OCR failed.");
+      setOcrFailed(true);
       setOcrLoading(false);
     }
   }
@@ -1854,6 +1883,42 @@ export default function Page() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="" className="h-full w-full object-contain" />
             ) : null}
+            {/* OCR couldn't pull anything out of this shot. Cover the
+                preview with a clear banner explaining what happened
+                and offering the host an actionable next step — retake
+                (clears the photo, goes back to live camera) or fall
+                back to manual entry. */}
+            {ocrFailed && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+                <div className="w-full max-w-xs rounded-2xl bg-white p-5 text-center shadow-2xl">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </div>
+                  <h2 className="mt-3 text-base font-bold text-ink">{t.ocrFailedTitle}</h2>
+                  <p className="mt-1 text-sm leading-snug text-gray-600">{t.ocrFailedBody}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={skipToManual}
+                      className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-ink active:bg-gray-200"
+                    >
+                      {t.enterManually}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={retakeShot}
+                      className="rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-swish-dark"
+                    >
+                      {t.retakePhoto}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {ocrLoading && (
               <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute inset-0 bg-black/40" />
@@ -2114,11 +2179,33 @@ export default function Page() {
                 mutually exclusive, so they never fight for the same
                 slot. shadow-lg on every button so they read against the
                 live video underneath. */}
-            {!(ocrLoading || scanCount !== null || scanReady || hostReady) && (
+            {!(ocrLoading || scanCount !== null || scanReady || hostReady || ocrFailed) && (
               <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 px-6">
                 {ocrError && (
                   <p className="pointer-events-auto mx-auto mb-3 max-w-xs rounded-lg bg-red-600 px-3 py-1.5 text-center text-xs font-medium text-white shadow-lg">
                     {ocrError}
+                  </p>
+                )}
+                {/* Pre-scan quality hint. analyzeImageQuality runs after
+                    every capture / upload; if the Laplacian variance
+                    or contrast metrics fall below the human-readable
+                    thresholds we surface a single most-actionable
+                    warning above the "Read receipt" button. Non-
+                    blocking — the host can still tap to commit. */}
+                {imageUrl && imageQuality?.warning && !ocrError && (
+                  <p className="pointer-events-auto mx-auto mb-3 flex max-w-xs items-center justify-center gap-1.5 rounded-lg bg-amber-50/95 px-3 py-1.5 text-center text-xs font-medium text-amber-900 shadow-lg ring-1 ring-amber-200">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    {imageQuality.warning === "blur"
+                      ? t.qualityBlur
+                      : imageQuality.warning === "contrast"
+                      ? t.qualityContrast
+                      : imageQuality.warning === "dark"
+                      ? t.qualityDark
+                      : t.qualityBright}
                   </p>
                 )}
                 {/* Tooltip above the left slot, only shown right after
@@ -2141,7 +2228,7 @@ export default function Page() {
                   {/* LEFT slot ---------------------------------------- */}
                   <div className="justify-self-start">
                     {imageUrl ? (
-                      <CaptureIconButton onClick={() => setImageUrl(null)} label={t.takePhoto}>📷</CaptureIconButton>
+                      <CaptureIconButton onClick={retakeShot} label={t.takePhoto}>📷</CaptureIconButton>
                     ) : pendingShots.length === 0 ? (
                       <CaptureIconButton size="lg" onClick={() => fileRef.current?.click()} label={t.chooseLibrary}>
                         <PhotoIcon />
