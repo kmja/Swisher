@@ -1,29 +1,49 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import KvittLogo from "./KvittLogo";
+import LangToggle from "./LangToggle";
+import StepHeader from "./StepHeader";
+import { translations, type Lang } from "@/lib/i18n";
 
 /**
- * Skeleton of the room page, shown the instant the host taps "Skapa rum"
- * (and again on the real room page while state is still being fetched).
- * Same chrome + section shapes as the real room so the eventual swap from
- * skeleton → real content doesn't shift layout.
+ * Skeleton of the room page, shown the instant the host taps "Skapa
+ * rum" (and again on the real room page while state is still being
+ * fetched). Renders the *real* chrome — sticky nav with the
+ * KvittLogo + +/history/lang controls, the wizard step strip — and
+ * only swaps in placeholder bars for the live content (place name,
+ * QR, items). That way the swap from skeleton → real room is just a
+ * content fade-in, no header / step-bar flicker.
  *
- * The `play` flag enables the slide-from-right entry animation. It's on
- * when the items page mounts the skeleton as an overlay, and off when the
- * room page renders it as its own initial-loading state (so the page's
- * own playRoomEnter doesn't double-fire with this one).
+ * The `play` flag enables the slide-from-right entry animation. It's
+ * on when the items page mounts the skeleton as a wizard-step
+ * overlay; it's off when the room page renders it as its own
+ * initial-loading state (otherwise we'd double up with the page's
+ * own playRoomEnter).
  */
 export default function RoomSkeleton({ play = false }: { play?: boolean }) {
+  // Mirror the items / room page's lang persistence so the skeleton's
+  // SV/EN pill matches the user's choice instead of forcing "sv".
+  const [lang, setLang] = useState<Lang>("sv");
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("swisher-lang");
+      if (stored === "sv" || stored === "en") setLang(stored);
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const t = translations[lang];
+
   const playEnter = useCallback(
     (el: HTMLElement | null) => {
       if (!play || !el || typeof el.animate !== "function") return;
       el.animate(
         [
-          { opacity: 0, transform: "translateX(36px)" },
+          { opacity: 0, transform: "translateX(100%)" },
           { opacity: 1, transform: "translateX(0)" },
         ],
-        { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+        { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
       );
     },
     [play],
@@ -34,21 +54,39 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
       ref={playEnter}
       className="fixed inset-0 z-40 mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-y-auto bg-[#f0f0f4] px-4 pb-32"
     >
-      {/* Header — matches the room page exactly so the swap is invisible. */}
+      {/* Real nav — three-col grid matching the room page so the swap
+          when state loads doesn't redraw the header. */}
       <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
-          <div className="h-11 w-11 rounded-xl bg-swish/70 justify-self-start" aria-hidden />
+          <a
+            href="/"
+            aria-label={t.newReceipt}
+            title={t.newReceipt}
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark justify-self-start"
+          >
+            +
+          </a>
           <KvittLogo className="justify-self-center" />
           <div className="flex items-center gap-2 justify-self-end">
-            <div className="h-11 w-11 rounded-xl bg-gray-100" aria-hidden />
-            <div className="h-11 w-16 rounded-xl bg-gray-100" aria-hidden />
+            <a
+              href="/history"
+              aria-label={t.history}
+              title={t.history}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl text-swish-dark active:bg-gray-200"
+            >
+              🕘
+            </a>
+            <LangToggle lang={lang} onChange={setLang} />
           </div>
         </div>
       </header>
 
-      {/* Top section — title block left, QR + icons right. Bars sized
-          to roughly match the real content so nothing shifts when the
-          actual data lands. */}
+      {/* Real step strip — the host's "Share" pill is active. */}
+      <StepHeader step="share" t={t} />
+
+      {/* Top section — placeholder bars for place / date / QR / share
+          buttons. Shape matches the live top section so the layout
+          doesn't shift when real data lands. */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1 pt-0.5">

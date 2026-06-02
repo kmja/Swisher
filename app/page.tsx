@@ -8,6 +8,7 @@ import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
 import RoomSkeleton from "@/components/RoomSkeleton";
+import StepHeader from "@/components/StepHeader";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
@@ -1621,7 +1622,10 @@ export default function Page() {
         </div>
       </header>
 
-      <Header step={step} t={t} />
+      <StepHeader
+        step={step === "capture" ? "scan" : step === "items" ? "verify" : "share"}
+        t={t}
+      />
 
       {step === "capture" && (
         <section key="capture" className="mt-3 flex min-h-0 flex-1 flex-col">
@@ -2645,42 +2649,6 @@ export default function Page() {
   );
 }
 
-function Header({ step, t }: { step: Step; t: Strings }) {
-  // Three host-facing pills: Scan → Verify → Share. The internal step
-  // machine still has "assign" between items and result for the local
-  // (no-room) split path; both fold into the same "share" pill so the
-  // host's wizard never grows or shrinks under them.
-  const labels = [t.steps.scan, t.steps.verify, t.steps.share];
-  const activeIndex = step === "capture" ? 0 : step === "items" ? 1 : 2;
-  return (
-    <header className="flex items-center gap-2">
-      {labels.map((label, i) => {
-        const isActive = i === activeIndex;
-        const isDone = i < activeIndex;
-        // Three states: done (faded swish), active (solid swish), upcoming
-        // (gray). The done state is dimmer so the eye lands on the
-        // currently active pill while still showing what's already
-        // checked off behind.
-        const barClass = isActive
-          ? "bg-swish"
-          : isDone
-          ? "bg-swish/35"
-          : "bg-gray-200";
-        const labelClass = isActive
-          ? "font-semibold text-swish-dark"
-          : isDone
-          ? "text-swish-dark/45"
-          : "text-gray-400";
-        return (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1">
-            <div className={`h-1.5 w-full rounded-full ${barClass}`} />
-            <span className={`text-[11px] ${labelClass}`}>{label}</span>
-          </div>
-        );
-      })}
-    </header>
-  );
-}
 
 function Footer({
   step,

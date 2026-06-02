@@ -13,6 +13,7 @@ import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
 import KvittLogo from "@/components/KvittLogo";
 import RoomSkeleton from "@/components/RoomSkeleton";
+import StepHeader from "@/components/StepHeader";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
@@ -837,18 +838,26 @@ export default function RoomPage() {
    *
    *  Skipped when ?prewarmed=1 — the host is arriving from the items
    *  page's createRoom skeleton, which already slid into place; a
-   *  second slide on top would feel like a glitch. */
-  const prewarmed = searchParams.get("prewarmed") === "1";
+   *  second slide on top would feel like a glitch.
+   *
+   *  Captured once via useRef so the URL-strip useEffect below
+   *  (which removes prewarmed from the address bar) doesn't flip the
+   *  flag from true → false before the real <main> mounts. Without
+   *  the ref, the post-strip searchParams re-emit would rebuild
+   *  playRoomEnter without the prewarmed guard, and the slide would
+   *  fire when state finally arrives — producing the double-slide
+   *  the host saw. */
+  const prewarmedRef = useRef(searchParams.get("prewarmed") === "1");
   const playRoomEnter = useCallback((el: HTMLElement | null) => {
-    if (prewarmed || !el || typeof el.animate !== "function") return;
+    if (prewarmedRef.current || !el || typeof el.animate !== "function") return;
     el.animate(
       [
-        { opacity: 0, transform: "translateX(36px)" },
+        { opacity: 0, transform: "translateX(100%)" },
         { opacity: 1, transform: "translateX(0)" },
       ],
-      { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
     );
-  }, [prewarmed]);
+  }, []);
 
   /** Edit form mount: the row morphs into the edit form when the host
    *  taps the pencil. Gentle scale + fade on the wrapper so the form
@@ -1452,6 +1461,12 @@ export default function RoomPage() {
           </div>
         </div>
       </header>
+
+      {/* Wizard progress strip — the room is the "Share" step, the
+          last pill in the Scan → Verify → Share flow. Same component
+          the items page renders so the host's mental model of "where
+          am I in the flow" carries over. */}
+      <StepHeader step="share" t={tx} />
 
       {/* Share / invite — top of the room reads as a header / title now:
           place name as the hero, date subtitle, a small live QR with the
