@@ -580,12 +580,22 @@ export default function RoomPage() {
   useEffect(() => {
     if (status !== "ok" || !inviteOnMountRef.current) return;
     inviteOnMountRef.current = false;
-    // Prewarmed hosts come in with no slide-in to wait for, so the
-    // dialog can pop almost immediately. Direct-nav guests get the
-    // longer delay so the slide settles first.
-    const delay = prewarmedOnMountRef.current ? 80 : 320;
-    const id = setTimeout(() => openShare(), delay);
-    return () => clearTimeout(id);
+    // Open the share dialog the moment the page is renderable. With
+    // the createRoom bootstrap state in place, status flips to "ok"
+    // on the first render itself, which means this effect fires in
+    // the same commit — the share button ref is already attached,
+    // the dialog can grow straight out of its origin, and the host
+    // sees the QR ~0 ms after landing on the room instead of after
+    // a held-back timeout. Non-prewarmed direct-nav arrivals (rare
+    // edge case — invite=1 normally never survives a refresh) get
+    // a single rAF of breathing room so the entry slide doesn't
+    // collide with the dialog growing in on top of it.
+    if (prewarmedOnMountRef.current) {
+      openShare();
+      return;
+    }
+    const id = window.requestAnimationFrame(() => openShare());
+    return () => window.cancelAnimationFrame(id);
   }, [status]);
 
   // Trap iOS' edge-swipe-back (and the system back button) so a live room
