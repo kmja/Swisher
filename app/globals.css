@@ -55,29 +55,34 @@ textarea {
 @media (prefers-color-scheme: dark) {
   :root {
     --color-ink: #f4f4f5;
-    --color-page: #0c0c0e;
-    --color-surface: #18181b;
-    --color-surface-muted: #27272a;
-    --color-surface-2: #1f1f23;
+    /* Surfaces are spread further apart on the dark side than the
+     * original draft so each layer reads as distinct from its
+     * neighbour — page < surface < surface-muted, with enough
+     * tonal step between them that cards visibly sit on top of
+     * the backdrop and buttons visibly sit on top of cards. */
+    --color-page: #131316;
+    --color-surface: #26262b;
+    --color-surface-muted: #36363c;
+    --color-surface-2: #2e2e34;
   }
 
   /* Body backdrop already references --color-page so it follows
      automatically; same for text-ink consumers. */
 
   /* Solid white surfaces (cards, inputs, the round table) flip to
-     a dark zinc surface. Also handle the common /opacity variants
-     used as backdrop-blur headers and toast surfaces. */
+     the lifted dark surface. Also handle the common /opacity
+     variants used as backdrop-blur headers and toast surfaces. */
   .bg-white { background-color: var(--color-surface); }
-  .bg-white\/95 { background-color: rgb(24 24 27 / 0.95); }
-  .bg-white\/90 { background-color: rgb(24 24 27 / 0.90); }
-  .bg-white\/80 { background-color: rgb(24 24 27 / 0.80); }
-  .bg-white\/60 { background-color: rgb(24 24 27 / 0.60); }
+  .bg-white\/95 { background-color: rgb(38 38 43 / 0.95); }
+  .bg-white\/90 { background-color: rgb(38 38 43 / 0.90); }
+  .bg-white\/80 { background-color: rgb(38 38 43 / 0.80); }
+  .bg-white\/60 { background-color: rgb(38 38 43 / 0.60); }
   .bg-white\/15 { background-color: rgb(255 255 255 / 0.15); }
   .bg-white\/25 { background-color: rgb(255 255 255 / 0.25); }
   .bg-gray-50 { background-color: var(--color-surface-2); }
   .bg-gray-100 { background-color: var(--color-surface-muted); }
-  .bg-gray-200 { background-color: #3f3f46; }
-  .bg-gray-300 { background-color: #52525b; }
+  .bg-gray-200 { background-color: #44444a; }
+  .bg-gray-300 { background-color: #5a5a62; }
   .bg-amber-50,
   .bg-amber-50\/95,
   .bg-amber-50\/70 { background-color: rgb(58 38 9 / 0.95); }

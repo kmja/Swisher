@@ -2053,7 +2053,7 @@ export default function Page() {
                     doesn't change. z-40 keeps it on top of the action
                     row in case the right slot lands at the same
                     corner. */}
-                {cameraActive && torchAvailable && !ocrLoading && (
+                {cameraActive && torchAvailable && !ocrLoading && !scanReady && scanCount === null && (
                   <button
                     type="button"
                     onClick={toggleTorch}
