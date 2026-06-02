@@ -1120,7 +1120,7 @@ export default function RoomPage() {
                       type="button"
                       aria-label="−"
                       onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       −
                     </button>
@@ -1130,7 +1130,7 @@ export default function RoomPage() {
                       aria-label="+"
                       disabled={dv >= groupSize}
                       onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                     >
                       +
                     </button>
@@ -1424,7 +1424,7 @@ export default function RoomPage() {
               disabled={mineCount === 0}
               onClick={releaseOne}
               aria-label="−"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
             >
               −
             </button>
@@ -1434,7 +1434,7 @@ export default function RoomPage() {
               disabled={availableCount === 0}
               onClick={claimOne}
               aria-label="+"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
             >
               +
             </button>
@@ -1616,7 +1616,7 @@ export default function RoomPage() {
                   aria-label="−"
                   onClick={() => updateGroupSize(groupSize - 1)}
                   disabled={groupSize <= 2 || groupSize <= state.people.length}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                 >
                   −
                 </button>
@@ -1626,7 +1626,7 @@ export default function RoomPage() {
                   aria-label="+"
                   onClick={() => updateGroupSize(groupSize + 1)}
                   disabled={groupSize >= 50}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                 >
                   +
                 </button>

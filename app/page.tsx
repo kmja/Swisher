@@ -66,20 +66,22 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // stack stays legible at any count. Tints / lifts / rotations are all
 // indexed off the same i so a given slot is always the same "person".
 const CHIP_SIZES = [56, 48, 54, 50, 56, 52, 48, 54, 50, 56];
-// Use inline background colours instead of Tailwind opacity utilities so
-// the values survive the JIT — dynamic class strings like "bg-swish/N"
-// aren't always picked up when they live in a const array.
+// Solid pastel pinks (each one is the equivalent swish-on-white tint
+// without the alpha channel) so overlapping chips don't blend into a
+// darker patch where they cross. With the 3 px white ring, opaque
+// fills are what makes the stack read as discrete chips instead of a
+// translucent cluster.
 const CHIP_TINTS = [
-  "rgba(238, 92, 154, 0.16)",
-  "rgba(238, 92, 154, 0.30)",
-  "rgba(238, 92, 154, 0.20)",
-  "rgba(238, 92, 154, 0.36)",
-  "rgba(238, 92, 154, 0.18)",
-  "rgba(238, 92, 154, 0.28)",
-  "rgba(238, 92, 154, 0.22)",
-  "rgba(238, 92, 154, 0.34)",
-  "rgba(238, 92, 154, 0.15)",
-  "rgba(238, 92, 154, 0.26)",
+  "#fce5ef",
+  "#facee1",
+  "#fcdeeb",
+  "#f9c4db",
+  "#fce2ed",
+  "#fad1e3",
+  "#fbdbe9",
+  "#f9c8dd",
+  "#fce7f0",
+  "#fbd5e5",
 ];
 const CHIP_LIFTS = [0, -3, 2, -1, 3, -2, 1, -3, 2, -1];
 const CHIP_ROTATIONS = [-3, 2, 0, -2, 3, -1, 0, -3, 1, 2];
@@ -1896,7 +1898,7 @@ export default function Page() {
                       type="button"
                       aria-label="−"
                       onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                      className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       −
                     </button>
@@ -1905,7 +1907,7 @@ export default function Page() {
                       type="button"
                       aria-label="+"
                       onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                      className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       +
                     </button>
@@ -2218,7 +2220,7 @@ export default function Page() {
                                 type="button"
                                 aria-label="−"
                                 onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                               >
                                 −
                               </button>
@@ -2228,7 +2230,7 @@ export default function Page() {
                                 aria-label="+"
                                 disabled={d >= groupSize}
                                 onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                               >
                                 +
                               </button>
@@ -2464,7 +2466,7 @@ export default function Page() {
                         type="button"
                         aria-label="−"
                         onClick={() => setShareCount(it.id, d - 1)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                       >
                         −
                       </button>
@@ -2474,7 +2476,7 @@ export default function Page() {
                         aria-label="+"
                         disabled={d >= groupSize}
                         onClick={() => setShareCount(it.id, d + 1)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                       >
                         +
                       </button>
