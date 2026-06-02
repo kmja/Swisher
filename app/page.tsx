@@ -474,7 +474,7 @@ function GroupVisual({ count }: { count: number }) {
             {legPositions.map((pos, i) => (
               <div
                 key={i}
-                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
+                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-white shadow-sm ring-1 ring-black/5"
                 style={{
                   // Offset by TABLE_RADIUS_* so the leg's top edge
                   // tucks just inside the ellipse rim at the
@@ -487,14 +487,18 @@ function GroupVisual({ count }: { count: number }) {
               />
             ))}
             <div
-              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-2 ring-black/10 dark:bg-gray-100"
+              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5"
               style={{
-                // Inset shadow at the bottom hints at depth so the
-                // tipped-forward ellipse doesn't read as a flat
-                // disc. The outer ring-2 ring-black/10 (white/22
-                // in dark mode via globals.css) is the actual
-                // table-edge line — kept clearly visible so the
-                // tabletop has a defined border.
+                // Soft inset shadow at the bottom hints at depth so
+                // the tipped-forward ellipse doesn't read as a
+                // plain disc. The rest of the chrome — the bg, the
+                // shadow-sm drop and the ring-1 ring-black/5
+                // outline — is borrowed verbatim from the host-
+                // setup card's input fields, so the table reads
+                // as part of the same surface family in both
+                // light and dark modes (globals.css overrides
+                // bg-white / ring-black/5 to their dark-mode
+                // equivalents automatically).
                 boxShadow: "inset 0 -4px 8px rgba(0, 0, 0, 0.05)",
               }}
             />
@@ -518,7 +522,7 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[var(--color-surface-muted)]"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[var(--color-surface)]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
