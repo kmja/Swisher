@@ -174,7 +174,7 @@ export default function QrDialog({
           type="button"
           onClick={onClose}
           aria-label={labels.close}
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-2xl text-gray-400 active:bg-gray-100"
+          className="absolute right-3 top-3 flex h-14 w-14 items-center justify-center rounded-full text-4xl leading-none text-gray-500 active:bg-gray-100"
         >
           ×
         </button>

@@ -1328,9 +1328,30 @@ export default function Page() {
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
   // Soft-delete: move to the removed list (kept out of the totals/shares), with
   // a transient undo and a persistent collapsed list to restore from.
-  const removeItem = (id: string) => {
+  const removeItem = async (id: string) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
+    // Slide-and-fade the row out before dropping it from state so the
+    // delete feels like a deliberate motion instead of a pop. WAAPI
+    // on the wrapper marked with data-row-id; if the node's missing
+    // or the browser can't animate we just fall through to the
+    // immediate setItems. 200 ms keeps it punchy.
+    const el = typeof document !== "undefined"
+      ? document.querySelector(`[data-row-id="${id}"]`)
+      : null;
+    if (el instanceof HTMLElement && typeof el.animate === "function") {
+      try {
+        await el.animate(
+          [
+            { opacity: 1, transform: "translateX(0)" },
+            { opacity: 0, transform: "translateX(-24px)" },
+          ],
+          { duration: 200, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" },
+        ).finished;
+      } catch {
+        /* animation cancelled — fall through to the state update */
+      }
+    }
     setItems((prev) => prev.filter((x) => x.id !== id));
     setRemovedItems((r) => [it, ...r.filter((x) => x.id !== id)]);
     setUndoItem(it);
@@ -2038,7 +2059,7 @@ export default function Page() {
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
                 return (
-                <div key={rep.id}>
+                <div key={rep.id} data-row-id={rep.id}>
                   <div
                     className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >

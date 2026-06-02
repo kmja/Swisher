@@ -514,16 +514,21 @@ export default function RoomPage() {
   const t = R[lang];
   const tx = translations[lang];
 
-  // When the host lands here from createRoom (?invite=1), pop the QR/share
-  // dialog right away and strip the query so a refresh doesn't reopen it.
+  // When the host lands here from createRoom (?invite=1), pop the
+  // QR/share dialog AFTER the room-enter slide finishes so the
+  // dialog grows out of an already-settled QR target instead of one
+  // that's still translating in from the right. 320 ms = the
+  // playRoomEnter duration (280) + a small visual buffer. We also
+  // strip the query upfront so a refresh doesn't reopen it.
   useEffect(() => {
     if (searchParams.get("invite") !== "1") return;
-    setShareOpen(true);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("invite");
       window.history.replaceState(null, "", url.pathname + url.search);
     }
+    const id = setTimeout(() => setShareOpen(true), 320);
+    return () => clearTimeout(id);
   }, [searchParams]);
 
   // Trap iOS' edge-swipe-back (and the system back button) so a live room
@@ -800,6 +805,20 @@ export default function RoomPage() {
     );
   }, []);
 
+  /** Edit form mount: the row morphs into the edit form when the host
+   *  taps the pencil. Gentle scale + fade on the wrapper so the form
+   *  reads as "this row is expanding" rather than just swapping in. */
+  const playEditOpen = useCallback((el: HTMLElement | null) => {
+    if (!el || typeof el.animate !== "function") return;
+    el.animate(
+      [
+        { opacity: 0, transform: "scale(0.94)" },
+        { opacity: 1, transform: "scale(1)" },
+      ],
+      { duration: 220, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+    );
+  }, []);
+
   /** Origin rect captured the moment the host taps any of the share /
    *  QR / copy controls — passed to QrDialog so the dialog grows out
    *  of that spot instead of just popping into the centre. */
@@ -979,7 +998,7 @@ export default function RoomPage() {
       const dv = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
       const draftOre = parseAmountToOre(editDraft.priceInput) ?? 0;
       return (
-        <div key={it.id} data-item-id={it.id} className="space-y-2">
+        <div ref={playEditOpen} key={it.id} data-item-id={it.id} className="origin-top space-y-2">
           <div className="flex items-stretch gap-2">
             <div
               className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${
