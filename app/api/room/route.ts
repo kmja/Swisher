@@ -97,5 +97,10 @@ export async function POST(req: Request) {
     items,
   });
 
-  return NextResponse.json({ id, personId: state.payeePersonId });
+  // Return the freshly-initialised room state alongside id+personId.
+  // The host's items page already had every field that lands in the
+  // DO, so handing it back means the room page can skip its first
+  // GET round-trip and render real content instantly instead of a
+  // skeleton.
+  return NextResponse.json({ id, personId: state.payeePersonId, state });
 }

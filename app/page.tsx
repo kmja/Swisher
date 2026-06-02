@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
@@ -232,18 +232,89 @@ function CaptureCommitButton({
   );
 }
 
+type ChipSlot = { addIndex: number };
+
+/** Deterministic seed for a chip: every property derives from the
+ *  chip's permanent addIndex, NOT its current slot in the pile. That
+ *  way a chip's look doesn't change when its neighbours shift. */
+function chipLook(addIndex: number) {
+  const i = addIndex - 1;
+  return {
+    size: CHIP_SIZES[i % CHIP_SIZES.length],
+    tint: CHIP_TINTS[i % CHIP_TINTS.length],
+    lift: CHIP_LIFTS[i % CHIP_LIFTS.length],
+    rot: CHIP_ROTATIONS[i % CHIP_ROTATIONS.length],
+    z: CHIP_Z_ORDER[i % CHIP_Z_ORDER.length],
+  };
+}
+
+/** Reconstruct the pile order for "N adds starting from empty":
+ *  odd add-indices push to the right edge, even add-indices unshift
+ *  to the left edge, so additions land alternately on each end
+ *  instead of always on the right. */
+function buildInitialChips(n: number): ChipSlot[] {
+  const list: ChipSlot[] = [];
+  for (let i = 1; i <= n; i++) {
+    if (i % 2 === 1) list.push({ addIndex: i });
+    else list.unshift({ addIndex: i });
+  }
+  return list;
+}
+
 function GroupVisual({ count }: { count: number }) {
-  const visible = Math.max(0, Math.min(count, 10));
-  const overflow = Math.max(0, count - visible);
-  const clusterRef = useRef<HTMLDivElement>(null);
-  const chipRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const prevCount = useRef(count);
+  const initialCountRef = useRef(count);
+  const [chips, setChips] = useState<ChipSlot[]>(() =>
+    buildInitialChips(Math.max(0, Math.min(count, 50))),
+  );
+  // Monotonic counter — every add pulls the next value, every remove
+  // doesn't decrement (the chip's identity is gone for good). Means
+  // tap +/- repeatedly and the new chip's look + side cycle on each
+  // tap, rather than always reproducing the previous "+" chip.
+  const nextAddIndexRef = useRef<number>(initialCountRef.current + 1);
+
+  // Sync the chips array with the parent's count. Add: alternates
+  // sides by addIndex parity. Remove: pops the chip with the highest
+  // addIndex (newest), regardless of its current pile position.
   useEffect(() => {
-    if (prevCount.current === count) return;
-    const grew = count > prevCount.current;
-    const prev = prevCount.current;
-    prevCount.current = count;
-    // Cluster scale wobble — slight tactile feedback on the stepper.
+    setChips((prev) => {
+      if (prev.length === count) return prev;
+      let next = prev;
+      if (next.length < count) {
+        next = [...next];
+        while (next.length < count) {
+          const idx = nextAddIndexRef.current;
+          nextAddIndexRef.current = idx + 1;
+          if (idx % 2 === 1) next.push({ addIndex: idx });
+          else next.unshift({ addIndex: idx });
+        }
+      } else {
+        next = [...next];
+        while (next.length > count) {
+          let maxAt = 0;
+          let max = -1;
+          for (let i = 0; i < next.length; i++) {
+            if (next[i].addIndex > max) {
+              max = next[i].addIndex;
+              maxAt = i;
+            }
+          }
+          next.splice(maxAt, 1);
+        }
+      }
+      return next;
+    });
+  }, [count]);
+
+  const visibleChips = chips.slice(0, 10);
+  const overflow = Math.max(0, chips.length - 10);
+
+  // Cluster wobble for stepper feedback.
+  const clusterRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(count);
+  useEffect(() => {
+    if (prevCountRef.current === count) return;
+    const grew = count > prevCountRef.current;
+    prevCountRef.current = count;
     if (clusterRef.current?.animate) {
       clusterRef.current.animate(
         [
@@ -254,53 +325,125 @@ function GroupVisual({ count }: { count: number }) {
         { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
       );
     }
-    // Mushroom pop on every newly-mounted chip — scale from 0 to a
-    // small overshoot (1.18) and settle back to 1, composed with the
-    // chip's resting lift / rotation so it pops up INTO its idle
-    // pose rather than snapping there at the tail of the scale.
-    if (grew) {
-      for (let i = prev; i < Math.min(count, 10); i++) {
-        const el = chipRefs.current[i];
-        if (!el?.animate) continue;
-        const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
-        const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
-        const settled = `translateY(${lift}px) rotate(${rot}deg)`;
+  }, [count]);
+
+  // FLIP + mushroom + neighbour reaction. Runs after every render
+  // where the chips array changes shape:
+  //   - chips that have no remembered rect are brand new → mushroom
+  //     pop (scale 0 → 1.18 overshoot → 1) composed with their idle
+  //     lift/rotation.
+  //   - chips immediately next to a brand-new chip get a neighbour
+  //     reaction: lean a few degrees AWAY from the newcomer while
+  //     scaling up slightly, then settle back. If they also shifted
+  //     in the layout (left-edge inserts push every existing chip
+  //     right by one slot) the FLIP slide is composed in too so
+  //     they ride the lean down to their new resting spot.
+  //   - chips that just shifted without being neighbours play a
+  //     pure FLIP slide.
+  const chipElsRef = useRef<Map<number, HTMLSpanElement>>(new Map());
+  const prevRectsRef = useRef<Map<number, DOMRect>>(new Map());
+  const firstRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (firstRunRef.current) {
+      firstRunRef.current = false;
+      for (const c of visibleChips) {
+        const el = chipElsRef.current.get(c.addIndex);
+        if (el) prevRectsRef.current.set(c.addIndex, el.getBoundingClientRect());
+      }
+      return;
+    }
+    let newChipPos = -1;
+    for (let i = 0; i < visibleChips.length; i++) {
+      if (!prevRectsRef.current.has(visibleChips[i].addIndex)) {
+        newChipPos = i;
+        break;
+      }
+    }
+    for (let i = 0; i < visibleChips.length; i++) {
+      const chip = visibleChips[i];
+      const el = chipElsRef.current.get(chip.addIndex);
+      if (!el || typeof el.animate !== "function") continue;
+      const look = chipLook(chip.addIndex);
+      const resting = `translateY(${look.lift}px) rotate(${look.rot}deg)`;
+      const newRect = el.getBoundingClientRect();
+      const oldRect = prevRectsRef.current.get(chip.addIndex);
+      if (!oldRect) {
         el.animate(
           [
-            { transform: `${settled} scale(0)`, opacity: 0 },
-            { transform: `${settled} scale(1.18)`, opacity: 1, offset: 0.7 },
-            { transform: `${settled} scale(1)`, opacity: 1 },
+            { transform: `${resting} scale(0)`, opacity: 0 },
+            { transform: `${resting} scale(1.18)`, opacity: 1, offset: 0.7 },
+            { transform: `${resting} scale(1)`, opacity: 1 },
           ],
           { duration: 360, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
         );
+      } else {
+        const dx = oldRect.left - newRect.left;
+        const isNeighbour = newChipPos >= 0 && Math.abs(i - newChipPos) === 1;
+        if (isNeighbour) {
+          const leanDir = i > newChipPos ? 1 : -1; // tilt AWAY from the newcomer
+          const reactingRot = look.rot + leanDir * 6;
+          const reacting = `translateY(${look.lift - 2}px) rotate(${reactingRot}deg) scale(1.06)`;
+          if (Math.abs(dx) > 0.5) {
+            el.animate(
+              [
+                { transform: `translateX(${dx}px) ${resting}` },
+                { transform: `translateX(${dx * 0.3}px) ${reacting}`, offset: 0.45 },
+                { transform: resting },
+              ],
+              { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+            );
+          } else {
+            el.animate(
+              [
+                { transform: resting },
+                { transform: reacting, offset: 0.45 },
+                { transform: resting },
+              ],
+              { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
+            );
+          }
+        } else if (Math.abs(dx) > 0.5) {
+          el.animate(
+            [
+              { transform: `translateX(${dx}px) ${resting}` },
+              { transform: resting },
+            ],
+            { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+          );
+        }
       }
+      prevRectsRef.current.set(chip.addIndex, newRect);
     }
-  }, [count]);
+    const visibleIds = new Set(visibleChips.map((c) => c.addIndex));
+    for (const idx of [...prevRectsRef.current.keys()]) {
+      if (!visibleIds.has(idx)) prevRectsRef.current.delete(idx);
+    }
+  }, [visibleChips]);
+
   return (
     <div aria-hidden className="flex items-center">
       {/* Tighter ~30 px overlap so the chips read as a bunched pile
           rather than a slightly spaced queue; the 3 px white ring
           keeps each silhouette legible at that crowding. */}
       <div ref={clusterRef} className="flex items-center">
-        {Array.from({ length: visible }).map((_, i) => {
-          const size = CHIP_SIZES[i % CHIP_SIZES.length];
-          const tint = CHIP_TINTS[i % CHIP_TINTS.length];
-          const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
-          const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
-          const z = CHIP_Z_ORDER[i % CHIP_Z_ORDER.length];
-          const iconSize = Math.round(size * 0.5);
+        {visibleChips.map((chip, i) => {
+          const look = chipLook(chip.addIndex);
+          const iconSize = Math.round(look.size * 0.5);
           return (
             <span
-              key={i}
-              ref={(el) => { chipRefs.current[i] = el; }}
+              key={chip.addIndex}
+              ref={(el) => {
+                if (el) chipElsRef.current.set(chip.addIndex, el);
+                else chipElsRef.current.delete(chip.addIndex);
+              }}
               className="flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
               style={{
-                width: `${size}px`,
-                height: `${size}px`,
+                width: `${look.size}px`,
+                height: `${look.size}px`,
                 marginLeft: i === 0 ? 0 : -30,
-                background: tint,
-                transform: `translateY(${lift}px) rotate(${rot}deg)`,
-                zIndex: z,
+                background: look.tint,
+                transform: `translateY(${look.lift}px) rotate(${look.rot}deg)`,
+                zIndex: look.z,
               }}
             >
               <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1549,6 +1692,13 @@ export default function Page() {
       if (!res.ok) throw new Error(data.error || "Could not create the room.");
       try {
         localStorage.setItem(`swisher-room:${data.id}`, data.personId);
+        // Hand the freshly-init'd room state to the room page so it
+        // can render real content immediately instead of waiting on
+        // its own GET round-trip. One-shot — the room page clears
+        // the key on read.
+        if (data.state) {
+          sessionStorage.setItem(`kvitt-room-bootstrap:${data.id}`, JSON.stringify(data.state));
+        }
       } catch {
         /* storage unavailable */
       }

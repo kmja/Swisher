@@ -168,10 +168,28 @@ export default function RoomPage() {
   const searchParams = useSearchParams();
   const code = String(Array.isArray(params.id) ? params.id[0] : params.id ?? "").toUpperCase();
   const storageKey = `swisher-room:${code}`;
+  const bootstrapKey = `kvitt-room-bootstrap:${code}`;
 
   const [lang, setLang] = useState<Lang>("sv");
-  const [state, setState] = useState<RoomState | null>(null);
-  const [status, setStatus] = useState<"loading" | "ok" | "notfound" | "unavailable">("loading");
+  // Initial state can come from sessionStorage when the host just
+  // created the room — createRoom stashes the freshly-init'd room
+  // there so we don't need to GET the same data back from the DO
+  // before showing the page. The skeleton then only ever shows for
+  // direct-nav / shared-link arrivals.
+  const [state, setState] = useState<RoomState | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(bootstrapKey);
+      if (!raw) return null;
+      sessionStorage.removeItem(bootstrapKey);
+      return JSON.parse(raw) as RoomState;
+    } catch {
+      return null;
+    }
+  });
+  const [status, setStatus] = useState<"loading" | "ok" | "notfound" | "unavailable">(
+    () => (state ? "ok" : "loading"),
+  );
   const [personId, setPersonId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
