@@ -78,7 +78,7 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // diameters at ~50 — bigger and the outer ring would overflow the
 // 200-px container; smaller and ten of them at a packed table would
 // rattle around with too much air between them.
-const CHIP_SIZES = [46, 40, 48, 42, 44, 40, 46, 48, 42, 46];
+const CHIP_SIZES = [40, 34, 42, 36, 38, 34, 40, 42, 36, 40];
 const CHIP_TINTS = [
   "#f9c4db",
   "#fce5ef",
@@ -524,18 +524,16 @@ function GroupVisual({ count }: { count: number }) {
                 the entire table reads as a lit object floating
                 above the (still-darker) card backdrop. */}
             <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Faint wood-grain rings on the tabletop —
+              {/* Wood-grain rings on the tabletop —
                   repeating-radial-gradient paints concentric
-                  half-pixel arcs every 7 px out from the centre.
-                  Alpha is intentionally low (~4 % light / 5 %
-                  dark) so the rings only register as a hint of
-                  surface texture and don't compete with the
-                  count number sitting on top. */}
+                  arcs every ~6 px out from the centre. Alpha is
+                  tuned to read as a clear wood texture without
+                  competing with the count number on top. */}
               <div
                 className="pointer-events-none absolute inset-0 rounded-[50%]"
                 style={{
                   backgroundImage:
-                    "repeating-radial-gradient(ellipse at center, transparent 0 7px, var(--table-grain) 7px 7.5px)",
+                    "repeating-radial-gradient(ellipse at center, transparent 0 4.5px, var(--table-grain) 4.5px 6px)",
                 }}
               />
               {/* Inset bottom shadow on a child div so the parent's
