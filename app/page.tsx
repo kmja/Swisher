@@ -296,30 +296,42 @@ function slotPosition(slot: number, total: number) {
   };
 }
 
-/** Pick two angles for the table legs that fall in gaps BETWEEN
- *  chips around the lower half of the orbit — at 6 the chip ring is
- *  spaced just right that the default 150° / 210° works, but at 3-5
- *  chips the bottom of the table is either covered or sitting in a
- *  single wide gap, so we shift to whatever gap angles actually
- *  exist below the equator. Falls back to 150°/210° for N < 2.
+/** Pick angles for the table legs that fall in gaps BETWEEN chips
+ *  on the lower half of the orbit. For most counts that's a left
+ *  + right pair flanking the bottom chip; at 5 (where there's also
+ *  a gap directly at 180° between the two lower chips) we add a
+ *  middle leg too so the table doesn't look propped up on two stilts
+ *  with an obvious hole in the middle. Falls back to 150°/210° when
+ *  there are no lower-half gaps to land in.
  *  Angle convention: degrees clockwise from 12 o'clock. */
-function tableLegAngles(n: number): [number, number] {
+function tableLegAngles(n: number): number[] {
   if (n < 2) return [150, 210];
   const gaps: number[] = [];
   for (let i = 0; i < n; i++) gaps.push(((i + 0.5) * 360) / n);
   const lower = gaps.filter((a) => a > 90 && a < 270);
-  if (lower.length >= 2) {
-    const left = lower.filter((a) => a < 180).sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
-    const right = lower.filter((a) => a > 180).sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
-    if (left != null && right != null) return [left, right];
-  }
+  if (lower.length === 0) return [150, 210];
   if (lower.length === 1) {
-    // Single bottom gap (e.g., N = 3 has a gap at 180°); split into two
-    // legs offset to either side so we still get a left + right pair.
+    // Single bottom gap (N = 3 has one at 180°). Split into two
+    // legs offset to either side so we still get a left + right
+    // pair instead of a single stilt.
     const c = lower[0];
     return [c - 22, c + 22];
   }
-  return [150, 210];
+  const result: number[] = [];
+  // Include a centre leg if the gap closest to 6 o'clock IS 180°
+  // (true for odd N where the equator passes through a gap rather
+  // than a chip — N=5 / 7 / 9 …).
+  const hasMiddleGap = lower.some((a) => Math.abs(a - 180) < 0.5);
+  if (hasMiddleGap) result.push(180);
+  const left = lower
+    .filter((a) => a < 179.5)
+    .sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
+  const right = lower
+    .filter((a) => a > 180.5)
+    .sort((a, b) => Math.abs(a - 180) - Math.abs(b - 180))[0];
+  if (left != null) result.push(left);
+  if (right != null) result.push(right);
+  return result.sort((a, b) => a - b);
 }
 
 function GroupVisual({ count }: { count: number }) {
@@ -466,8 +478,7 @@ function GroupVisual({ count }: { count: number }) {
         const tableW = TABLE_RADIUS_X * 2;
         const tableH = TABLE_RADIUS_Y * 2;
         const RIM_DEPTH = 5;
-        const [legA, legB] = tableLegAngles(visibleChips.length);
-        const legPositions = [legA, legB].map((deg) => {
+        const legPositions = tableLegAngles(visibleChips.length).map((deg) => {
           const rad = (deg * Math.PI) / 180;
           // x / y are offsets from the table's centre, in px.
           return { x: TABLE_RADIUS_X * Math.sin(rad), y: -TABLE_RADIUS_Y * Math.cos(rad) };
