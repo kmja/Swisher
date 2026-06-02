@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
@@ -63,25 +63,34 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // Per-index variation tables so the cluster reads as a crew of distinct
 // people, not stamped clones. Sizes cycle 48/50/52/54/56 px — the
 // smallest still shows half itself past the next chip's overlap, so the
-// Palettes the people-pile picks from each time a new chip is added.
-// The chip's identity (size + tint + lift + rotation + z) is rolled
-// once at insert time and stored on the chip object — the choice
-// doesn't get re-indexed when its neighbours come and go, so the
-// pile genuinely scrambles rather than cycling through a fixed
-// shade-and-position rhythm.
-const CHIP_SIZE_POOL = [44, 46, 48, 50, 52, 54, 56, 58, 60];
-const CHIP_TINT_POOL = [
-  "#fce5ef",
-  "#facee1",
-  "#fcdeeb",
+// Each chip's identity (size, tint, lift, rotation, z-layer) is pinned
+// to its slot index — chip i always looks exactly the same, so the
+// pile is reproducible and won't flicker between renders. The arrays
+// are hand-shuffled (no dark-light-dark-light, no high-low-high-low)
+// so consecutive slots have no obvious rhythm and the pile reads as
+// a bunched group of people rather than a neat queue. New chips
+// arriving simply mount at the next slot and animate in with a
+// mushroom pop — no random insertion / sibling re-shuffle, which
+// was the source of the on-device glitching.
+const CHIP_SIZES = [56, 48, 58, 50, 44, 60, 46, 54, 52, 56];
+const CHIP_TINTS = [
   "#f9c4db",
-  "#fce2ed",
+  "#fce5ef",
   "#fad1e3",
   "#fbdbe9",
   "#f9c8dd",
-  "#fce7f0",
+  "#fce2ed",
+  "#facee1",
   "#fbd5e5",
+  "#fce7f0",
+  "#fcdeeb",
 ];
+const CHIP_LIFTS = [2, -6, 5, -2, 8, -4, 0, 6, -9, 3];
+const CHIP_ROTATIONS = [-5, 7, -1, 4, 2, -8, 6, -3, 1, -6];
+// Coprime stride through 0–9 so each slot's depth looks random
+// without two chips ever sharing a layer — keeps the leftmost chip
+// from always landing on top.
+const CHIP_Z_ORDER = [3, 8, 1, 6, 9, 2, 7, 0, 5, 4];
 
 /** Round secondary button styled like the side controls in a native
  *  camera app — translucent dark surface, white icon, soft outline so
@@ -223,65 +232,18 @@ function CaptureCommitButton({
   );
 }
 
-type Chip = { id: string; size: number; tint: string; lift: number; rot: number; z: number };
-
-/** Roll a fresh chip — random size, tint, vertical lift, rotation
- *  and z-layer. Each chip remembers its own identity so when its
- *  neighbours change, its look doesn't shuffle around it. */
-function rollChip(): Chip {
-  const pick = <T,>(pool: readonly T[]): T => pool[Math.floor(Math.random() * pool.length)];
-  return {
-    id: Math.random().toString(36).slice(2, 10),
-    size: pick(CHIP_SIZE_POOL),
-    tint: pick(CHIP_TINT_POOL),
-    lift: Math.floor(Math.random() * 18) - 9, // -9 … +8 px
-    rot: Math.floor(Math.random() * 17) - 8, // -8 … +8 deg
-    z: Math.floor(Math.random() * 10),
-  };
-}
-
 function GroupVisual({ count }: { count: number }) {
-  // Each chip carries its own identity for as long as it's alive.
-  // Adds insert at a random spot in the array (so new people pop up
-  // anywhere in the pile, not just at the right edge) and removes
-  // pick a random victim. Existing chips' properties never change —
-  // only their array position does, and the FLIP effect below slides
-  // them to their new resting spot.
-  const [chips, setChips] = useState<Chip[]>(() =>
-    Array.from({ length: Math.max(0, Math.min(count, 50)) }, rollChip),
-  );
-  useEffect(() => {
-    setChips((prev) => {
-      if (prev.length === count) return prev;
-      const next = [...prev];
-      while (next.length < count) {
-        const at = Math.floor(Math.random() * (next.length + 1));
-        next.splice(at, 0, rollChip());
-      }
-      while (next.length > count) {
-        const at = Math.floor(Math.random() * next.length);
-        next.splice(at, 1);
-      }
-      return next;
-    });
-  }, [count]);
-
-  const visibleChips = chips.slice(0, 10);
-  const overflow = Math.max(0, chips.length - 10);
-
+  const visible = Math.max(0, Math.min(count, 10));
+  const overflow = Math.max(0, count - visible);
   const clusterRef = useRef<HTMLDivElement>(null);
-  const chipElsRef = useRef<Map<string, HTMLSpanElement>>(new Map());
-  const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
-  const firstRenderRef = useRef(true);
-
-  // Cluster scale wobble when count changes, kept for tactile feedback
-  // on the stepper. Driven off count rather than chips.length so it
-  // fires even on the same render as the chips update.
-  const prevCountRef = useRef(count);
+  const chipRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const prevCount = useRef(count);
   useEffect(() => {
-    if (prevCountRef.current === count) return;
-    const grew = count > prevCountRef.current;
-    prevCountRef.current = count;
+    if (prevCount.current === count) return;
+    const grew = count > prevCount.current;
+    const prev = prevCount.current;
+    prevCount.current = count;
+    // Cluster scale wobble — slight tactile feedback on the stepper.
     if (clusterRef.current?.animate) {
       clusterRef.current.animate(
         [
@@ -292,82 +254,53 @@ function GroupVisual({ count }: { count: number }) {
         { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
       );
     }
-  }, [count]);
-
-  // FLIP + pop-up. For each chip currently rendered, compare its
-  // bounding rect to the one we cached on the previous run:
-  //   - no previous rect → freshly inserted; play a mushroom pop
-  //     (scale 0 → 1.18 → 1 over 360 ms)
-  //   - moved → it got pushed to make room; FLIP from its old x to
-  //     its new x with the resting lift/rotation composed in so we
-  //     don't clobber the chip's idle transform
-  useLayoutEffect(() => {
-    if (firstRenderRef.current) {
-      firstRenderRef.current = false;
-      for (const chip of visibleChips) {
-        const el = chipElsRef.current.get(chip.id);
-        if (el) prevRectsRef.current.set(chip.id, el.getBoundingClientRect());
-      }
-      return;
-    }
-    for (const chip of visibleChips) {
-      const el = chipElsRef.current.get(chip.id);
-      if (!el || !el.animate) continue;
-      const newRect = el.getBoundingClientRect();
-      const oldRect = prevRectsRef.current.get(chip.id);
-      const resting = `translateY(${chip.lift}px) rotate(${chip.rot}deg)`;
-      if (!oldRect) {
+    // Mushroom pop on every newly-mounted chip — scale from 0 to a
+    // small overshoot (1.18) and settle back to 1, composed with the
+    // chip's resting lift / rotation so it pops up INTO its idle
+    // pose rather than snapping there at the tail of the scale.
+    if (grew) {
+      for (let i = prev; i < Math.min(count, 10); i++) {
+        const el = chipRefs.current[i];
+        if (!el?.animate) continue;
+        const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
+        const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
+        const settled = `translateY(${lift}px) rotate(${rot}deg)`;
         el.animate(
           [
-            { transform: `${resting} scale(0)`, opacity: 0 },
-            { transform: `${resting} scale(1.18)`, opacity: 1, offset: 0.7 },
-            { transform: `${resting} scale(1)`, opacity: 1 },
+            { transform: `${settled} scale(0)`, opacity: 0 },
+            { transform: `${settled} scale(1.18)`, opacity: 1, offset: 0.7 },
+            { transform: `${settled} scale(1)`, opacity: 1 },
           ],
           { duration: 360, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
         );
-      } else {
-        const dx = oldRect.left - newRect.left;
-        if (Math.abs(dx) > 0.5) {
-          el.animate(
-            [
-              { transform: `translateX(${dx}px) ${resting}` },
-              { transform: resting },
-            ],
-            { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-          );
-        }
       }
-      prevRectsRef.current.set(chip.id, newRect);
     }
-    const visibleIds = new Set(visibleChips.map((c) => c.id));
-    for (const id of [...prevRectsRef.current.keys()]) {
-      if (!visibleIds.has(id)) prevRectsRef.current.delete(id);
-    }
-  }, [visibleChips]);
-
+  }, [count]);
   return (
     <div aria-hidden className="flex items-center">
       {/* Tighter ~30 px overlap so the chips read as a bunched pile
           rather than a slightly spaced queue; the 3 px white ring
           keeps each silhouette legible at that crowding. */}
       <div ref={clusterRef} className="flex items-center">
-        {visibleChips.map((chip, i) => {
-          const iconSize = Math.round(chip.size * 0.5);
+        {Array.from({ length: visible }).map((_, i) => {
+          const size = CHIP_SIZES[i % CHIP_SIZES.length];
+          const tint = CHIP_TINTS[i % CHIP_TINTS.length];
+          const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
+          const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
+          const z = CHIP_Z_ORDER[i % CHIP_Z_ORDER.length];
+          const iconSize = Math.round(size * 0.5);
           return (
             <span
-              key={chip.id}
-              ref={(el) => {
-                if (el) chipElsRef.current.set(chip.id, el);
-                else chipElsRef.current.delete(chip.id);
-              }}
+              key={i}
+              ref={(el) => { chipRefs.current[i] = el; }}
               className="flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
               style={{
-                width: `${chip.size}px`,
-                height: `${chip.size}px`,
+                width: `${size}px`,
+                height: `${size}px`,
                 marginLeft: i === 0 ? 0 : -30,
-                background: chip.tint,
-                transform: `translateY(${chip.lift}px) rotate(${chip.rot}deg)`,
-                zIndex: chip.z,
+                background: tint,
+                transform: `translateY(${lift}px) rotate(${rot}deg)`,
+                zIndex: z,
               }}
             >
               <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
