@@ -31,14 +31,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <head>
-        {/* Two manifests, one per system theme. Chromium-based PWAs
-            respect media on link[rel=manifest] when picking the
-            install splash + background_color; the dark variant
-            paints the launch screen in the same near-black surface
-            family the page itself uses, so dark-mode hosts don't
-            see a white flash before the body backdrop kicks in. */}
-        <link rel="manifest" href="/manifest.webmanifest" media="(prefers-color-scheme: light)" />
-        <link rel="manifest" href="/manifest-dark.webmanifest" media="(prefers-color-scheme: dark)" />
+        {/* A single <link rel="manifest"> tag whose href is rewritten
+            inline if the device is in dark mode. The media-query
+            multi-manifest pattern looks correct on paper but Android
+            Chromium ignores it at install / launch time — the
+            installed PWA always reaches for the first manifest. Doing
+            the swap in JS at the top of <head> means the link's href
+            already points to the dark variant by the time the
+            "Install app" UI fires off its manifest fetch. The
+            matchMedia change listener also keeps the active href in
+            sync if the user toggles their OS theme after the page
+            has loaded. */}
+        <link rel="manifest" href="/manifest.webmanifest" id="kvitt-manifest" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var l=document.getElementById('kvitt-manifest');if(!l)return;var m=window.matchMedia('(prefers-color-scheme: dark)');var set=function(d){l.href=d?'/manifest-dark.webmanifest':'/manifest.webmanifest';};set(m.matches);try{m.addEventListener('change',function(e){set(e.matches);});}catch(e){m.addListener(function(e){set(e.matches);});}})();",
+          }}
+        />
       </head>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
