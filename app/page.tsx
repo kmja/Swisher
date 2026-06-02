@@ -487,14 +487,15 @@ function GroupVisual({ count }: { count: number }) {
               />
             ))}
             <div
-              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-gray-100"
+              className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-2 ring-black/10 dark:bg-gray-100"
               style={{
-                // Inset shadow paints a faint rim INSIDE the
-                // ellipse — reads as a finished table edge and
-                // gives the tabletop a hint of depth so it
-                // doesn't look like a plain disc.
-                boxShadow:
-                  "inset 0 0 0 3px rgba(238, 92, 154, 0.05), inset 0 -4px 8px rgba(0, 0, 0, 0.04)",
+                // Inset shadow at the bottom hints at depth so the
+                // tipped-forward ellipse doesn't read as a flat
+                // disc. The outer ring-2 ring-black/10 (white/22
+                // in dark mode via globals.css) is the actual
+                // table-edge line — kept clearly visible so the
+                // tabletop has a defined border.
+                boxShadow: "inset 0 -4px 8px rgba(0, 0, 0, 0.05)",
               }}
             />
           </div>
@@ -954,6 +955,14 @@ export default function Page() {
   // briefly before being moved on — and so the receipt isn't half-validated
   // by the time the host is still typing their name.
   const [hostReady, setHostReady] = useState(false);
+  // Setup-card dismissal: the host can tap "Klar" before the scan
+  // finishes; we flash a checkmark on the button for ~250 ms, then
+  // unmount the card via hostCardDismissed (the dismissal flag
+  // gates the card's outer condition below). The scan keeps running
+  // in the background; the existing scanReady + hostReady → "items"
+  // effect handles the handoff to the verify step.
+  const [hostDoneFlash, setHostDoneFlash] = useState(false);
+  const [hostCardDismissed, setHostCardDismissed] = useState(false);
   // Tick "1 → 2 → 3 → 1" every 400 ms so the "Reading" label has a live
   // ellipsis while the host waits for OCR to catch up. Only ticks when
   // the button is in its "host committed, scan still working" state.
@@ -1241,6 +1250,11 @@ export default function Page() {
       setScanCardVisible(false);
       return;
     }
+    // Reset the dismiss flag on every new scan so the setup card
+    // can pop again for a fresh receipt — without this, the second
+    // scan would silently skip showing the card because the host
+    // dismissed it on the previous run.
+    setHostCardDismissed(false);
     const id = setTimeout(() => setScanCardVisible(true), 1000);
     return () => clearTimeout(id);
   }, [ocrLoading]);
@@ -1558,7 +1572,11 @@ export default function Page() {
           isTip: true,
         });
       }
-      setItems(sortByCategory(mapped));
+      // Keep receipt order — the OCR returns items in the order they
+      // appear on the printed bill. sortByCategory used to group
+      // them, but hosts wanted to verify against the physical receipt
+      // top-to-bottom, so we stopped re-ordering.
+      setItems(mapped);
       setRemovedItems([]);
       setUndoItem(null);
       // Reset to the default of 4 for the new receipt — same baseline as the
@@ -2245,7 +2263,7 @@ export default function Page() {
                 stays up while OCR runs AND while we're holding for the
                 host's name + valid phone (scanReady), so a host still
                 mid-typing isn't kicked off the screen. */}
-            {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && (
+            {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && !hostCardDismissed && (
               <div className="scan-card-rise pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -2350,25 +2368,35 @@ export default function Page() {
                   </ul>
                 </details>
                 {(() => {
-                  const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
                   const hasPhone = isValidPhone(payerPhone);
                   const hasGroup = groupSize >= 2;
-                  const canCommit = hasName && hasPhone && hasGroup;
-                  const waiting = hostReady && ocrLoading;
+                  // Name is no longer required — empty falls back to
+                  // t.genericHostName (the "Notans hjälte" placeholder).
+                  const canCommit = hasPhone && hasGroup;
                   return (
                     <button
                       type="button"
-                      onClick={() => setHostReady(true)}
+                      onClick={() => {
+                        if (hostReady) return;
+                        setHostReady(true);
+                        setHostDoneFlash(true);
+                        // Hold the checkmark for ~450 ms, then dismiss
+                        // the whole setup card — even if the scan is
+                        // still in flight. Scan continues in the
+                        // background; scanReady + hostReady advances
+                        // to the verify step when it completes.
+                        window.setTimeout(() => {
+                          setHostDoneFlash(false);
+                          setHostCardDismissed(true);
+                        }, 450);
+                      }}
                       disabled={!canCommit || hostReady}
-                      className="w-full rounded-xl bg-swish px-4 py-3 text-base font-semibold text-white active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3 text-base font-semibold text-white active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
                     >
-                      {waiting ? (
-                        <>
-                          {t.reading}
-                          <span className="ml-0.5 inline-block w-5 text-left tabular-nums" aria-hidden>
-                            {".".repeat(readingDots)}
-                          </span>
-                        </>
+                      {hostDoneFlash ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <polyline points="5 12 10 17 19 7" />
+                        </svg>
                       ) : (
                         t.setupDone
                       )}
