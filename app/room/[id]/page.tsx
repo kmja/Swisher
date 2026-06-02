@@ -349,32 +349,17 @@ export default function RoomPage() {
       el.style.transform = "translateY(0)";
     }
     rowPositionsRef.current = next;
-  }, [itemIdsSig, state]);
-
-  // Edit-form open / close height morph. openEdit / cancelEdit capture
-  // the row's current height into editHeightRef BEFORE setState; this
-  // effect runs after the swap, measures the new height, and animates
-  // from old → new so the row grows / shrinks smoothly instead of
-  // snapping. Rows below are carried along by the FLIP effect above.
-  const editHeightRef = useRef<{ id: string; from: number } | null>(null);
-  useLayoutEffect(() => {
-    const req = editHeightRef.current;
-    if (!req) return;
-    editHeightRef.current = null;
-    const el = document.querySelector(`[data-item-id="${req.id}"]`);
-    if (!(el instanceof HTMLElement) || typeof el.animate !== "function") return;
-    const to = el.getBoundingClientRect().height;
-    if (Math.abs(to - req.from) < 1) return;
-    const prevOverflow = el.style.overflow;
-    el.style.overflow = "hidden";
-    const anim = el.animate(
-      [{ height: `${req.from}px` }, { height: `${to}px` }],
-      { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
-    );
-    anim.onfinish = () => {
-      el.style.overflow = prevOverflow;
-    };
-  }, [editingItemId]);
+    // editingItemId + addingItem are in the dep array so any state
+    // change that swaps a row for its edit form (or a "+ add" form,
+    // or back again) re-runs the FLIP — rows below the new tall row
+    // slide down to make room instead of snapping into place. The
+    // dedicated height-morph effect that used to grow the row's own
+    // height has been removed: it ran in parallel with the FLIP on
+    // the rows below and the two animations interfered, which read
+    // as the jitter you saw on edit / save / mark-shared. With just
+    // the FLIP, every row movement is the same single transform
+    // transition.
+  }, [itemIdsSig, state, editingItemId, addingItem]);
 
   // After the items state lands with a freshly promoted row, look up
   // the shared section header's position and seed flyingItem with both
@@ -895,14 +880,7 @@ export default function RoomPage() {
     setShareOrigin(shareOriginRef.current?.getBoundingClientRect() ?? null);
     setShareOpen(true);
   }
-  function captureEditFromHeight(id: string) {
-    const el = document.querySelector(`[data-item-id="${id}"]`);
-    if (el instanceof HTMLElement) {
-      editHeightRef.current = { id, from: el.getBoundingClientRect().height };
-    }
-  }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
-    captureEditFromHeight(it.id);
     setEditingItemId(it.id);
     setEditDraft({
       description: it.description,
@@ -912,7 +890,6 @@ export default function RoomPage() {
     });
   }
   function cancelEdit() {
-    if (editingItemId) captureEditFromHeight(editingItemId);
     setEditingItemId(null);
     setEditDraft(null);
   }
@@ -1507,20 +1484,26 @@ export default function RoomPage() {
                 type="button"
                 onClick={openReceipt}
                 aria-label={t.showReceipt}
-                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-swish-dark active:bg-gray-200"
+                className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-sm font-medium text-ink shadow-sm active:bg-gray-200"
               >
-                🧾 {t.showReceipt}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M6 2v20l2-1.5L10 22l2-1.5L14 22l2-1.5L18 22V2" />
+                  <line x1="9" y1="7" x2="15" y2="7" />
+                  <line x1="9" y1="11" x2="15" y2="11" />
+                  <line x1="9" y1="15" x2="13" y2="15" />
+                </svg>
+                {t.showReceipt}
               </button>
             )}
           </div>
-          {/* QR + share / copy-link buttons. The QR opens the share
-              dialog on tap; the two h-11 icon buttons under it are
-              quicker grabs — share is primary (swish bg), copy is
-              secondary (gray). All three feed the same room URL. The
-              ref on the wrapper feeds QrDialog so the dialog grows
-              out of this corner of the screen rather than just
-              popping into the centre. */}
-          <div ref={shareOriginRef} className="flex shrink-0 items-start gap-2">
+          {/* QR + share / copy buttons. QR opens the dialog on tap;
+              the two icon buttons UNDERNEATH the QR are quicker
+              grabs — share is the tray icon, copy is the overlap
+              icon. All three feed the same room URL. The ref on the
+              column wrapper feeds QrDialog so the dialog grows out
+              of this corner of the screen rather than just popping
+              into the centre. */}
+          <div ref={shareOriginRef} className="flex shrink-0 flex-col items-center gap-2">
             <button
               type="button"
               onClick={openShare}
@@ -1530,15 +1513,15 @@ export default function RoomPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/room/${code}/qr`} alt="" className="block h-[88px] w-[88px]" />
             </button>
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={shareRoom}
                 aria-label={t.share}
                 title={t.share}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
                   <polyline points="16 6 12 2 8 6" />
                   <line x1="12" y1="2" x2="12" y2="15" />
@@ -1549,14 +1532,14 @@ export default function RoomPage() {
                 onClick={copyShareLink}
                 aria-label={t.copyLink}
                 title={linkCopied ? t.copied : t.copyLink}
-                className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 shadow-sm transition active:bg-gray-200 ${linkCopied ? "text-emerald-600" : "text-ink"}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 shadow-sm transition active:bg-gray-200 ${linkCopied ? "text-emerald-600" : "text-ink"}`}
               >
                 {linkCopied ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <polyline points="5 12 10 17 19 7" />
                   </svg>
                 ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M9 4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H9Z" />
                     <path d="M5 8H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1" />
                   </svg>
