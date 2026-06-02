@@ -2098,14 +2098,14 @@ export default function Page() {
                       </button>
                     </div>
                     {!rep.isTip && (
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
+                      <div className="mt-2 pl-1 text-sm text-gray-500">
                         <button
                           type="button"
                           role="switch"
                           onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
                           aria-checked={rep.shared}
                           aria-label={t.sharedToggle}
-                          className="flex items-center gap-2"
+                          className="inline-flex items-center gap-2"
                         >
                           <span
                             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
@@ -2123,39 +2123,55 @@ export default function Page() {
                             {t.sharedLabel}
                           </span>
                         </button>
-                        {rep.shared && (
-                          <>
-                            <span>{t.splitWays}</span>
+                        {/* Stepper / maybeShared sit in grid-rows reveals
+                            so the row grows / shrinks smoothly when the
+                            shared toggle flips, instead of snapping
+                            between heights. */}
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-220 ease-out ${
+                            rep.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                              <span>{t.splitWays}</span>
+                              <button
+                                type="button"
+                                aria-label="−"
+                                onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                              >
+                                −
+                              </button>
+                              <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
+                              <button
+                                type="button"
+                                aria-label="+"
+                                disabled={d >= groupSize}
+                                onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                              >
+                                +
+                              </button>
+                              <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-220 ease-out ${
+                            !rep.shared && sharedSuggestion(rep.description) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
                             <button
                               type="button"
-                              aria-label="−"
-                              onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                              className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                              onClick={() => updateGroup(rep, { shared: true, sharers: [], shareCount: undefined })}
+                              className="ml-3 mt-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
                             >
-                              −
+                              {t.maybeShared}
                             </button>
-                            <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
-                            <button
-                              type="button"
-                              aria-label="+"
-                              disabled={d >= groupSize}
-                              onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                              className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                            >
-                              +
-                            </button>
-                            <span className="text-gray-400">≈ {formatOre(Math.floor(sharedOre / d))} SEK</span>
-                          </>
-                        )}
-                        {!rep.shared && sharedSuggestion(rep.description) && (
-                          <button
-                            type="button"
-                            onClick={() => updateGroup(rep, { shared: true, sharers: [], shareCount: undefined })}
-                            className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 active:bg-amber-100"
-                          >
-                            {t.maybeShared}
-                          </button>
-                        )}
+                          </div>
+                        </div>
                       </div>
                     )}
                     {rep.isTip && (

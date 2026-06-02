@@ -349,6 +349,31 @@ export default function RoomPage() {
     rowPositionsRef.current = next;
   }, [itemIdsSig, state]);
 
+  // Edit-form open / close height morph. openEdit / cancelEdit capture
+  // the row's current height into editHeightRef BEFORE setState; this
+  // effect runs after the swap, measures the new height, and animates
+  // from old → new so the row grows / shrinks smoothly instead of
+  // snapping. Rows below are carried along by the FLIP effect above.
+  const editHeightRef = useRef<{ id: string; from: number } | null>(null);
+  useLayoutEffect(() => {
+    const req = editHeightRef.current;
+    if (!req) return;
+    editHeightRef.current = null;
+    const el = document.querySelector(`[data-item-id="${req.id}"]`);
+    if (!(el instanceof HTMLElement) || typeof el.animate !== "function") return;
+    const to = el.getBoundingClientRect().height;
+    if (Math.abs(to - req.from) < 1) return;
+    const prevOverflow = el.style.overflow;
+    el.style.overflow = "hidden";
+    const anim = el.animate(
+      [{ height: `${req.from}px` }, { height: `${to}px` }],
+      { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
+    );
+    anim.onfinish = () => {
+      el.style.overflow = prevOverflow;
+    };
+  }, [editingItemId]);
+
   // After the items state lands with a freshly promoted row, look up
   // the shared section header's position and seed flyingItem with both
   // source + target rects. Runs on every items change but only does
@@ -828,7 +853,14 @@ export default function RoomPage() {
     setShareOrigin(shareOriginRef.current?.getBoundingClientRect() ?? null);
     setShareOpen(true);
   }
+  function captureEditFromHeight(id: string) {
+    const el = document.querySelector(`[data-item-id="${id}"]`);
+    if (el instanceof HTMLElement) {
+      editHeightRef.current = { id, from: el.getBoundingClientRect().height };
+    }
+  }
   function openEdit(it: { id: string; description: string; priceOre: number; shared?: boolean; shareCount?: number }) {
+    captureEditFromHeight(it.id);
     setEditingItemId(it.id);
     setEditDraft({
       description: it.description,
@@ -838,6 +870,7 @@ export default function RoomPage() {
     });
   }
   function cancelEdit() {
+    if (editingItemId) captureEditFromHeight(editingItemId);
     setEditingItemId(null);
     setEditDraft(null);
   }
@@ -1031,30 +1064,38 @@ export default function RoomPage() {
                   ✕
                 </button>
               </div>
-              {editDraft.shared && (
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
-                  <span>{tx.splitWays}</span>
-                  <button
-                    type="button"
-                    aria-label="−"
-                    onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                  >
-                    −
-                  </button>
-                  <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
-                  <button
-                    type="button"
-                    aria-label="+"
-                    disabled={dv >= groupSize}
-                    onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                  >
-                    +
-                  </button>
-                  <span className="text-gray-400">≈ {formatOre(Math.floor(draftOre / dv))} SEK</span>
+              {/* Stepper sits in a grid-rows reveal so the edit card
+                  grows / shrinks smoothly when the shared toggle flips. */}
+              <div
+                className={`grid transition-[grid-template-rows] duration-220 ease-out ${
+                  editDraft.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pl-1 text-sm text-gray-500">
+                    <span>{tx.splitWays}</span>
+                    <button
+                      type="button"
+                      aria-label="−"
+                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
+                    <button
+                      type="button"
+                      aria-label="+"
+                      disabled={dv >= groupSize}
+                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                    <span className="text-gray-400">≈ {formatOre(Math.floor(draftOre / dv))} SEK</span>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
             <button
               type="button"
