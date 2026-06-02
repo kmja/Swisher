@@ -373,9 +373,11 @@ export default function RoomPage() {
             pendingRestoreRef.current = null;
             const el = document.querySelector(`[data-item-id="${id}"]`);
             if (el instanceof HTMLElement && typeof el.animate === "function") {
+              // Swipe-out went OFF-SCREEN LEFT (translateX(-120%)),
+              // so the reverse motion comes back IN from the left.
               el.animate(
                 [
-                  { transform: "translateX(120%)", opacity: 0 },
+                  { transform: "translateX(-120%)", opacity: 0 },
                   { transform: "translateX(0)", opacity: 1 },
                 ],
                 { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },

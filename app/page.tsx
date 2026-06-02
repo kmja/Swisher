@@ -499,7 +499,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#e6e8ed] shadow-sm ring-1 ring-black/5 dark:bg-[#5e5e6c]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
                   style={{
                     // Position the leg's TOP-CENTER at the
                     // computed rim attachment point. translateX
@@ -524,7 +524,7 @@ function GroupVisual({ count }: { count: number }) {
                       down for the centre leg, tilted out for the
                       side legs. */}
                   <div
-                    className="absolute left-1/2 top-full h-1.5 w-3 rounded-full bg-[#e6e8ed] shadow-sm ring-1 ring-black/5 dark:bg-[#5e5e6c]"
+                    className="absolute left-1/2 top-full h-1.5 w-3 rounded-full bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
                     style={{
                       transform: `translate(-50%, -2px) rotate(${lean}deg)`,
                       transformOrigin: "50% 50%",
@@ -539,7 +539,7 @@ function GroupVisual({ count }: { count: number }) {
                 up the dark-mode value so the whole table is
                 brighter against the dark card. */}
             <div
-              className="absolute inset-0 rounded-[50%] bg-[#e6e8ed] dark:bg-[#5e5e6c]"
+              className="absolute inset-0 rounded-[50%] bg-[#f0f2f6] dark:bg-[#6e6e7c]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             {/* Top surface ellipse. Light mode keeps bg-white to
@@ -2434,7 +2434,7 @@ export default function Page() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-base font-bold text-ink">{t.groupSizeLabel}</p>
+                  <p className="text-sm text-gray-500">{t.groupSizeLabel}</p>
                   <div className="mt-1 flex items-center justify-center gap-3">
                     <button
                       type="button"
