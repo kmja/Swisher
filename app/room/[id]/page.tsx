@@ -1596,7 +1596,8 @@ export default function RoomPage() {
                     onChange={(e) => setPayeeNameDraft(e.target.value)}
                     onBlur={savePayeeDrafts}
                     onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                    placeholder={tx.yourName}
+                    placeholder={tx.genericHostName}
+                    autoComplete="name"
                     className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                   />
                 </div>
@@ -1613,7 +1614,9 @@ export default function RoomPage() {
                     onChange={(e) => setPayeeNumberDraft(e.target.value)}
                     onBlur={savePayeeDrafts}
                     onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    type="tel"
                     inputMode="tel"
+                    autoComplete="tel"
                     placeholder={tx.swishNumber}
                     className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                   />

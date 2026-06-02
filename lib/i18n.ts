@@ -96,6 +96,9 @@ export interface Strings {
   totalDiff: (amt: string) => string;
   payerTitle: string;
   yourName: string;
+  /** Playful fallback used as the host-name placeholder AND as the
+   *  actual name on the room if the host doesn't type anything. */
+  genericHostName: string;
   swishNumber: string;
   invalidPhone: string;
   whoElse: string;
@@ -267,6 +270,7 @@ const sv: Strings = {
     `Summan stämmer inte – ${amt} SEK ifrån kvittots total. Kontrollera om en rätt saknas eller är felläst.`,
   payerTitle: "Vem la ut för notan?",
   yourName: "Ditt namn",
+  genericHostName: "Notans hjälte",
   swishNumber: "Swish-nummer (07XXXXXXXX)",
   invalidPhone: "Ange ett giltigt svenskt mobilnummer.",
   whoElse: "Vilka fler var med?",
@@ -427,6 +431,7 @@ const en: Strings = {
     `The sums don't match — ${amt} SEK from the receipt total. Check for a missing or misread row.`,
   payerTitle: "Who paid the bill?",
   yourName: "Your name",
+  genericHostName: "Tab hero",
   swishNumber: "Swish number (07XXXXXXXX)",
   invalidPhone: "Enter a valid Swedish mobile number.",
   whoElse: "Who else was there?",

@@ -517,7 +517,7 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[var(--color-surface-muted)]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
@@ -1858,7 +1858,10 @@ export default function Page() {
     updateItem(id, { shareCount: Math.max(2, Math.min(Math.max(2, groupSize || 50), n)) });
 
   // --- live room -------------------------------------------------------------
-  const roomReady = validItems.length > 0 && !!diners[0]?.name.trim() && payDestOk;
+  // Empty name is fine — we fall back to the playful t.genericHostName
+  // placeholder when creating the room, so the host doesn't have to
+  // type anything if they don't want to.
+  const roomReady = validItems.length > 0 && payDestOk;
 
   async function createRoom() {
     if (!roomReady || creatingRoom) return;
@@ -1874,7 +1877,7 @@ export default function Page() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          payeeName: diners[0].name,
+          payeeName: diners[0].name.trim() || t.genericHostName,
           payeeNumber: payerPhone,
           method,
           payeeIban: method === "sepa" ? normalizeIban(payeeIban) : "",
@@ -2267,7 +2270,8 @@ export default function Page() {
                     <input
                       value={diners[0]?.name ?? ""}
                       onChange={(e) => updateDiner(diners[0].id, e.target.value)}
-                      placeholder={t.yourName}
+                      placeholder={t.genericHostName}
+                      autoComplete="name"
                       className="w-full rounded-xl bg-white py-3.5 pl-11 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                     />
                   </div>
@@ -2286,7 +2290,9 @@ export default function Page() {
                         setPayerPhone(e.target.value);
                         if (isValidPhone(e.target.value)) e.target.blur();
                       }}
+                      type="tel"
                       inputMode="tel"
+                      autoComplete="tel"
                       placeholder={t.swishNumber}
                       className="w-full rounded-xl bg-white py-3.5 pl-11 pr-10 text-base shadow-sm ring-1 ring-black/5 outline-none"
                     />
