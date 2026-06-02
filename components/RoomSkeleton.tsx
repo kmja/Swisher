@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import KvittLogo from "./KvittLogo";
 import LangToggle from "./LangToggle";
-import StepHeader from "./StepHeader";
+import StepHeader, { type WizardStep } from "./StepHeader";
 import { translations, type Lang } from "@/lib/i18n";
 
 /**
@@ -34,6 +34,19 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
     }
   }, []);
   const t = translations[lang];
+
+  // When the skeleton mounts because the items page is sliding into
+  // the room (play=true), start the step strip at the previous pill
+  // ("Verify") and flip to "Share" one frame later so the CSS color
+  // transitions on StepHeader interpolate live alongside the slide.
+  // Room-page loading-state mounts (play=false) just render "Share"
+  // directly — there's no "from" step to animate from.
+  const [pillStep, setPillStep] = useState<WizardStep>(play ? "verify" : "share");
+  useEffect(() => {
+    if (!play) return;
+    const id = requestAnimationFrame(() => setPillStep("share"));
+    return () => cancelAnimationFrame(id);
+  }, [play]);
 
   const playEnter = useCallback(
     (el: HTMLElement | null) => {
@@ -87,7 +100,7 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
           skeleton's main is otherwise transparent so the exiting
           body content can slide out visibly). */}
       <div className="bg-[#f0f0f4]">
-        <StepHeader step="share" t={t} />
+        <StepHeader step={pillStep} t={t} />
       </div>
 
       {/* Slide-in wrapper. Only the body (placeholder cards + item

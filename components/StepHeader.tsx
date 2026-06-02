@@ -27,8 +27,8 @@ export default function StepHeader({ step, t }: { step: WizardStep; t: Strings }
           : "text-gray-400";
         return (
           <div key={i} className="flex flex-1 flex-col items-center gap-1">
-            <div className={`h-1.5 w-full rounded-full ${barClass}`} />
-            <span className={`text-[11px] ${labelClass}`}>{label}</span>
+            <div className={`h-1.5 w-full rounded-full transition-colors duration-300 ease-out ${barClass}`} />
+            <span className={`text-[11px] transition-colors duration-300 ease-out ${labelClass}`}>{label}</span>
           </div>
         );
       })}
