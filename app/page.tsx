@@ -73,7 +73,11 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // arriving simply mount at the next slot and animate in with a
 // mushroom pop — no random insertion / sibling re-shuffle, which
 // was the source of the on-device glitching.
-const CHIP_SIZES = [56, 48, 58, 50, 44, 60, 46, 54, 52, 56];
+// Chips sit on a ~72-px orbit around the count number, so cap their
+// diameters at ~50 — bigger and the outer ring would overflow the
+// 200-px container; smaller and ten of them at a packed table would
+// rattle around with too much air between them.
+const CHIP_SIZES = [46, 40, 48, 42, 44, 40, 46, 48, 42, 46];
 const CHIP_TINTS = [
   "#f9c4db",
   "#fce5ef",
@@ -262,20 +266,38 @@ function buildInitialChips(n: number): ChipSlot[] {
   return list;
 }
 
+// Around-the-table circle layout. Chips sit at evenly-spaced
+// positions on a ring centred on the count number — visually reads
+// like guests around a round table. Each chip's own personality
+// (size, tint, rotation, z) is still pinned to its addIndex, so a
+// chip never changes appearance once it's seated; only its angle
+// around the ring updates as the table grows or shrinks.
+const CIRCLE_SIZE = 200;
+const CIRCLE_RADIUS = 72; // distance from centre to a chip's centre
+
+function slotPosition(slot: number, total: number) {
+  // 12 o'clock seat at slot 0, walking clockwise. If only one chip
+  // is at the table, just centre it (no orbit).
+  if (total <= 0) return { x: 0, y: 0 };
+  const angle = -Math.PI / 2 + (slot / total) * 2 * Math.PI;
+  return { x: Math.cos(angle) * CIRCLE_RADIUS, y: Math.sin(angle) * CIRCLE_RADIUS };
+}
+
 function GroupVisual({ count }: { count: number }) {
   const initialCountRef = useRef(count);
   const [chips, setChips] = useState<ChipSlot[]>(() =>
     buildInitialChips(Math.max(0, Math.min(count, 50))),
   );
   // Monotonic counter — every add pulls the next value, every remove
-  // doesn't decrement (the chip's identity is gone for good). Means
-  // tap +/- repeatedly and the new chip's look + side cycle on each
-  // tap, rather than always reproducing the previous "+" chip.
+  // doesn't decrement. Tap +/- repeatedly and the new chip's look
+  // and orbit position cycle on each tap.
   const nextAddIndexRef = useRef<number>(initialCountRef.current + 1);
 
-  // Sync the chips array with the parent's count. Add: alternates
-  // sides by addIndex parity. Remove: pops the chip with the highest
-  // addIndex (newest), regardless of its current pile position.
+  // Sync chips with parent's count. Add: alternates the side it
+  // joins the array (odd push, even unshift), so guests "sit down"
+  // alternately at adjacent seats either side of the host instead
+  // of always at the next clockwise seat. Remove: drops the newest
+  // (highest addIndex) chip.
   useEffect(() => {
     setChips((prev) => {
       if (prev.length === count) return prev;
@@ -320,7 +342,7 @@ function GroupVisual({ count }: { count: number }) {
       clusterRef.current.animate(
         [
           { transform: "scale(1)" },
-          { transform: grew ? "scale(1.06)" : "scale(0.96)" },
+          { transform: grew ? "scale(1.04)" : "scale(0.97)" },
           { transform: "scale(1)" },
         ],
         { duration: 260, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
@@ -328,135 +350,100 @@ function GroupVisual({ count }: { count: number }) {
     }
   }, [count]);
 
-  // FLIP + mushroom + neighbour reaction. Runs after every render
-  // where the chips array changes shape:
-  //   - chips that have no remembered rect are brand new → mushroom
-  //     pop (scale 0 → 1.18 overshoot → 1) composed with their idle
-  //     lift/rotation.
-  //   - chips immediately next to a brand-new chip get a neighbour
-  //     reaction: lean a few degrees AWAY from the newcomer while
-  //     scaling up slightly, then settle back. If they also shifted
-  //     in the layout (left-edge inserts push every existing chip
-  //     right by one slot) the FLIP slide is composed in too so
-  //     they ride the lean down to their new resting spot.
-  //   - chips that just shifted without being neighbours play a
-  //     pure FLIP slide.
+  // FLIP-along-the-orbit. Each chip's transform composes its angle-
+  // based position with its personality rotation. On count change:
+  //   - chips with no remembered position are brand new → mushroom
+  //     pop in place (scale 0 → 1.18 → 1) at their target seat.
+  //   - chips whose seat moved animate the transform delta from
+  //     their old orbit position to the new one.
   const chipElsRef = useRef<Map<number, HTMLSpanElement>>(new Map());
-  const prevRectsRef = useRef<Map<number, DOMRect>>(new Map());
+  const prevPosRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const firstRunRef = useRef(true);
   useLayoutEffect(() => {
     if (firstRunRef.current) {
       firstRunRef.current = false;
-      for (const c of visibleChips) {
-        const el = chipElsRef.current.get(c.addIndex);
-        if (el) prevRectsRef.current.set(c.addIndex, el.getBoundingClientRect());
+      for (let i = 0; i < visibleChips.length; i++) {
+        prevPosRef.current.set(visibleChips[i].addIndex, slotPosition(i, visibleChips.length));
       }
       return;
     }
-    let newChipPos = -1;
-    for (let i = 0; i < visibleChips.length; i++) {
-      if (!prevRectsRef.current.has(visibleChips[i].addIndex)) {
-        newChipPos = i;
-        break;
-      }
-    }
-    for (let i = 0; i < visibleChips.length; i++) {
+    const n = visibleChips.length;
+    for (let i = 0; i < n; i++) {
       const chip = visibleChips[i];
       const el = chipElsRef.current.get(chip.addIndex);
       if (!el || typeof el.animate !== "function") continue;
       const look = chipLook(chip.addIndex);
-      const resting = `translateY(${look.lift}px) rotate(${look.rot}deg)`;
-      const newRect = el.getBoundingClientRect();
-      const oldRect = prevRectsRef.current.get(chip.addIndex);
-      if (!oldRect) {
+      const pos = slotPosition(i, n);
+      const restingTransform = `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) rotate(${look.rot}deg)`;
+      const oldPos = prevPosRef.current.get(chip.addIndex);
+      if (!oldPos) {
         el.animate(
           [
-            { transform: `${resting} scale(0)`, opacity: 0 },
-            { transform: `${resting} scale(1.18)`, opacity: 1, offset: 0.7 },
-            { transform: `${resting} scale(1)`, opacity: 1 },
+            { transform: `${restingTransform} scale(0)`, opacity: 0 },
+            { transform: `${restingTransform} scale(1.18)`, opacity: 1, offset: 0.7 },
+            { transform: `${restingTransform} scale(1)`, opacity: 1 },
           ],
           { duration: 360, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
         );
-      } else {
-        const dx = oldRect.left - newRect.left;
-        const isNeighbour = newChipPos >= 0 && Math.abs(i - newChipPos) === 1;
-        if (isNeighbour) {
-          const leanDir = i > newChipPos ? 1 : -1; // tilt AWAY from the newcomer
-          const reactingRot = look.rot + leanDir * 6;
-          const reacting = `translateY(${look.lift - 2}px) rotate(${reactingRot}deg) scale(1.06)`;
-          if (Math.abs(dx) > 0.5) {
-            el.animate(
-              [
-                { transform: `translateX(${dx}px) ${resting}` },
-                { transform: `translateX(${dx * 0.3}px) ${reacting}`, offset: 0.45 },
-                { transform: resting },
-              ],
-              { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-            );
-          } else {
-            el.animate(
-              [
-                { transform: resting },
-                { transform: reacting, offset: 0.45 },
-                { transform: resting },
-              ],
-              { duration: 380, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)" },
-            );
-          }
-        } else if (Math.abs(dx) > 0.5) {
-          el.animate(
-            [
-              { transform: `translateX(${dx}px) ${resting}` },
-              { transform: resting },
-            ],
-            { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-          );
-        }
+      } else if (Math.hypot(oldPos.x - pos.x, oldPos.y - pos.y) > 0.5) {
+        const oldTransform = `translate(-50%, -50%) translate(${oldPos.x}px, ${oldPos.y}px) rotate(${look.rot}deg)`;
+        el.animate(
+          [{ transform: oldTransform }, { transform: restingTransform }],
+          { duration: 340, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+        );
       }
-      prevRectsRef.current.set(chip.addIndex, newRect);
+      prevPosRef.current.set(chip.addIndex, pos);
     }
-    const visibleIds = new Set(visibleChips.map((c) => c.addIndex));
-    for (const idx of [...prevRectsRef.current.keys()]) {
-      if (!visibleIds.has(idx)) prevRectsRef.current.delete(idx);
+    const ids = new Set(visibleChips.map((c) => c.addIndex));
+    for (const k of [...prevPosRef.current.keys()]) {
+      if (!ids.has(k)) prevPosRef.current.delete(k);
     }
   }, [visibleChips]);
 
   return (
-    <div aria-hidden className="flex items-center">
-      {/* Tighter ~30 px overlap so the chips read as a bunched pile
-          rather than a slightly spaced queue; the 3 px white ring
-          keeps each silhouette legible at that crowding. */}
-      <div ref={clusterRef} className="flex items-center">
-        {visibleChips.map((chip, i) => {
-          const look = chipLook(chip.addIndex);
-          const iconSize = Math.round(look.size * 0.5);
-          return (
-            <span
-              key={chip.addIndex}
-              ref={(el) => {
-                if (el) chipElsRef.current.set(chip.addIndex, el);
-                else chipElsRef.current.delete(chip.addIndex);
-              }}
-              className="flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
-              style={{
-                width: `${look.size}px`,
-                height: `${look.size}px`,
-                marginLeft: i === 0 ? 0 : -30,
-                background: look.tint,
-                transform: `translateY(${look.lift}px) rotate(${look.rot}deg)`,
-                zIndex: look.z,
-              }}
-            >
-              <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="3.5" />
-                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-              </svg>
-            </span>
-          );
-        })}
+    <div
+      aria-hidden
+      ref={clusterRef}
+      className="relative"
+      style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
+    >
+      {/* Big count number at the centre of the table. tabular-nums
+          so 1 / 2 / 3 don't make the centre tick from frame to
+          frame as the chips orbit around it. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="text-5xl font-bold tabular-nums text-ink">{count || "–"}</span>
       </div>
+      {visibleChips.map((chip, i) => {
+        const look = chipLook(chip.addIndex);
+        const pos = slotPosition(i, visibleChips.length);
+        const iconSize = Math.round(look.size * 0.5);
+        return (
+          <span
+            key={chip.addIndex}
+            ref={(el) => {
+              if (el) chipElsRef.current.set(chip.addIndex, el);
+              else chipElsRef.current.delete(chip.addIndex);
+            }}
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white"
+            style={{
+              width: `${look.size}px`,
+              height: `${look.size}px`,
+              transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) rotate(${look.rot}deg)`,
+              background: look.tint,
+              zIndex: look.z,
+            }}
+          >
+            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+            </svg>
+          </span>
+        );
+      })}
       {overflow > 0 && (
-        <span className="ml-3 text-base font-semibold text-gray-500">+{overflow}</span>
+        <span className="absolute bottom-0 right-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 ring-2 ring-white">
+          +{overflow}
+        </span>
       )}
     </div>
   );
@@ -2117,27 +2104,24 @@ export default function Page() {
                 </div>
                 <div>
                   <p className="text-center text-sm font-medium text-ink">{t.groupSizeLabel}</p>
-                  <div className="mt-3 flex items-center justify-center gap-5">
+                  <div className="mt-3 flex items-center justify-center gap-3">
                     <button
                       type="button"
                       aria-label="−"
                       onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       −
                     </button>
-                    <span className="w-12 text-center text-4xl font-bold tabular-nums text-ink">{groupSize || "–"}</span>
+                    <GroupVisual count={groupSize} />
                     <button
                       type="button"
                       aria-label="+"
                       onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
                     >
                       +
                     </button>
-                  </div>
-                  <div className="mt-3 flex justify-center">
-                    <GroupVisual count={groupSize} />
                   </div>
                   <p className="mt-2 px-1 text-center text-[11px] leading-snug text-gray-500">{t.whyGroup}</p>
                 </div>
