@@ -753,7 +753,7 @@ export default function RoomPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   async function copyShareLink() {
     if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/room/${code}`;
+    const url = `${window.location.origin}/${code}`;
     try {
       await navigator.clipboard.writeText(url);
       setLinkCopied(true);
@@ -770,7 +770,7 @@ export default function RoomPage() {
    *  doesn't have to open the QR dialog just to send the invite. */
   async function shareRoom() {
     if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/room/${code}`;
+    const url = `${window.location.origin}/${code}`;
     const title = state?.place || "Kvitt";
     const text = state ? t.inviteText(state.place ?? "", state.date ?? "") : url;
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -910,7 +910,7 @@ export default function RoomPage() {
     setAddingItem(false);
   }
 
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/room/${code}` : "";
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/${code}` : "";
   const shareText = t.inviteText(state?.place ?? "", state?.date ?? "");
 
   async function openReceipt() {

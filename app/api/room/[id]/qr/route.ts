@@ -8,7 +8,11 @@ export const runtime = "nodejs";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const code = id.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-  const url = `${new URL(req.url).origin}/room/${code}`;
+  // Encode the bare-code form (handled by middleware.ts) so the QR
+  // pixels stay sparse — fewer characters = bigger modules at the
+  // same physical size, which means the camera can lock on from
+  // farther away.
+  const url = `${new URL(req.url).origin}/${code}`;
   try {
     const dataUrl = await QRCode.toDataURL(url, { width: 280, margin: 1, errorCorrectionLevel: "M" });
     const base64 = dataUrl.split(",")[1];
