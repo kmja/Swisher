@@ -408,15 +408,15 @@ function GroupVisual({ count }: { count: number }) {
       className="relative"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
-      {/* Round "table" the chips sit around. Faint cream surface
-          with a subtle ring so it reads as a tangible object the
-          guests gather around, not just empty space behind the
-          number. Sized just under the chip orbit's inner edge so
-          the chips visually perch on the table's rim. */}
+      {/* Round "table" the chips sit around. Light swish-pink fill
+          with a 2-px pink ring so it actually reads as a tangible
+          surface, not the white card it sits on. Sized just under
+          the chip orbit's inner edge so the chips visually perch
+          on the table's rim. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#fff7fb] ring-1 ring-swish/15"
-        style={{ width: "104px", height: "104px" }}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-swish/[0.07] ring-2 ring-swish/35"
+        style={{ width: "108px", height: "108px" }}
       />
       {/* Big count number at the centre of the table. tabular-nums
           so 1 / 2 / 3 don't make the centre tick from frame to
@@ -2931,6 +2931,23 @@ export default function Page() {
                   className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
                 >
                   Share QR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Drop into the capture step with the setup card up
+                    // and waiting for input — same state the host sees
+                    // mid-scan while OCR is still chewing on the photo.
+                    setDebugOpen(false);
+                    setStep("capture");
+                    setOcrFailed(false);
+                    setHostReady(false);
+                    setScanCardVisible(true);
+                    setScanReady(true);
+                  }}
+                  className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-semibold text-ink active:bg-gray-200"
+                >
+                  Host input
                 </button>
                 <button
                   type="button"
