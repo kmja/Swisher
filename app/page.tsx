@@ -65,26 +65,33 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // smallest still shows half itself past the next chip's overlap, so the
 // stack stays legible at any count. Tints / lifts / rotations are all
 // indexed off the same i so a given slot is always the same "person".
-const CHIP_SIZES = [56, 48, 54, 50, 56, 52, 48, 54, 50, 56];
-// Solid pastel pinks (each one is the equivalent swish-on-white tint
-// without the alpha channel) so overlapping chips don't blend into a
-// darker patch where they cross. With the 3 px white ring, opaque
-// fills are what makes the stack read as discrete chips instead of a
-// translucent cluster.
+//
+// Each array is hand-shuffled so consecutive slots don't fall into a
+// regular dark-light-dark-light / high-low-high-low rhythm — the
+// goal is to read as a bunch of people piled together rather than a
+// neat queue. Sizes vary more (44–60 px), lifts span a wider
+// vertical range (~-9 / +8 px), and tints jump around the lightness
+// scale instead of zig-zagging.
+const CHIP_SIZES = [56, 48, 58, 50, 44, 60, 46, 54, 52, 56];
 const CHIP_TINTS = [
-  "#fce5ef",
-  "#facee1",
-  "#fcdeeb",
   "#f9c4db",
-  "#fce2ed",
+  "#fce5ef",
   "#fad1e3",
   "#fbdbe9",
   "#f9c8dd",
-  "#fce7f0",
+  "#fce2ed",
+  "#facee1",
   "#fbd5e5",
+  "#fce7f0",
+  "#fcdeeb",
 ];
-const CHIP_LIFTS = [0, -3, 2, -1, 3, -2, 1, -3, 2, -1];
-const CHIP_ROTATIONS = [-3, 2, 0, -2, 3, -1, 0, -3, 1, 2];
+const CHIP_LIFTS = [2, -6, 5, -2, 8, -4, 0, 6, -9, 3];
+const CHIP_ROTATIONS = [-5, 7, -1, 4, 2, -8, 6, -3, 1, -6];
+// Z-stack scatter — coprime stride through 0–9 so each slot's depth
+// looks random while every layer index appears exactly once. Without
+// this the chips snap back to "leftmost on top, rightmost on bottom"
+// and the pile reads as a strict queue from the front.
+const CHIP_Z_ORDER = [3, 8, 1, 6, 9, 2, 7, 0, 5, 4];
 
 /** Round secondary button styled like the side controls in a native
  *  camera app — translucent dark surface, white icon, soft outline so
@@ -270,15 +277,16 @@ function GroupVisual({ count }: { count: number }) {
   }, [count]);
   return (
     <div aria-hidden className="flex items-center">
-      {/* Fixed 24 px overlap (≈ half the smallest chip). The 3 px white
-          ring is what keeps the stack tidy — even at this overlap each
-          chip reads as its own silhouette against its neighbour. */}
+      {/* Tighter ~30 px overlap so the chips read as a bunched pile
+          rather than a slightly spaced queue; the 3 px white ring
+          keeps each silhouette legible at that crowding. */}
       <div ref={clusterRef} className="flex items-center">
         {Array.from({ length: visible }).map((_, i) => {
           const size = CHIP_SIZES[i % CHIP_SIZES.length];
           const tint = CHIP_TINTS[i % CHIP_TINTS.length];
           const lift = CHIP_LIFTS[i % CHIP_LIFTS.length];
           const rot = CHIP_ROTATIONS[i % CHIP_ROTATIONS.length];
+          const z = CHIP_Z_ORDER[i % CHIP_Z_ORDER.length];
           const iconSize = Math.round(size * 0.5);
           return (
             <span
@@ -288,10 +296,10 @@ function GroupVisual({ count }: { count: number }) {
               style={{
                 width: `${size}px`,
                 height: `${size}px`,
-                marginLeft: i === 0 ? 0 : -24,
+                marginLeft: i === 0 ? 0 : -30,
                 background: tint,
                 transform: `translateY(${lift}px) rotate(${rot}deg)`,
-                zIndex: visible - i,
+                zIndex: z,
               }}
             >
               <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
