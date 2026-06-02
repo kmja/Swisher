@@ -455,7 +455,7 @@ function GroupVisual({ count }: { count: number }) {
     <div
       aria-hidden
       ref={clusterRef}
-      className="relative"
+      className="relative isolate"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
       {/* Round dining table. Built from TWO stacked ellipses so the
@@ -486,7 +486,7 @@ function GroupVisual({ count }: { count: number }) {
         return (
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
             style={{ width: `${tableW}px`, height: `${tableH}px` }}
           >
             {legPositions.map((pos, i) => {
@@ -501,36 +501,12 @@ function GroupVisual({ count }: { count: number }) {
                   key={i}
                   className="absolute h-3 w-1.5 rounded-b-md bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
                   style={{
-                    // Position the leg's TOP-CENTER at the
-                    // computed rim attachment point. translateX
-                    // does the horizontal centring (so we can't
-                    // use Tailwind's -translate-x-1/2 — the
-                    // rotate would replace it); the rotate
-                    // pivots around the top of the leg via
-                    // transform-origin so the foot swings out
-                    // while the attachment stays put.
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
                     transform: `translateX(-50%) rotate(${lean}deg)`,
                     transformOrigin: "50% 0",
                   }}
-                >
-                  {/* Cute little foot at the bottom of each leg.
-                      Doubles the leg width with a rounded-full
-                      ellipse, sits tucked into the leg's bottom
-                      curve. Its OWN rotation matches the leg's
-                      lean direction (and is doubled up) so the
-                      foot reads as "pointing outward" — straight
-                      down for the centre leg, tilted out for the
-                      side legs. */}
-                  <div
-                    className="absolute left-1/2 top-full h-1.5 w-3 rounded-full bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
-                    style={{
-                      transform: `translate(-50%, -2px) rotate(${lean}deg)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  />
-                </div>
+                />
               );
             })}
             {/* Bottom rim ellipse — the table's side / thickness.
@@ -578,13 +554,19 @@ function GroupVisual({ count }: { count: number }) {
       {/* Big count number at the centre of the table. tabular-nums
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
         <span className="text-4xl font-medium tabular-nums text-gray-700">{count || "–"}</span>
       </div>
       {visibleChips.map((chip, i) => {
         const look = chipLook(chip.addIndex);
         const pos = slotPosition(i, visibleChips.length);
         const iconSize = Math.round(look.size * 0.5);
+        // Chips on the back half of the table (pos.y < 0, i.e. the
+        // upper arc behind the count) sit BELOW the table's z-index
+        // so the table top ellipse clips their lower edge — giving
+        // a 3D effect where the back chips look tucked behind the
+        // table. Chips on the front half rise above the count.
+        const behind = pos.y < 0;
         return (
           <span
             key={chip.addIndex}
@@ -592,13 +574,13 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[#7a7a8a]"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark dark:saturate-50 dark:brightness-90"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
               transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) rotate(${look.rot}deg)`,
               background: look.tint,
-              zIndex: look.z,
+              zIndex: behind ? look.z : 30 + look.z,
             }}
           >
             <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

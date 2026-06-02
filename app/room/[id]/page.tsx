@@ -866,43 +866,6 @@ export default function RoomPage() {
     await postAction({ action: "editPayee", groupSize: clamped });
   }
 
-  /** Quick "copied!" feedback for the link-copy icon button next to
-   *  the QR. Briefly swaps the icon for a ✓ via the linkCopied flag
-   *  and clears it after 1.5 s, matching the QrCard pattern. */
-  const [linkCopied, setLinkCopied] = useState(false);
-  async function copyShareLink() {
-    if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/${code}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 1500);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
-
-  /** Same flow as the dialog's primary share button: hit
-   *  navigator.share when the browser supports it (opens the OS
-   *  share sheet), fall back to copy when it doesn't / the user
-   *  cancels. Lets the corner share icon be the fast path — the host
-   *  doesn't have to open the QR dialog just to send the invite. */
-  async function shareRoom() {
-    if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/${code}`;
-    const title = state?.place || "Kvitt";
-    const text = state ? t.inviteText(state.place ?? "", state.date ?? "") : url;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title, text, url });
-        return;
-      } catch {
-        /* user cancelled or unsupported — fall through to copy */
-      }
-    }
-    await copyShareLink();
-  }
-
   /** Page-enter pan: when the room page mounts the whole main slides
    *  in from the right + fades up. Matches the items-step entrance in
    *  app/page.tsx so scan → verify → room reads as one flow rather
@@ -1617,101 +1580,11 @@ export default function RoomPage() {
                 {t.showReceipt}
               </button>
             )}
-            {/* Host's name / Swish number / group-size stepper sit
-                stacked in the same left column as the place name +
-                date — the section used to wrap them in its own
-                horizontal row below the top card, which doubled the
-                top section's height. Three full-width rows here
-                share the space the QR + share buttons own to the
-                right. Guests get a compact read-only host line in
-                this slot instead. */}
-            {isPayee ? (
-              <div className="mt-3 space-y-2">
-                <div className="relative">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                    </svg>
-                  </span>
-                  <input
-                    ref={payeeNameInputRef}
-                    value={payeeNameDraft}
-                    onChange={(e) => setPayeeNameDraft(e.target.value)}
-                    onBlur={savePayeeDrafts}
-                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                    placeholder={tx.genericHostName}
-                    autoComplete="name"
-                    className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
-                  />
-                </div>
-                <div className="relative">
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="6" y="2" width="12" height="20" rx="2.5" />
-                      <path d="M12 18h.01" />
-                    </svg>
-                  </span>
-                  <input
-                    ref={payeeNumberInputRef}
-                    value={payeeNumberDraft}
-                    onChange={(e) => setPayeeNumberDraft(e.target.value)}
-                    onBlur={savePayeeDrafts}
-                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder={tx.swishNumber}
-                    className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-1.5 shadow-sm ring-1 ring-black/5">
-                  <span className="min-w-0 truncate text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      aria-label="−"
-                      onClick={() => updateGroupSize(groupSize - 1)}
-                      disabled={groupSize <= 2 || groupSize <= state.people.length}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center text-base font-bold tabular-nums text-ink">{groupSize}</span>
-                    <button
-                      type="button"
-                      aria-label="+"
-                      onClick={() => updateGroupSize(groupSize + 1)}
-                      disabled={groupSize >= 50}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-500">
-                <span aria-hidden className="text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
-                  </svg>
-                </span>
-                <span className="min-w-0 truncate">
-                  {state.payeeName}
-                  {state.payeeNumber && <span className="text-gray-400"> · {state.payeeNumber}</span>}
-                </span>
-              </p>
-            )}
           </div>
-          {/* QR + share / copy buttons. QR opens the dialog on tap;
-              the two icon buttons UNDERNEATH the QR are quicker
-              grabs — share is the tray icon, copy is the overlap
-              icon. All three feed the same room URL. The ref on the
-              column wrapper feeds QrDialog so the dialog grows out
-              of this corner of the screen rather than just popping
-              into the centre. */}
+          {/* QR opens the share dialog on tap. The ref on the column
+              wrapper feeds QrDialog so the dialog grows out of this
+              corner of the screen rather than just popping into the
+              centre. */}
           <div ref={shareOriginRef} className="flex shrink-0 flex-col items-center gap-2">
             <button
               type="button"
@@ -1722,41 +1595,93 @@ export default function RoomPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/room/${code}/qr`} alt="" className="block h-[88px] w-[88px]" />
             </button>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={shareRoom}
-                aria-label={t.share}
-                title={t.share}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-ink shadow-sm transition active:bg-gray-200"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={copyShareLink}
-                aria-label={t.copyLink}
-                title={linkCopied ? t.copied : t.copyLink}
-                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 shadow-sm transition active:bg-gray-200 ${linkCopied ? "text-emerald-600" : "text-ink"}`}
-              >
-                {linkCopied ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <polyline points="5 12 10 17 19 7" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M9 4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H9Z" />
-                    <path d="M5 8H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1" />
-                  </svg>
-                )}
-              </button>
-            </div>
           </div>
         </div>
+        {isPayee ? (
+          <div className="mt-5 space-y-2 border-t border-gray-100 pt-3">
+            {/* Name + number share a row. Number column is fixed at
+                w-40 — enough for "0701234567" without forcing the
+                name column to shrink awkwardly on most viewports. */}
+            <div className="flex items-stretch gap-2">
+              <div className="relative min-w-0 flex-1">
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+                  </svg>
+                </span>
+                <input
+                  ref={payeeNameInputRef}
+                  value={payeeNameDraft}
+                  onChange={(e) => setPayeeNameDraft(e.target.value)}
+                  onBlur={savePayeeDrafts}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                  placeholder={tx.genericHostName}
+                  autoComplete="name"
+                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                />
+              </div>
+              <div className="relative w-40 shrink-0">
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                    <path d="M12 18h.01" />
+                  </svg>
+                </span>
+                <input
+                  ref={payeeNumberInputRef}
+                  value={payeeNumberDraft}
+                  onChange={(e) => setPayeeNumberDraft(e.target.value)}
+                  onBlur={savePayeeDrafts}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder={tx.swishNumber}
+                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-2 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                />
+              </div>
+            </div>
+            {/* Group size — +/− stepper in the same input surface. */}
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-2 shadow-sm ring-1 ring-black/5">
+              <span className="text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="−"
+                  onClick={() => updateGroupSize(groupSize - 1)}
+                  disabled={groupSize <= 2 || groupSize <= state.people.length}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-lg font-bold tabular-nums text-ink">{groupSize}</span>
+                <button
+                  type="button"
+                  aria-label="+"
+                  onClick={() => updateGroupSize(groupSize + 1)}
+                  disabled={groupSize >= 50}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 flex items-center justify-center gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-500">
+            <span aria-hidden className="text-gray-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
+              </svg>
+            </span>
+            <span className="min-w-0 truncate">
+              {state.payeeName}
+              {state.payeeNumber && <span className="text-gray-400"> · {state.payeeNumber}</span>}
+            </span>
+          </p>
+        )}
         {roomFx && (
           <p className="mt-3 text-center text-xs text-gray-400">
             {state.country ? `${flagEmoji(state.country)} ${regionName(state.country, lang)} · ` : ""}
