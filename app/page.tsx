@@ -408,6 +408,16 @@ function GroupVisual({ count }: { count: number }) {
       className="relative"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
+      {/* Round "table" the chips sit around. Faint cream surface
+          with a subtle ring so it reads as a tangible object the
+          guests gather around, not just empty space behind the
+          number. Sized just under the chip orbit's inner edge so
+          the chips visually perch on the table's rim. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#fff7fb] ring-1 ring-swish/15"
+        style={{ width: "104px", height: "104px" }}
+      />
       {/* Big count number at the centre of the table. tabular-nums
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
@@ -963,11 +973,13 @@ export default function Page() {
 
   const [receiptChargedOre, setReceiptChargedOre] = useState(0);
 
-  // Default to 4 — a sensible "small dinner" size that fits the most common
-  // host case and saves a tap. The host adjusts via the +/− stepper on the
-  // setup card; the auto-estimate effect only runs when the value is 0 (e.g.
-  // an explicit reset path), so this default keeps it dormant.
-  const [groupSize, setGroupSize] = useState(4);
+  // Default to 6 — gives the round-table chip widget enough seats to
+  // actually read as a circle from the first tap (4 chips form a
+  // square, 6 round it out properly). Still a believable "small
+  // dinner" size for most host cases. The +/− stepper is right
+  // there, and the auto-estimate effect only fires when the value
+  // is 0, so this default doesn't trigger any rebalancing.
+  const [groupSize, setGroupSize] = useState(6);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -1453,7 +1465,7 @@ export default function Page() {
       setUndoItem(null);
       // Reset to the default of 4 for the new receipt — same baseline as the
       // initial state.
-      setGroupSize(4);
+      setGroupSize(6);
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
