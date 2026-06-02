@@ -481,7 +481,7 @@ function GroupVisual({ count }: { count: number }) {
             {legPositions.map((pos, i) => (
               <div
                 key={i}
-                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-[#d0d3da] shadow-sm dark:bg-[#16161a]"
+                className="absolute h-3 w-1.5 -translate-x-1/2 rounded-b-md bg-[#e6e8ed] shadow-sm dark:bg-[var(--color-surface)]"
                 style={{
                   // Offset by TABLE_RADIUS_* + RIM_DEPTH so legs
                   // hang from the rim's bottom edge (not the top
@@ -493,13 +493,24 @@ function GroupVisual({ count }: { count: number }) {
                 }}
               />
             ))}
-            {/* Bottom rim ellipse — the table's side / thickness. */}
+            {/* Bottom rim ellipse — the table's side / thickness.
+                Lighter than the previous draft so the rim doesn't
+                read as a heavy stripe under the surface; in dark
+                mode it uses --color-surface (the un-lifted card
+                colour) so the brighter --color-surface-muted top
+                still has enough contrast to show as "the lit
+                surface above the side". */}
             <div
-              className="absolute inset-0 rounded-[50%] bg-[#d0d3da] dark:bg-[#16161a]"
+              className="absolute inset-0 rounded-[50%] bg-[#e6e8ed] dark:bg-[var(--color-surface)]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface ellipse — input-field chrome. */}
-            <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5">
+            {/* Top surface ellipse. In light mode it's the same
+                bg-white the inputs use. In dark mode it switches
+                to --color-surface-muted so the tabletop sits one
+                clear tone above the (overridden) rim and reads as
+                "lit surface" instead of dissolving into the card
+                behind it. */}
+            <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[var(--color-surface-muted)]">
               {/* Inset bottom shadow on a child div so the parent's
                   Tailwind ring + drop shadow aren't clobbered (ring
                   is implemented as a box-shadow under the hood;
@@ -530,7 +541,7 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[var(--color-surface)]"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark ring-[3px] ring-white dark:ring-[var(--color-surface-muted)]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
