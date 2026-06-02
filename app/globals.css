@@ -95,6 +95,11 @@ textarea {
   /* Skeleton screen's bg (#f0f0f4 — the same colour as --color-page
      in light mode) needs to track the dark backdrop too. */
   .bg-\[\#f0f0f4\] { background-color: var(--color-page); }
+  /* Claimed-item row background. Light mode freezes a faint swish
+     tint (#f4e6ee — bg-swish/10 over white). In dark mode the
+     equivalent tint is a deep plum that still reads as "swish-y"
+     but has enough contrast for the light text on top. */
+  .bg-\[\#f4e6ee\] { background-color: #3b1f2d; }
 
   /* Greys for secondary text. Tailwind's gray-* are mid-tone lights
      in default theme; we dim them down so they don't burn against

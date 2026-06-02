@@ -3055,8 +3055,8 @@ export default function Page() {
         download="kvitt-test01.png"
         labels={
           lang === "sv"
-            ? { share: "Dela", copied: "Kopierat!", copyLink: "Kopiera länk", close: "Stäng", save: "Spara" }
-            : { share: "Share", copied: "Copied!", copyLink: "Copy link", close: "Close", save: "Save" }
+            ? { share: "Dela länk", copied: "Kopierat!", copyLink: "Kopiera länk", close: "Stäng", save: "Spara" }
+            : { share: "Share link", copied: "Copied!", copyLink: "Copy link", close: "Close", save: "Save" }
         }
       />
       {receiptOpen && images.length > 0 && (
