@@ -50,21 +50,20 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
   );
 
   return (
-    <main className="fixed inset-0 z-40 mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-y-auto bg-[#f0f0f4] px-4 pb-32">
+    <main className="fixed inset-0 z-40 mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-y-auto px-4 pb-32">
       {/* Real nav — three-col grid matching the room page so the swap
           when state loads doesn't redraw the header. */}
       <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
-          <a
-            href="/"
-            aria-label={t.newReceipt}
-            title={t.newReceipt}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark justify-self-start"
-          >
-            +
-          </a>
-          <KvittLogo className="justify-self-center" />
-          <div className="flex items-center gap-2 justify-self-end">
+          <div className="flex items-center gap-2 justify-self-start">
+            <a
+              href="/"
+              aria-label={t.newReceipt}
+              title={t.newReceipt}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
+            >
+              +
+            </a>
             <a
               href="/history"
               aria-label={t.history}
@@ -73,13 +72,23 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
             >
               🕘
             </a>
+          </div>
+          <KvittLogo className="justify-self-center" />
+          <div className="justify-self-end">
             <LangToggle lang={lang} onChange={setLang} />
           </div>
         </div>
       </header>
 
-      {/* Real step strip — the host's "Share" pill is active. */}
-      <StepHeader step="share" t={t} />
+      {/* Real step strip — the host's "Share" pill is active.
+          Wrapper carries an explicit page-bg colour so it occludes
+          the outgoing items page's "Verify" step strip directly
+          underneath (both render at the same y-position, and the
+          skeleton's main is otherwise transparent so the exiting
+          body content can slide out visibly). */}
+      <div className="bg-[#f0f0f4]">
+        <StepHeader step="share" t={t} />
+      </div>
 
       {/* Slide-in wrapper. Only the body (placeholder cards + item
           rows) slides in; the nav + step strip above stay anchored

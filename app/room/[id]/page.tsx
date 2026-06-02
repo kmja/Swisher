@@ -1448,20 +1448,20 @@ export default function RoomPage() {
     <FxProvider value={roomFx}>
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
       {/* Sticky nav. Three-column grid (matches the home page) keeps
-          the wordmark dead-centre while the + and history / language
-          controls stay pinned to their corners. */}
+          the wordmark dead-centre. Left column carries the room
+          actions (new receipt + history) so they sit together; the
+          right column is just the lang toggle. */}
       <header className="sticky top-0 z-30 -mx-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
-          <a
-            href="/"
-            aria-label={t.newReceipt}
-            title={t.newReceipt}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark justify-self-start"
-          >
-            +
-          </a>
-          <KvittLogo className="justify-self-center" />
-          <div className="flex items-center gap-2 justify-self-end">
+          <div className="flex items-center gap-2 justify-self-start">
+            <a
+              href="/"
+              aria-label={t.newReceipt}
+              title={t.newReceipt}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
+            >
+              +
+            </a>
             <a
               href="/history"
               aria-label={t.history}
@@ -1470,6 +1470,9 @@ export default function RoomPage() {
             >
               🕘
             </a>
+          </div>
+          <KvittLogo className="justify-self-center" />
+          <div className="justify-self-end">
             <LangToggle lang={lang} onChange={(l) => { setLang(l); saveLang(l); }} />
           </div>
         </div>

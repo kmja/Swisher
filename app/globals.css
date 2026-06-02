@@ -14,6 +14,12 @@ body {
   background: #f0f0f4;
   color: var(--color-ink);
   overscroll-behavior-y: none;
+  /* Wizard slide-out animations push body content to translateX(-100%),
+     which would otherwise extend the document width and let mobile
+     browsers horizontal-scroll into the off-screen space. Clipping
+     here keeps the slide invisible past the viewport edge without
+     creating a new scroll context. */
+  overflow-x: clip;
 }
 
 /* Larger tap targets and no zoom-on-focus for inputs on mobile. */

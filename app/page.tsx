@@ -726,7 +726,14 @@ export default function Page() {
   // to a CSS animation class that iOS Safari could try to replay. The
   // stable useCallback ref fires only on the section's mount, and the
   // imperative animation completes once and detaches itself.
+  // Stash the items section's DOM node so the createRoom flow can
+  // animate it out to the left when the host taps "Skapa rum" — the
+  // wizard transition into the room is "old page slides left while
+  // new page slides in from right", and this is the left half of
+  // that pair.
+  const itemsSectionRef = useRef<HTMLElement | null>(null);
   const playPanIn = useCallback((el: HTMLElement | null) => {
+    itemsSectionRef.current = el;
     if (!el || typeof el.animate !== "function") return;
     el.animate(
       [
@@ -807,6 +814,36 @@ export default function Page() {
   const [groupSize, setGroupSize] = useState(4);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
+
+  // Wizard exit animation: when createRoom flips creatingRoom true,
+  // slide the items section out to the left while the RoomSkeleton
+  // overlay slides in from the right. If the POST fails (creatingRoom
+  // goes back to false), play the inverse so the section returns to
+  // its resting position. The "have we ever fired" ref guards the
+  // initial-mount run from playing a phantom reverse animation.
+  const hasExitedRef = useRef(false);
+  useEffect(() => {
+    const el = itemsSectionRef.current;
+    if (!el || typeof el.animate !== "function") return;
+    if (creatingRoom) {
+      hasExitedRef.current = true;
+      el.animate(
+        [
+          { opacity: 1, transform: "translateX(0)" },
+          { opacity: 0, transform: "translateX(-100%)" },
+        ],
+        { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "forwards" },
+      );
+    } else if (hasExitedRef.current) {
+      el.animate(
+        [
+          { opacity: 0, transform: "translateX(-100%)" },
+          { opacity: 1, transform: "translateX(0)" },
+        ],
+        { duration: 280, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "forwards" },
+      );
+    }
+  }, [creatingRoom]);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -1442,6 +1479,11 @@ export default function Page() {
     if (!roomReady || creatingRoom) return;
     setCreatingRoom(true);
     setRoomError(null);
+    // Hold router.replace until the wizard slide has played all the
+    // way through, even if the POST returns sooner. Without this the
+    // page can unmount mid-animation and the room page snaps in.
+    const slideStartedAt = Date.now();
+    const SLIDE_MS = 320;
     try {
       const res = await fetch("/api/room", {
         method: "POST",
@@ -1494,6 +1536,8 @@ export default function Page() {
       // ?prewarmed=1 tells the room page to skip its own slide-in animation —
       // the skeleton overlay below has already slid into place, a second
       // slide on top would feel like a glitch.
+      const remaining = SLIDE_MS - (Date.now() - slideStartedAt);
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       router.replace(`/room/${data.id}?invite=1&prewarmed=1`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
