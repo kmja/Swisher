@@ -2582,7 +2582,7 @@ export default function Page() {
                                   type="button"
                                   aria-label="−"
                                   onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
                                 >
                                   −
                                 </button>
@@ -2592,7 +2592,7 @@ export default function Page() {
                                   aria-label="+"
                                   disabled={d >= groupSize}
                                   onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                                 >
                                   +
                                 </button>

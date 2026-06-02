@@ -218,6 +218,11 @@ export default function RoomPage() {
     shareCount: number | undefined;
   };
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  // Mirror the items-page price-draft pattern: while a host is typing
+  // in the edit form's price field we buffer their keystrokes here so
+  // a partial / decimal input isn't immediately re-formatted by the
+  // share ↔ total conversion. Committed back to editDraft on blur.
+  const [editPriceDraft, setEditPriceDraft] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
@@ -926,10 +931,25 @@ export default function RoomPage() {
       shared: !!it.shared,
       shareCount: it.shareCount,
     });
+    setEditPriceDraft(null);
   }
   function cancelEdit() {
     setEditingItemId(null);
     setEditDraft(null);
+    setEditPriceDraft(null);
+  }
+  // Convert a share-price draft back into a total when the host
+  // blurs the price field while DELAT is on. Mirrors the items-page
+  // commitPriceDraft helper.
+  function commitEditPriceDraft() {
+    if (editPriceDraft == null || !editDraft) return;
+    const parsed = parseAmountToOre(editPriceDraft);
+    if (parsed != null) {
+      const divisor = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
+      const newTotal = editDraft.shared ? parsed * Math.max(1, divisor) : parsed;
+      setEditDraft({ ...editDraft, priceInput: formatOre(newTotal) });
+    }
+    setEditPriceDraft(null);
   }
   async function saveEdit(itemId: string) {
     if (!editDraft) return cancelEdit();
@@ -1082,20 +1102,26 @@ export default function RoomPage() {
   // each category section.
   function claimItemRow(it: RoomState["items"][number]) {
     if (editingItemId === it.id && editDraft) {
-      // Mirror the validation step's row chrome exactly so editing in
-      // the room feels like editing back on the items page — single
-      // column card (icon · description · price · ✕), inline shared
-      // toggle below the row, stepper grid-rows reveal, Save / Cancel
-      // pair sitting under the card. The room flow still needs the
-      // Save / Cancel because edits buffer in editDraft until the
-      // host commits (the validation step writes through immediately).
+      // Card chrome + inner layout matches the validation step row
+      // 1-for-1 (single column, icon · description · price column
+      // with stepper, DELAT toggle inline below). The differences
+      // from validation are scoped to the buffered draft state
+      // (editDraft / editPriceDraft) and the Save / Cancel / Delete
+      // row below the card, which the live items-page row doesn't
+      // need because it writes through every keystroke.
       const dv = editDraft.shareCount && editDraft.shareCount > 0 ? editDraft.shareCount : groupSize;
-      const draftOre = parseAmountToOre(editDraft.priceInput) ?? 0;
+      const draftTotalOre = parseAmountToOre(editDraft.priceInput) ?? 0;
+      const priceDisplay =
+        editPriceDraft != null
+          ? editPriceDraft
+          : editDraft.shared
+          ? formatOre(Math.floor(draftTotalOre / Math.max(1, dv)))
+          : editDraft.priceInput;
       return (
         <div ref={playEditOpen} key={it.id} data-item-id={it.id} className="origin-top space-y-2">
           <div
             className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 ${
-              editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-swish/30"
+              editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -1108,81 +1134,84 @@ export default function RoomPage() {
                 placeholder={t.descPh}
                 className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
               />
-              <input
-                value={editDraft.priceInput}
-                onChange={(e) => setEditDraft({ ...editDraft, priceInput: e.target.value })}
-                inputMode="decimal"
-                placeholder={t.pricePh}
-                className="w-20 shrink-0 rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
-              />
-            </div>
-            <div className="mt-2 text-sm text-gray-500">
-              {/* Shared toggle on the right, below the price column —
-                  matches the validation step's row layout. */}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  role="switch"
-                  onClick={() =>
-                    setEditDraft({
-                      ...editDraft,
-                      shared: !editDraft.shared,
-                      shareCount: editDraft.shared ? undefined : editDraft.shareCount,
-                    })
-                  }
-                  aria-checked={editDraft.shared}
-                  aria-label={tx.sharedToggle}
-                  className="-m-2 inline-flex items-center gap-2.5 p-2"
+              <div className="flex w-20 shrink-0 flex-col items-stretch gap-1">
+                <input
+                  value={priceDisplay}
+                  onChange={(e) => setEditPriceDraft(e.target.value)}
+                  onBlur={commitEditPriceDraft}
+                  inputMode="decimal"
+                  placeholder={t.pricePh}
+                  className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                />
+                {/* Compact split-ways stepper below the price input,
+                    in a grid-rows reveal so the column grows
+                    smoothly on DELAT toggle. h-10 buttons keep the
+                    touch target up to native size on mobile; the
+                    glyphs and the N/M count stay text-base / text-
+                    xs so the controls don't look chunky. */}
+                <div
+                  className={`grid transition-[grid-template-rows] duration-220 ease-out ${
+                    editDraft.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
                 >
-                  <span className={`text-sm font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                    {tx.sharedLabel}
-                  </span>
-                  <span
-                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                      editDraft.shared ? "bg-swish" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      aria-hidden
-                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        editDraft.shared ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </span>
-                </button>
-              </div>
-              {/* Stepper sits in a grid-rows reveal so the card grows
-                  / shrinks smoothly when the shared toggle flips. */}
-              <div
-                className={`grid transition-[grid-template-rows] duration-220 ease-out ${
-                  editDraft.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                }`}
-              >
-                <div className="overflow-hidden">
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <span>{tx.splitWays}</span>
-                    <button
-                      type="button"
-                      aria-label="−"
-                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                    >
-                      −
-                    </button>
-                    <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
-                    <button
-                      type="button"
-                      aria-label="+"
-                      disabled={dv >= groupSize}
-                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                    >
-                      +
-                    </button>
-                    <span className="text-gray-400">≈ {formatOre(Math.floor(draftOre / dv))} SEK</span>
+                  <div className="overflow-hidden">
+                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                      <button
+                        type="button"
+                        aria-label="−"
+                        onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                      >
+                        −
+                      </button>
+                      <span className="text-xs font-semibold tabular-nums text-gray-500">{dv}/{groupSize}</span>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        disabled={dv >= groupSize}
+                        onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              {/* DELAT toggle, left-aligned — exact mirror of the
+                  validation row's toggle position. */}
+              <button
+                type="button"
+                role="switch"
+                onClick={() =>
+                  setEditDraft({
+                    ...editDraft,
+                    shared: !editDraft.shared,
+                    shareCount: editDraft.shared ? undefined : editDraft.shareCount,
+                  })
+                }
+                aria-checked={editDraft.shared}
+                aria-label={tx.sharedToggle}
+                className="-m-2 inline-flex items-center gap-2.5 p-2"
+              >
+                <span
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                    editDraft.shared ? "bg-swish" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      editDraft.shared ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </span>
+                <span className={`text-sm font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                  {tx.sharedLabel}
+                </span>
+              </button>
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
