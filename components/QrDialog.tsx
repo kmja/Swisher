@@ -7,6 +7,10 @@ type Props = {
   onClose: () => void;
   qrSrc: string;
   title: string;
+  /** Pre-formatted receipt date shown as the centred sub-header
+   *  under the title — same hierarchy the room page's top section
+   *  uses (h1 + date line). */
+  date?: string;
   subtitle?: string;
   shareUrl?: string;
   shareTitle?: string;
@@ -36,6 +40,7 @@ export default function QrDialog({
   onClose,
   qrSrc,
   title,
+  date,
   subtitle,
   shareUrl,
   shareTitle,
@@ -174,11 +179,17 @@ export default function QrDialog({
           type="button"
           onClick={onClose}
           aria-label={labels.close}
-          className="absolute right-3 top-3 flex h-14 w-14 items-center justify-center rounded-full text-4xl leading-none text-gray-500 active:bg-gray-100"
+          className="absolute right-3 top-3 flex h-16 w-16 items-center justify-center rounded-full text-5xl leading-none text-gray-500 active:bg-gray-100"
         >
           ×
         </button>
-        <p className="truncate pr-10 text-center text-lg font-bold">{title}</p>
+        {/* Header block mirrors the room-page top-section hierarchy:
+            text-xl font-bold for the place / title and a mt-0.5
+            text-sm text-gray-500 line underneath for the date.
+            Equal pl/pr leaves room for the close button on the
+            right while keeping the text dead-centred. */}
+        <p className="truncate px-16 text-center text-xl font-bold text-ink">{title}</p>
+        {date && <p className="mt-0.5 truncate px-16 text-center text-sm text-gray-500">{date}</p>}
         <div className="mx-auto mt-4 aspect-square w-full max-w-[min(80vw,80vh,420px)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrSrc} alt={title} className="h-full w-full rounded-2xl object-contain" />

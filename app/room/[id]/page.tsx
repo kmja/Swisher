@@ -2239,6 +2239,7 @@ export default function RoomPage() {
         origin={shareOrigin}
         qrSrc={`/api/room/${code}/qr`}
         title={state.place || "Kvitt"}
+        date={state.date ? formatReceiptDate(state.date, lang) : undefined}
         subtitle={`${t.scanToJoin} · ${code}`}
         shareUrl={shareUrl}
         shareTitle={state.place || "Kvitt"}
