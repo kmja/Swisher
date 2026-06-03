@@ -536,26 +536,27 @@ function GroupVisual({ count }: { count: number }) {
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop. Just FOUR stripes at
-                  hand-picked irregular positions — a vague
-                  impression of growth rings rather than a full
-                  pattern. The SVG turbulence filter then bends
-                  these few lines into curves so the table reads
-                  as wood without feeling busy. */}
+              {/* Wood-grain on the tabletop. Four single lines
+                  spread out across the surface — two near the top
+                  edge, two near the bottom — with a large empty
+                  band (28-74 %) running through the middle so the
+                  count number sits on a clean patch of wood. The
+                  SVG turbulence filter still bends each line into
+                  a soft curve. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
                     "linear-gradient(180deg," +
-                    "transparent 0 14%," +
-                    "var(--table-grain) 14% 15.8%," +
-                    "transparent 15.8% 38%," +
-                    "var(--table-grain) 38% 40.5%," +
-                    "transparent 40.5% 64%," +
-                    "var(--table-grain) 64% 67%," +
-                    "transparent 67% 86%," +
-                    "var(--table-grain) 86% 87.8%," +
-                    "transparent 87.8% 100%)",
+                    "transparent 0 9%," +
+                    "var(--table-grain) 9% 10.5%," +
+                    "transparent 10.5% 26%," +
+                    "var(--table-grain) 26% 28%," +
+                    "transparent 28% 74%," +
+                    "var(--table-grain) 74% 75.8%," +
+                    "transparent 75.8% 91%," +
+                    "var(--table-grain) 91% 92.5%," +
+                    "transparent 92.5% 100%)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
