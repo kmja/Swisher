@@ -2180,50 +2180,53 @@ export default function RoomPage() {
                 </div>
               </div>
             </div>
+            {/* Small chevron strip — the only handle for toggling
+                the cart breakdown above. The total / pay action
+                lives inside the big primary button below, so this
+                strip just lets the guest peek at the line items
+                without interfering with the tap-to-pay target. */}
             <button
               type="button"
               onClick={() => setCartOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-3 px-5 pt-3 pb-2 text-left active:bg-white/5"
+              aria-label={tx.showReceipt}
+              aria-expanded={cartOpen}
+              className="flex w-full items-center justify-center py-1.5 active:bg-white/5"
             >
-              <span className="min-w-0 flex-1 truncate text-sm text-white/80">
-                {mineCount === 0 && sharedCount === 0
-                  ? t.cartEmpty
-                  : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-              </span>
-              {/* Right side stacks the "DIN ANDEL" label ABOVE the
-                  amount, with the cart chevron tucked next to the
-                  amount on the bottom row. Keeps the eye flowing
-                  small-caption → big number → control. */}
-              <span className="flex shrink-0 flex-col items-end leading-tight">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{t.yourTotal}</span>
-                <span className="flex items-center gap-1">
-                  <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
-                  <span className={`text-xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
-                </span>
-              </span>
+              <span className={`text-xl leading-none text-white/40 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
             </button>
-            {/* Primary action — a rounded full-width button that
-                sits INSIDE the dark plate, with a padded gutter
-                around it instead of bleeding to the footer edges.
-                Reads as a regular CTA inside the share section
-                rather than a separate bottom bar. */}
+            {/* Primary action — the total / share section IS the pay
+                button now. Single rounded primary at the bottom of
+                the plate, with the "DIN ANDEL" + count breakdown on
+                the left and the amount + official Swish logo on
+                the right. Tapping anywhere fires the Swish deep
+                link (or "I'm done" when there's no Swish phone). */}
             <div className="px-4 pb-4 pt-1">
             {canSwish && swishUri ? (
               <a
                 href={swishUri}
                 onClick={payAndDone}
-                className={`flex items-center justify-center gap-3 rounded-2xl px-5 py-4 text-base font-semibold ${
+                className={`flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-left ${
                   iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-swish text-white active:bg-swish-dark"
                 }`}
               >
                 {iAmDone ? (
-                  <span>{t.doneOn}</span>
+                  <span className="w-full text-center text-base font-semibold">{t.doneOn}</span>
                 ) : (
                   <>
-                    <span>{t.payWithSwish}</span>
-                    <SwishLogo height={22} className="shrink-0" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">{t.yourTotal}</span>
+                      <span className="truncate text-xs text-white/85">
+                        {mineCount === 0 && sharedCount === 0
+                          ? t.cartEmpty
+                          : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2.5">
+                      <Money ore={myShare.totalOre} className="text-xl font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/75" />
+                      <SwishLogo height={22} className="shrink-0" />
+                    </span>
                   </>
                 )}
               </a>
@@ -2231,11 +2234,21 @@ export default function RoomPage() {
               <button
                 type="button"
                 onClick={toggleDone}
-                className={`w-full rounded-2xl px-5 py-4 text-base font-semibold ${
+                className={`flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-left ${
                   iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/90 active:bg-white/15"
                 }`}
               >
-                {iAmDone ? t.doneOn : t.imDone}
+                {iAmDone ? (
+                  <span className="w-full text-center text-base font-semibold">{t.doneOn}</span>
+                ) : (
+                  <>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-white/70">{t.yourTotal}</span>
+                      <span className="truncate text-xs text-white/75">{t.imDone}</span>
+                    </span>
+                    <Money ore={myShare.totalOre} className="shrink-0 text-xl font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
+                  </>
+                )}
               </button>
             )}
             </div>
