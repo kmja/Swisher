@@ -1050,6 +1050,11 @@ export default function Page() {
   // Set when OCR returns no items / no total, OR the API answered 502.
   // Triggers the full retake banner over the capture preview.
   const [ocrFailed, setOcrFailed] = useState(false);
+  // Why we're showing the retake banner — drives different copy in
+  // the failure card. "general" = couldn't read the photo at all;
+  // "noPrices" = OCR found item lines but none had a price (e.g. an
+  // online-order pickup slip lists the order but no money).
+  const [ocrFailReason, setOcrFailReason] = useState<"general" | "noPrices">("general");
   const [scanPhase, setScanPhase] = useState(0);
   // True between OCR-complete and host-info-complete: the scan overlay keeps
   // its setup card up so the host can finish typing their name & phone
@@ -1740,6 +1745,21 @@ export default function Page() {
         // the host doesn't land on a blank items list wondering what
         // happened.
         setOcrLoading(false);
+        setOcrFailReason("general");
+        setOcrFailed(true);
+        return;
+      }
+      // Items came back but every line is priced at 0 — typical of an
+      // online-order takeaway slip that lists "1 × Sharing combo / 2 ×
+      // Flamed salmon" but no money. Splitting a free meal isn't a thing
+      // we can do, so flip to the failure card and ask the host to
+      // photograph something with prices on it.
+      const hasAnyRealPrice = mapped.some(
+        (it) => !it.isTip && (parseAmountToOre(it.priceInput) ?? 0) > 0,
+      );
+      if (!hasAnyRealPrice) {
+        setOcrLoading(false);
+        setOcrFailReason("noPrices");
         setOcrFailed(true);
         return;
       }
@@ -1774,6 +1794,7 @@ export default function Page() {
       requestAnimationFrame(step);
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "OCR failed.");
+      setOcrFailReason("general");
       setOcrFailed(true);
       setOcrLoading(false);
     }
@@ -2242,8 +2263,8 @@ export default function Page() {
                       <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                   </div>
-                  <h2 className="mt-3 text-base font-bold text-ink">{t.ocrFailedTitle}</h2>
-                  <p className="mt-1 text-sm leading-snug text-gray-600">{t.ocrFailedBody}</p>
+                  <h2 className="mt-3 text-base font-bold text-ink">{ocrFailReason === "noPrices" ? t.ocrNoPricesTitle : t.ocrFailedTitle}</h2>
+                  <p className="mt-1 text-sm leading-snug text-gray-600">{ocrFailReason === "noPrices" ? t.ocrNoPricesBody : t.ocrFailedBody}</p>
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
                       type="button"

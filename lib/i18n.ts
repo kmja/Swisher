@@ -61,6 +61,11 @@ export interface Strings {
   retakePhoto: string;
   ocrFailedTitle: string;
   ocrFailedBody: string;
+  /** Title + body shown in the failure card when OCR managed to find
+   *  item lines but every line was unpriced — typical of an online-
+   *  order takeaway slip. */
+  ocrNoPricesTitle: string;
+  ocrNoPricesBody: string;
   enterManually: string;
   qualityBlur: string;
   qualityContrast: string;
@@ -241,6 +246,8 @@ const sv: Strings = {
   retakePhoto: "Ta nytt foto",
   ocrFailedTitle: "Kunde inte läsa kvittot",
   ocrFailedBody: "Försök igen med bättre ljus eller en stadigare bild.",
+  ocrNoPricesTitle: "Kvittot saknar priser",
+  ocrNoPricesBody: "Det här kvittot har inga priser – ta foto på orderbekräftelsen istället.",
   enterManually: "Skriv in själv",
   qualityBlur: "Bilden ser suddig ut",
   qualityContrast: "Svag kontrast – prova bättre ljus",
@@ -404,6 +411,8 @@ const en: Strings = {
   retakePhoto: "Retake",
   ocrFailedTitle: "Couldn't read this receipt",
   ocrFailedBody: "Try again with better lighting or a steadier shot.",
+  ocrNoPricesTitle: "This receipt has no prices",
+  ocrNoPricesBody: "There are no prices on this slip — try a photo of the order confirmation instead.",
   enterManually: "Enter manually",
   qualityBlur: "Photo looks blurry",
   qualityContrast: "Low contrast — try better lighting",
