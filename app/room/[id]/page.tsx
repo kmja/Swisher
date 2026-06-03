@@ -1250,7 +1250,7 @@ export default function RoomPage() {
               <button
                 type="button"
                 onClick={() => saveEdit(it.id)}
-                className="rounded-xl bg-swish px-4 py-2 text-sm font-semibold text-white active:bg-swish-dark"
+                className="rounded-xl bg-swish px-4 py-2 text-sm font-semibold text-black active:bg-swish-dark"
               >
                 {t.save}
               </button>
@@ -1324,7 +1324,7 @@ export default function RoomPage() {
         >
         <span
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-            mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+            mine ? "border-swish bg-swish text-black" : "border-gray-300 text-transparent"
           }`}
         >
           ✓
@@ -1468,7 +1468,7 @@ export default function RoomPage() {
           >
             <span
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-                taken ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+                taken ? "border-swish bg-swish text-black" : "border-gray-300 text-transparent"
               }`}
             >
               ✓
@@ -1537,7 +1537,7 @@ export default function RoomPage() {
               href="/"
               aria-label={t.newReceipt}
               title={t.newReceipt}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-swish text-2xl font-semibold leading-none text-black shadow-sm active:bg-swish-dark"
             >
               +
             </a>
@@ -1784,7 +1784,7 @@ export default function RoomPage() {
             type="button"
             onClick={join}
             disabled={!name.trim() || joining}
-            className="mt-3 w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
+            className="mt-3 w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-black active:bg-swish-dark disabled:opacity-50"
           >
             {joining ? t.joining : t.join}
           </button>
@@ -1941,7 +1941,7 @@ export default function RoomPage() {
                   type="button"
                   onClick={addItemRow}
                   disabled={!newDesc.trim() || (parseAmountToOre(newPrice) ?? 0) <= 0}
-                  className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+                  className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-black active:bg-swish-dark disabled:opacity-40"
                 >
                   {t.addRow}
                 </button>
@@ -2240,7 +2240,7 @@ export default function RoomPage() {
                   <a
                     href={swishUri}
                     onClick={() => setPaymentInitiated(true)}
-                    className="flex flex-1 items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-white active:bg-swish-dark"
+                    className="flex flex-1 items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-black active:bg-swish-dark"
                   >
                     <span>{t.payWithSwish}</span>
                     <SwishLogo height={22} className="shrink-0" />
@@ -2262,7 +2262,7 @@ export default function RoomPage() {
                 <a
                   href={swishUri}
                   onClick={() => setPaymentInitiated(true)}
-                  className="flex items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-white active:bg-swish-dark"
+                  className="flex items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-black active:bg-swish-dark"
                 >
                   <span>{t.payWithSwish}</span>
                   <SwishLogo height={22} className="shrink-0" />
@@ -2334,7 +2334,7 @@ export default function RoomPage() {
         <div className="fixed inset-x-0 bottom-28 z-50 mx-auto max-w-md px-4">
           <div
             key={markedSharedToast.description}
-            className="relative overflow-hidden rounded-xl bg-swish px-3 py-2.5 text-sm text-white shadow-lg ring-1 ring-swish-dark/40"
+            className="relative overflow-hidden rounded-xl bg-swish px-3 py-2.5 text-sm text-black shadow-lg ring-1 ring-swish-dark/40"
           >
             <p className="pr-1 leading-snug">{t.markedShared(markedSharedToast.description)}</p>
             <span
@@ -2408,7 +2408,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 
 function HomeLink({ label }: { label: string }) {
   return (
-    <a href="/" className="rounded-xl bg-swish px-5 py-2.5 text-sm font-semibold text-white active:bg-swish-dark">
+    <a href="/" className="rounded-xl bg-swish px-5 py-2.5 text-sm font-semibold text-black active:bg-swish-dark">
       {label}
     </a>
   );

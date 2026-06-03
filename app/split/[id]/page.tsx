@@ -133,7 +133,7 @@ export default function SplitPage() {
     <FxProvider value={fx}>
       <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-16 pt-5">
         <nav className="flex items-center justify-between gap-2 text-xs font-semibold">
-          <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-white active:bg-swish-dark">
+          <a href="/" className="inline-flex items-center gap-1 rounded-full bg-swish px-3 py-1.5 text-black active:bg-swish-dark">
             + {t.newReceipt}
           </a>
           <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function SplitPage() {
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-full bg-swish px-4 py-1.5 text-sm font-semibold text-white active:bg-swish-dark"
+                className="rounded-full bg-swish px-4 py-1.5 text-sm font-semibold text-black active:bg-swish-dark"
               >
                 {t.doneEditing}
               </button>
@@ -222,7 +222,7 @@ export default function SplitPage() {
                 type="button"
                 onClick={addShare}
                 disabled={!newName.trim() || (parseAmountToOre(newAmount) ?? 0) <= 0}
-                className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-white active:bg-swish-dark disabled:opacity-40"
+                className="rounded-lg bg-swish px-3 py-2 text-sm font-semibold text-black active:bg-swish-dark disabled:opacity-40"
               >
                 {t.addRow}
               </button>
@@ -281,7 +281,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 
 function HomeLink({ label }: { label: string }) {
   return (
-    <a href="/" className="rounded-xl bg-swish px-5 py-2.5 text-sm font-semibold text-white active:bg-swish-dark">
+    <a href="/" className="rounded-xl bg-swish px-5 py-2.5 text-sm font-semibold text-black active:bg-swish-dark">
       {label}
     </a>
   );

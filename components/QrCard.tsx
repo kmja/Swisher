@@ -124,7 +124,7 @@ export default function QrCard({
           <a
             href={swishUri}
             onClick={trackSwishOpen}
-            className="mt-4 flex items-center justify-center gap-2.5 rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
+            className="mt-4 flex items-center justify-center gap-2.5 rounded-xl bg-swish px-4 py-4 text-base font-bold text-black shadow-sm active:bg-swish-dark"
           >
             <span>{t.payWithSwish(sekAmount)}</span>
             <SwishLogo height={22} className="shrink-0" />
