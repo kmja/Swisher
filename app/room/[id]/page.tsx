@@ -1604,12 +1604,12 @@ export default function RoomPage() {
           </div>
         </div>
         {isPayee ? (
-          <div className="mt-5 space-y-2 border-t border-gray-100 pt-3">
-            {/* Name + number share a row. Number column is fixed at
-                w-40 — enough for "0701234567" without forcing the
-                name column to shrink awkwardly on most viewports. */}
-            <div className="flex items-stretch gap-2">
-              <div className="relative min-w-0 flex-1">
+          <div className="mt-5 grid grid-cols-[1fr_auto] items-start gap-4 border-t border-gray-100 pt-3">
+            {/* Column 1: host name + Swish number stacked, both
+                full-width inside their column. Header above. */}
+            <div className="min-w-0 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{tx.payerTitle}</p>
+              <div className="relative">
                 <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="8" r="4" />
@@ -1627,7 +1627,7 @@ export default function RoomPage() {
                   className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                 />
               </div>
-              <div className="relative w-40 shrink-0">
+              <div className="relative">
                 <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <rect x="6" y="2" width="12" height="20" rx="2.5" />
@@ -1644,14 +1644,16 @@ export default function RoomPage() {
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder={tx.swishNumber}
-                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-2 text-base shadow-sm ring-1 ring-black/5 outline-none"
+                  className="w-full rounded-xl bg-white py-2.5 pl-10 pr-3 text-base shadow-sm ring-1 ring-black/5 outline-none"
                 />
               </div>
             </div>
-            {/* Group size — +/− stepper in the same input surface. */}
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-white py-1.5 pl-3 pr-2 shadow-sm ring-1 ring-black/5">
-              <span className="text-sm font-medium text-ink">{tx.groupSizeLabel}</span>
-              <div className="flex items-center gap-2">
+            {/* Column 2: group-size stepper. Header above, then the
+                +/− card itself. shrink-0 so it doesn't squeeze the
+                inputs column on narrow viewports. */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{tx.groupSizeLabel}</p>
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-white px-2 py-1.5 shadow-sm ring-1 ring-black/5">
                 <button
                   type="button"
                   aria-label="−"
