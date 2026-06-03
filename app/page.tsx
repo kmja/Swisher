@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#c9b389]/70 shadow-sm ring-1 ring-black/5"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#d9caac] shadow-sm ring-1 ring-black/5 dark:bg-[#9a8b70]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,18 +532,18 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#c9b389]/70"
+              className="absolute inset-0 rounded-[50%] bg-[#d9caac] dark:bg-[#9a8b70]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top + rim + legs wear the FULL oak palette (top
-                #e8d8b8 / rim #c9b389) but with low alpha — 60 % on
-                the top, 70 % on the rim/legs. The card surface
-                underneath blends through, muting the saturation
-                in light mode (pale oak on white) and darkening it
-                naturally in dark mode (warm tan on the dim
-                surface). One color set, two modes, no separate
-                dark: overrides. */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#e8d8b8]/60 shadow-sm ring-1 ring-black/5">
+            {/* Solid equivalents of the previous oak-with-alpha
+                approach — the values are precomputed blends of
+                full oak (#e8d8b8 top / #c9b389 rim) over the card
+                surface in each mode, so the table renders at the
+                same visual tone but without depending on whatever
+                sits behind the card.
+                  light  top #f1e7d4   rim/legs #d9caac
+                  dark   top #9d9484   rim/legs #9a8b70 */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#f1e7d4] shadow-sm ring-1 ring-black/5 dark:bg-[#9d9484]">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
