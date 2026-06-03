@@ -463,8 +463,8 @@ function GroupVisual({ count }: { count: number }) {
       <svg width="0" height="0" aria-hidden className="absolute">
         <defs>
           <filter id="kvitt-wood-grain" x="-10%" y="-10%" width="120%" height="120%">
-            <feTurbulence type="turbulence" baseFrequency="0.022 0.55" numOctaves="2" seed="7" />
-            <feDisplacementMap in="SourceGraphic" scale="14" />
+            <feTurbulence type="turbulence" baseFrequency="0.018 0.38" numOctaves="1" seed="7" />
+            <feDisplacementMap in="SourceGraphic" scale="11" />
           </filter>
         </defs>
       </svg>
@@ -549,7 +549,7 @@ function GroupVisual({ count }: { count: number }) {
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
-                    "repeating-linear-gradient(0deg, transparent 0 9px, var(--table-grain) 9px 10.25px)",
+                    "repeating-linear-gradient(0deg, transparent 0 15px, var(--table-grain) 15px 17px)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
@@ -595,7 +595,7 @@ function GroupVisual({ count }: { count: number }) {
             // standing out as a coloured patch — the only thing
             // that defines the silhouette now is the thin ring +
             // the muted person icon. "Subtle but not see-through."
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-white text-gray-400 ring-1 ring-gray-400 dark:bg-[#7a7a8a] dark:text-gray-500 dark:ring-gray-500"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-white text-gray-500 ring-[1.5px] ring-gray-500 dark:bg-[#7a7a8a] dark:text-gray-300 dark:ring-gray-300"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
