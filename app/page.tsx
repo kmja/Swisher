@@ -609,7 +609,7 @@ function GroupVisual({ count }: { count: number }) {
             // and the icon swings to the opposite end of the
             // gray ramp from the fill so it stays clearly legible
             // on either chip colour.
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#f2f2f5] text-gray-600 ring-1 ring-gray-300 dark:bg-[#787888] dark:text-gray-200 dark:ring-[#5a5a64]"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#f6f6f8] text-gray-600 ring-1 ring-gray-300 dark:bg-[#6c6c78] dark:text-gray-200 dark:ring-[#555560]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
@@ -2806,7 +2806,7 @@ export default function Page() {
                         )}
                       </div>
                       {rep.shared && !rep.isTip && (
-                        <span className="shrink-0 pt-2.5 text-[11px] text-gray-400">{t.perShareUnit}</span>
+                        <span className="shrink-0 pt-2 text-base text-gray-400">{t.perShareUnit}</span>
                       )}
                     </div>
                     {!rep.isTip && (

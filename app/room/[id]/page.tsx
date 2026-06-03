@@ -1151,7 +1151,7 @@ export default function RoomPage() {
                 />
               </div>
               {editDraft.shared && (
-                <span className="shrink-0 pt-2.5 text-[11px] text-gray-400">{tx.perShareUnit}</span>
+                <span className="shrink-0 pt-2 text-base text-gray-400">{tx.perShareUnit}</span>
               )}
             </div>
             <div className="mt-2 text-sm text-gray-500">
