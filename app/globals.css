@@ -22,10 +22,12 @@
   --color-surface-muted: #f3f4f6;
   --color-surface-2: #fafafa;
   /* Wood-grain ring colour painted on the round-table top via a
-     repeating-radial-gradient. Warm brown so the rings read as
-     wood rather than pencil; dark mode flips to a soft white
-     because the dark surface needs light strokes to be visible. */
-  --table-grain: rgba(110, 70, 40, 0.18);
+     repeating-linear-gradient + SVG displacement filter. Neutral
+     gray so the grain pattern matches the rest of the gray pile
+     instead of standing out as the only chromatic surface; dark
+     mode flips to a soft white because the dark surface needs
+     light strokes to be visible. */
+  --table-grain: rgba(40, 40, 50, 0.16);
 }
 
 html {
