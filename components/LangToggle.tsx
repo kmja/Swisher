@@ -21,7 +21,7 @@ export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (
           className={`px-3 py-2 ${
             lang === l
               ? "bg-swish text-black"
-              : "text-gray-500 ring-1 ring-inset ring-gray-200 active:bg-gray-100"
+              : "text-gray-500 ring-2 ring-inset ring-gray-300 active:bg-gray-100"
           }`}
         >
           {l.toUpperCase()}
