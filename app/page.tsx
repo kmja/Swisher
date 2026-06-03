@@ -536,32 +536,32 @@ function GroupVisual({ count }: { count: number }) {
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop. SIX thin lines spread
-                  across the table — three in the top half, three
-                  in the bottom — with a clean band running through
-                  the middle 20 % radius (vertical 40-60 %) where
-                  the count number sits. Spaced ~14 % apart inside
-                  each half so they read as occasional rings, not
-                  clusters. SVG turbulence below still bends each
-                  one into a soft curve. */}
+              {/* Wood-grain on the tabletop — SIX short stripes that
+                  alternate between coming in from the left edge and
+                  the right edge, each reaching 35-55 % across the
+                  surface. No line spans the whole table, so the
+                  pattern reads as the partial growth rings you'd
+                  see in a real slab cut off-centre. Y positions
+                  still skip the middle 20 % radius where the count
+                  number sits. Each line is its own background-image
+                  (horizontal linear-gradient) sized to a 2 px
+                  band and positioned vertically with background-
+                  position; the SVG turbulence filter at the
+                  bottom still bends each one into a soft curve. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
-                  backgroundImage:
-                    "linear-gradient(180deg," +
-                    "transparent 0 8%," +
-                    "var(--table-grain) 8% 9.5%," +
-                    "transparent 9.5% 22%," +
-                    "var(--table-grain) 22% 23.5%," +
-                    "transparent 23.5% 36%," +
-                    "var(--table-grain) 36% 37.5%," +
-                    "transparent 37.5% 64%," +
-                    "var(--table-grain) 64% 65.5%," +
-                    "transparent 65.5% 78%," +
-                    "var(--table-grain) 78% 79.5%," +
-                    "transparent 79.5% 92%," +
-                    "var(--table-grain) 92% 93.5%," +
-                    "transparent 93.5% 100%)",
+                  backgroundImage: [
+                    "linear-gradient(90deg, var(--table-grain) 0 47%, transparent 51% 100%)",
+                    "linear-gradient(90deg, transparent 0 60%, var(--table-grain) 64% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 39%, transparent 43% 100%)",
+                    "linear-gradient(90deg, transparent 0 41%, var(--table-grain) 45% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 31%, transparent 35% 100%)",
+                    "linear-gradient(90deg, transparent 0 49%, var(--table-grain) 53% 100%)",
+                  ].join(", "),
+                  backgroundSize: "100% 2px, 100% 2px, 100% 2px, 100% 2px, 100% 2px, 100% 2px",
+                  backgroundPosition: "0 10%, 0 23%, 0 36%, 0 64%, 0 77%, 0 90%",
+                  backgroundRepeat: "no-repeat",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
