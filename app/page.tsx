@@ -79,24 +79,6 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // 200-px container; smaller and ten of them at a packed table would
 // rattle around with too much air between them.
 const CHIP_SIZES = [40, 34, 42, 36, 38, 34, 40, 42, 36, 40];
-// Neutral-gray pile — a slight cool tint so the chips don't clash
-// with the swish pink elsewhere on the page, varied by lightness
-// (no fixed pattern; just hand-shuffled) so adjacent chips don't
-// look like duplicates. Dark mode applies brightness-90 on top to
-// drop the pile further into the surface.
-const CHIP_TINTS = [
-  "#b9b9c3",
-  "#cdcdd5",
-  "#b1b1bd",
-  "#c5c5cf",
-  "#b5b5c0",
-  "#d0d0d8",
-  "#b7b7c1",
-  "#c8c8d1",
-  "#bdbdc8",
-  "#c2c2cc",
-];
-const CHIP_LIFTS = [2, -6, 5, -2, 8, -4, 0, 6, -9, 3];
 const CHIP_ROTATIONS = [-5, 7, -1, 4, 2, -8, 6, -3, 1, -6];
 // Coprime stride through 0–9 so each slot's depth looks random
 // without two chips ever sharing a layer — keeps the leftmost chip
@@ -252,8 +234,6 @@ function chipLook(addIndex: number) {
   const i = addIndex - 1;
   return {
     size: CHIP_SIZES[i % CHIP_SIZES.length],
-    tint: CHIP_TINTS[i % CHIP_TINTS.length],
-    lift: CHIP_LIFTS[i % CHIP_LIFTS.length],
     rot: CHIP_ROTATIONS[i % CHIP_ROTATIONS.length],
     z: CHIP_Z_ORDER[i % CHIP_Z_ORDER.length],
   };
@@ -609,14 +589,17 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-gray-600 ring-2 ring-gray-400 dark:brightness-90 dark:ring-gray-300"
+            // Chip fill is opaque + matches the tabletop colour
+            // (white in light, the dark mid-gray in dark), so the
+            // chip occludes the wood grain underneath without
+            // standing out as a coloured patch — the only thing
+            // that defines the silhouette now is the thin ring +
+            // the muted person icon. "Subtle but not see-through."
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-white text-gray-400 ring-1 ring-gray-400 dark:bg-[#7a7a8a] dark:text-gray-500 dark:ring-gray-500"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
               transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) rotate(${look.rot}deg)`,
-              // Tint at ~33 % alpha so the chip's fill recedes and
-              // the gray ring + person icon do the visual work.
-              background: `${look.tint}55`,
               zIndex: behind ? look.z : 30 + look.z,
             }}
           >
