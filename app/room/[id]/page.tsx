@@ -6,7 +6,7 @@ import QrCard from "@/components/QrCard";
 import SwishIcon from "@/components/SwishIcon";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
-import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/categories";
+import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
@@ -2036,22 +2036,53 @@ export default function RoomPage() {
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
-        // What I've claimed, aggregated by description so "3 × Bryggkaffe"
-        // reads as one cart row.
-        const cart: { description: string; count: number; oreEach: number; shared: boolean }[] = [];
-        const cartMap = new Map<string, { description: string; count: number; oreEach: number; shared: boolean }>();
+        // Cart contents — what I'm on the hook for. Split into
+        // "category sections" mirroring the main receipt layout (so
+        // the cart reads as a condensed copy of the real bill) and a
+        // separate fully-shared pile that sits collapsed at the bottom.
+        // Identical copies still aggregate so "3 × Bryggkaffe" is one
+        // line with a counter.
+        type CartLine = {
+          description: string;
+          count: number;
+          oreEach: number;
+          emoji?: string;
+          rawCategory?: string;
+          category: Category;
+        };
+        const mineMap = new Map<string, CartLine>();
+        const sharedMap = new Map<string, CartLine>();
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
           const oreEach = it.shared
             ? Math.floor(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize))
             : Math.floor(it.priceOre / Math.max(1, it.claimedBy.length));
-          const k = `${it.description}|${oreEach}|${it.shared ? 1 : 0}`;
-          const ex = cartMap.get(k);
+          const isShared = isFullyShared(it, groupSize);
+          const k = `${it.description}|${oreEach}|${isShared ? 1 : 0}`;
+          const map = isShared ? sharedMap : mineMap;
+          const ex = map.get(k);
           if (ex) ex.count++;
-          else cartMap.set(k, { description: it.description, count: 1, oreEach, shared: !!it.shared });
+          else
+            map.set(k, {
+              description: it.description,
+              count: 1,
+              oreEach,
+              emoji: it.emoji,
+              rawCategory: it.category,
+              category: categoryFor(it.description, it.category),
+            });
         }
-        for (const v of cartMap.values()) cart.push(v);
-        cart.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
+        const minesByCategory: Partial<Record<Category, CartLine[]>> = {};
+        for (const line of mineMap.values()) {
+          (minesByCategory[line.category] ??= []).push(line);
+        }
+        for (const cat of CATEGORY_ORDER) {
+          minesByCategory[cat]?.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
+        }
+        const sharedArr = Array.from(sharedMap.values()).sort(
+          (a, b) => b.oreEach * b.count - a.oreEach * a.count,
+        );
+        const sharedSubtotal = sharedArr.reduce((acc, l) => acc + l.oreEach * l.count, 0);
         // Split the cart count into "items I picked for myself" vs
         // "items the table is sharing that I'm in on". The tip
         // travels separately as state.tipOre — it never appears in
@@ -2092,26 +2123,85 @@ export default function RoomPage() {
         };
         return (
           <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 text-white shadow-lg backdrop-blur">
-            {cartOpen && (
-              <div className="max-h-[42vh] overflow-y-auto border-b border-white/10 px-4 py-3 text-sm">
-                {cart.length === 0 ? (
-                  <p className="py-2 text-center text-white/60">{t.cartEmpty}</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {cart.map((g, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <span className="w-6 shrink-0 text-right text-white/60 tabular-nums">{g.count}×</span>
-                        <span className="min-w-0 flex-1 truncate">
-                          {g.description}
-                          {g.shared && <span className="ml-1 text-xs text-white/40">· {tx.sharedToggle.toLowerCase()}</span>}
+            {/* Cart expansion uses a grid-template-rows trick to
+                animate height from 0 to auto. The outer grid switches
+                grid-rows-[0fr] ↔ grid-rows-[1fr]; the inner scroll
+                container provides max-height + overflow so the list
+                still scrolls when there are more items than fit. */}
+            <div
+              aria-hidden={!cartOpen}
+              className={`grid overflow-hidden border-white/10 transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                cartOpen ? "grid-rows-[1fr] border-b opacity-100" : "grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="min-h-0">
+                <div className="max-h-[42vh] space-y-3 overflow-y-auto px-4 py-3 text-sm">
+                  {mineCount === 0 && sharedArr.length === 0 && (
+                    <p className="py-2 text-center text-white/60">{t.cartEmpty}</p>
+                  )}
+                  {/* Per-category sections, condensed copy of the main
+                      receipt's category groupings. */}
+                  {CATEGORY_ORDER.map((cat) => {
+                    const items = minesByCategory[cat];
+                    if (!items || items.length === 0) return null;
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                          <span aria-hidden className="text-base leading-none">{CATEGORY_EMOJI[cat]}</span>
+                          <span>{CATEGORY_LABEL[lang][cat]}</span>
+                        </div>
+                        <ul className="space-y-1">
+                          {items.map((line, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <span aria-hidden className="inline-flex w-7 shrink-0 items-center justify-center text-lg leading-none">
+                                <ItemEmoji description={line.description} hint={line.rawCategory} modelEmoji={line.emoji} />
+                              </span>
+                              <span className="min-w-0 flex-1 truncate text-white/90">
+                                {line.count > 1 && <span className="text-white/55 tabular-nums">{line.count}× </span>}
+                                {line.description}
+                              </span>
+                              <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                  {/* "Delas av alla" — fully-shared pile collapsed by
+                      default, with the same total + chevron rotation
+                      pattern the main receipt's shared section uses. */}
+                  {sharedArr.length > 0 && (
+                    <details className="group border-t border-white/10 pt-2">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-white/55 marker:hidden [&::-webkit-details-marker]:hidden">
+                        <span className="flex items-center gap-1.5">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 ease-out group-open:rotate-90" aria-hidden>
+                            <path d="M9 6 L15 12 L9 18" />
+                          </svg>
+                          <span aria-hidden className="text-base leading-none">🤝</span>
+                          <span>{t.sharedSection}</span>
+                          <span className="text-white/40">({sharedArr.length})</span>
                         </span>
-                        <span className="shrink-0 tabular-nums text-white/85">{formatOre(g.count * g.oreEach)} SEK</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        <span className="tabular-nums text-white/75 normal-case">{formatOre(sharedSubtotal)}</span>
+                      </summary>
+                      <ul className="mt-1.5 space-y-1">
+                        {sharedArr.map((line, i) => (
+                          <li key={i} className="flex items-center gap-2">
+                            <span aria-hidden className="inline-flex w-7 shrink-0 items-center justify-center text-lg leading-none">
+                              <ItemEmoji description={line.description} hint={line.rawCategory} modelEmoji={line.emoji} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-white/90">
+                              {line.count > 1 && <span className="text-white/55 tabular-nums">{line.count}× </span>}
+                              {line.description}
+                            </span>
+                            <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
             <button
               type="button"
               onClick={() => setCartOpen((v) => !v)}
