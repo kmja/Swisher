@@ -79,22 +79,22 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // 200-px container; smaller and ten of them at a packed table would
 // rattle around with too much air between them.
 const CHIP_SIZES = [40, 34, 42, 36, 38, 34, 40, 42, 36, 40];
-// Dusty-rose / mauve palette — pulled down from the pale pinks the
-// chips used to wear because those washed out against the white
-// table + card and read as "pastel sticker". Lower lightness and
-// lower saturation gives the pile a grounded, painterly look in
-// light mode; dark mode further softens via saturate-50 brightness-90.
+// Neutral-gray pile — a slight cool tint so the chips don't clash
+// with the swish pink elsewhere on the page, varied by lightness
+// (no fixed pattern; just hand-shuffled) so adjacent chips don't
+// look like duplicates. Dark mode applies brightness-90 on top to
+// drop the pile further into the surface.
 const CHIP_TINTS = [
-  "#c89aa9",
-  "#d4a8b6",
-  "#bd8ea0",
-  "#cca0ae",
-  "#c193a4",
-  "#d2a6b3",
-  "#bf90a1",
-  "#cba0ae",
-  "#d6abb7",
-  "#c69bab",
+  "#b9b9c3",
+  "#cdcdd5",
+  "#b1b1bd",
+  "#c5c5cf",
+  "#b5b5c0",
+  "#d0d0d8",
+  "#b7b7c1",
+  "#c8c8d1",
+  "#bdbdc8",
+  "#c2c2cc",
 ];
 const CHIP_LIFTS = [2, -6, 5, -2, 8, -4, 0, 6, -9, 3];
 const CHIP_ROTATIONS = [-5, 7, -1, 4, 2, -8, 6, -3, 1, -6];
@@ -602,7 +602,7 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-swish-dark dark:saturate-50 dark:brightness-90"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-gray-600 dark:brightness-90"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
