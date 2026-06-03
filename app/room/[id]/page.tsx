@@ -2036,12 +2036,15 @@ export default function RoomPage() {
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
-        // Cart contents — what I'm on the hook for. Split into
-        // "category sections" mirroring the main receipt layout (so
-        // the cart reads as a condensed copy of the real bill) and a
-        // separate fully-shared pile that sits collapsed at the bottom.
-        // Identical copies still aggregate so "3 × Bryggkaffe" is one
-        // line with a counter.
+        // Cart contents — what I'm on the hook for. Lines are
+        // bucketed by category (starter / mains / drinks / dessert /
+        // other) and rendered as a condensed mirror of the main
+        // receipt; shared items sit alongside the guest's own picks
+        // under their natural category with a small 🤝 marker, so
+        // the cart reads as one coherent list grouped by course
+        // rather than splitting "mine" and "shared" into separate
+        // piles. Identical copies still aggregate so "3 × Bryggkaffe"
+        // is one line with a counter.
         type CartLine = {
           description: string;
           count: number;
@@ -2049,9 +2052,9 @@ export default function RoomPage() {
           emoji?: string;
           rawCategory?: string;
           category: Category;
+          isShared: boolean;
         };
-        const mineMap = new Map<string, CartLine>();
-        const sharedMap = new Map<string, CartLine>();
+        const lineMap = new Map<string, CartLine>();
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
           const oreEach = it.shared
@@ -2059,30 +2062,33 @@ export default function RoomPage() {
             : Math.floor(it.priceOre / Math.max(1, it.claimedBy.length));
           const isShared = isFullyShared(it, groupSize);
           const k = `${it.description}|${oreEach}|${isShared ? 1 : 0}`;
-          const map = isShared ? sharedMap : mineMap;
-          const ex = map.get(k);
+          const ex = lineMap.get(k);
           if (ex) ex.count++;
           else
-            map.set(k, {
+            lineMap.set(k, {
               description: it.description,
               count: 1,
               oreEach,
               emoji: it.emoji,
               rawCategory: it.category,
               category: categoryFor(it.description, it.category),
+              isShared,
             });
         }
-        const minesByCategory: Partial<Record<Category, CartLine[]>> = {};
-        for (const line of mineMap.values()) {
-          (minesByCategory[line.category] ??= []).push(line);
+        const linesByCategory: Partial<Record<Category, CartLine[]>> = {};
+        for (const line of lineMap.values()) {
+          (linesByCategory[line.category] ??= []).push(line);
         }
+        // Within each category section, list the guest's own picks
+        // first and the shared rows after — gives the column a clear
+        // top-to-bottom "yours then shared" rhythm even without an
+        // explicit section divider.
         for (const cat of CATEGORY_ORDER) {
-          minesByCategory[cat]?.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
+          linesByCategory[cat]?.sort((a, b) => {
+            if (a.isShared !== b.isShared) return a.isShared ? 1 : -1;
+            return b.oreEach * b.count - a.oreEach * a.count;
+          });
         }
-        const sharedArr = Array.from(sharedMap.values()).sort(
-          (a, b) => b.oreEach * b.count - a.oreEach * a.count,
-        );
-        const sharedSubtotal = sharedArr.reduce((acc, l) => acc + l.oreEach * l.count, 0);
         // Split the cart count into "items I picked for myself" vs
         // "items the table is sharing that I'm in on". The tip
         // travels separately as state.tipOre — it never appears in
@@ -2136,13 +2142,14 @@ export default function RoomPage() {
             >
               <div className="min-h-0">
                 <div className="max-h-[42vh] space-y-3 overflow-y-auto px-4 py-3 text-sm">
-                  {mineCount === 0 && sharedArr.length === 0 && (
+                  {Object.keys(linesByCategory).length === 0 && (
                     <p className="py-2 text-center text-white/60">{t.cartEmpty}</p>
                   )}
-                  {/* Per-category sections, condensed copy of the main
-                      receipt's category groupings. */}
+                  {/* One section per category that has anything in it.
+                      Shared rows live INSIDE the category, sorted after
+                      the guest's own picks and marked with a small 🤝. */}
                   {CATEGORY_ORDER.map((cat) => {
-                    const items = minesByCategory[cat];
+                    const items = linesByCategory[cat];
                     if (!items || items.length === 0) return null;
                     return (
                       <div key={cat} className="space-y-1">
@@ -2159,6 +2166,9 @@ export default function RoomPage() {
                               <span className="min-w-0 flex-1 truncate text-white/90">
                                 {line.count > 1 && <span className="text-white/55 tabular-nums">{line.count}× </span>}
                                 {line.description}
+                                {line.isShared && (
+                                  <span className="ml-1.5 text-[11px] text-white/45" aria-label={tx.sharedToggle}>🤝</span>
+                                )}
                               </span>
                               <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
                             </li>
@@ -2167,66 +2177,44 @@ export default function RoomPage() {
                       </div>
                     );
                   })}
-                  {/* "Delas av alla" — fully-shared pile collapsed by
-                      default, with the same total + chevron rotation
-                      pattern the main receipt's shared section uses. */}
-                  {sharedArr.length > 0 && (
-                    <details className="group border-t border-white/10 pt-2">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-white/55 marker:hidden [&::-webkit-details-marker]:hidden">
-                        <span className="flex items-center gap-1.5">
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 ease-out group-open:rotate-90" aria-hidden>
-                            <path d="M9 6 L15 12 L9 18" />
-                          </svg>
-                          <span aria-hidden className="text-base leading-none">🤝</span>
-                          <span>{t.sharedSection}</span>
-                          <span className="text-white/40">({sharedArr.length})</span>
-                        </span>
-                        <span className="tabular-nums text-white/75 normal-case">{formatOre(sharedSubtotal)}</span>
-                      </summary>
-                      <ul className="mt-1.5 space-y-1">
-                        {sharedArr.map((line, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <span aria-hidden className="inline-flex w-7 shrink-0 items-center justify-center text-lg leading-none">
-                              <ItemEmoji description={line.description} hint={line.rawCategory} modelEmoji={line.emoji} />
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-white/90">
-                              {line.count > 1 && <span className="text-white/55 tabular-nums">{line.count}× </span>}
-                              {line.description}
-                            </span>
-                            <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
                 </div>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setCartOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left active:bg-white/5"
+              className="flex w-full items-center justify-between gap-3 px-5 pt-3 pb-2 text-left active:bg-white/5"
             >
-              <span className="flex min-w-0 flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70">{t.yourTotal}</span>
-                <span className="truncate text-xs text-white/80">
-                  {mineCount === 0 && sharedCount === 0
-                    ? t.cartEmpty
-                    : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
-                        .filter(Boolean)
-                        .join(" · ")}
+              <span className="min-w-0 flex-1 truncate text-sm text-white/80">
+                {mineCount === 0 && sharedCount === 0
+                  ? t.cartEmpty
+                  : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+              </span>
+              {/* Right side stacks the "DIN ANDEL" label ABOVE the
+                  amount, with the cart chevron tucked next to the
+                  amount on the bottom row. Keeps the eye flowing
+                  small-caption → big number → control. */}
+              <span className="flex shrink-0 flex-col items-end leading-tight">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{t.yourTotal}</span>
+                <span className="flex items-center gap-1">
+                  <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
+                  <span className={`text-xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
                 </span>
               </span>
-              <span className="flex shrink-0 items-center gap-2">
-                <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
-                <span className={`text-2xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
-              </span>
             </button>
+            {/* Primary action — a rounded full-width button that
+                sits INSIDE the dark plate, with a padded gutter
+                around it instead of bleeding to the footer edges.
+                Reads as a regular CTA inside the share section
+                rather than a separate bottom bar. */}
+            <div className="px-4 pb-4 pt-1">
             {canSwish && swishUri ? (
               <a
                 href={swishUri}
                 onClick={payAndDone}
-                className={`flex items-center justify-center gap-3 border-t border-white/10 px-5 py-4 text-base font-semibold ${
+                className={`flex items-center justify-center gap-3 rounded-2xl px-5 py-4 text-base font-semibold ${
                   iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-swish text-white active:bg-swish-dark"
                 }`}
               >
@@ -2243,13 +2231,14 @@ export default function RoomPage() {
               <button
                 type="button"
                 onClick={toggleDone}
-                className={`w-full border-t border-white/10 px-5 py-4 text-base font-semibold ${
-                  iAmDone ? "bg-emerald-500/20 text-emerald-200" : "text-white/90 active:bg-white/10"
+                className={`w-full rounded-2xl px-5 py-4 text-base font-semibold ${
+                  iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/90 active:bg-white/15"
                 }`}
               >
                 {iAmDone ? t.doneOn : t.imDone}
               </button>
             )}
+            </div>
           </div>
         );
       })()}
