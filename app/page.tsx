@@ -464,7 +464,7 @@ function GroupVisual({ count }: { count: number }) {
         <defs>
           <filter id="kvitt-wood-grain" x="-10%" y="-10%" width="120%" height="120%">
             <feTurbulence type="turbulence" baseFrequency="0.018 0.38" numOctaves="1" seed="7" />
-            <feDisplacementMap in="SourceGraphic" scale="11" />
+            <feDisplacementMap in="SourceGraphic" scale="6" />
           </filter>
         </defs>
       </svg>
@@ -536,31 +536,38 @@ function GroupVisual({ count }: { count: number }) {
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop — SIX short stripes that
-                  alternate between coming in from the left edge and
-                  the right edge, each reaching 35-55 % across the
-                  surface. No line spans the whole table, so the
-                  pattern reads as the partial growth rings you'd
-                  see in a real slab cut off-centre. Y positions
-                  still skip the middle 20 % radius where the count
-                  number sits. Each line is its own background-image
-                  (horizontal linear-gradient) sized to a 2 px
-                  band and positioned vertically with background-
-                  position; the SVG turbulence filter at the
-                  bottom still bends each one into a soft curve. */}
+              {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
+                  alternating from the left and right edges, each
+                  reaching 34-54 % across. Five sit in the top half,
+                  five in the bottom; nothing crosses the 40-60 %
+                  middle band where the count number lives. Each
+                  stripe is its own horizontal linear-gradient
+                  background-image, sized to a 1 px band and placed
+                  vertically with background-position. The SVG
+                  turbulence filter is dialed down (scale 11 → 6)
+                  so the warp reads as a soft curl rather than a
+                  smear, keeping the lines crisp and graphic. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage: [
-                    "linear-gradient(90deg, var(--table-grain) 0 47%, transparent 51% 100%)",
-                    "linear-gradient(90deg, transparent 0 60%, var(--table-grain) 64% 100%)",
-                    "linear-gradient(90deg, var(--table-grain) 0 39%, transparent 43% 100%)",
-                    "linear-gradient(90deg, transparent 0 41%, var(--table-grain) 45% 100%)",
-                    "linear-gradient(90deg, var(--table-grain) 0 31%, transparent 35% 100%)",
-                    "linear-gradient(90deg, transparent 0 49%, var(--table-grain) 53% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 50%, transparent 53% 100%)",
+                    "linear-gradient(90deg, transparent 0 63%, var(--table-grain) 66% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 42%, transparent 45% 100%)",
+                    "linear-gradient(90deg, transparent 0 43%, var(--table-grain) 46% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 35%, transparent 38% 100%)",
+                    "linear-gradient(90deg, transparent 0 56%, var(--table-grain) 59% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 48%, transparent 51% 100%)",
+                    "linear-gradient(90deg, transparent 0 63%, var(--table-grain) 66% 100%)",
+                    "linear-gradient(90deg, var(--table-grain) 0 43%, transparent 46% 100%)",
+                    "linear-gradient(90deg, transparent 0 43%, var(--table-grain) 46% 100%)",
                   ].join(", "),
-                  backgroundSize: "100% 2px, 100% 2px, 100% 2px, 100% 2px, 100% 2px, 100% 2px",
-                  backgroundPosition: "0 10%, 0 23%, 0 36%, 0 64%, 0 77%, 0 90%",
+                  backgroundSize:
+                    "100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px," +
+                    "100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px",
+                  backgroundPosition:
+                    "0 5%, 0 13%, 0 21%, 0 29%, 0 37%," +
+                    "0 63%, 0 71%, 0 79%, 0 87%, 0 95%",
                   backgroundRepeat: "no-repeat",
                   filter: "url(#kvitt-wood-grain)",
                 }}
