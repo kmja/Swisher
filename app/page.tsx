@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#ddd0b0] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6859]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#c9b389]/70 shadow-sm ring-1 ring-black/5"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,15 +532,18 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#ddd0b0] dark:bg-[#6e6859]"
+              className="absolute inset-0 rounded-[50%] bg-[#c9b389]/70"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface wears a clear blonde-wood cast now —
-                #f3ecdb light, #7d7665 dark — so the grain lines
-                sit on actual wood instead of warm-tinted paper.
-                Still on the muted side so it doesn't compete with
-                the swish pink elsewhere on the page. */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#f3ecdb] shadow-sm ring-1 ring-black/5 dark:bg-[#7d7665]">
+            {/* Top + rim + legs wear the FULL oak palette (top
+                #e8d8b8 / rim #c9b389) but with low alpha — 60 % on
+                the top, 70 % on the rim/legs. The card surface
+                underneath blends through, muting the saturation
+                in light mode (pale oak on white) and darkening it
+                naturally in dark mode (warm tan on the dim
+                surface). One color set, two modes, no separate
+                dark: overrides. */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#e8d8b8]/60 shadow-sm ring-1 ring-black/5">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
