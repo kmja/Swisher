@@ -536,43 +536,32 @@ function GroupVisual({ count }: { count: number }) {
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop. FOUR tight little
-                  clusters of thin lines — three stripes each,
-                  spaced 3-4 % apart inside a cluster — laid out
-                  along the top and bottom halves of the table.
-                  Empty band at 32-68 % keeps the count number
-                  on a clean patch of wood. SVG turbulence below
-                  bends every line into a soft curve. */}
+              {/* Wood-grain on the tabletop. SIX thin lines spread
+                  across the table — three in the top half, three
+                  in the bottom — with a clean band running through
+                  the middle 20 % radius (vertical 40-60 %) where
+                  the count number sits. Spaced ~14 % apart inside
+                  each half so they read as occasional rings, not
+                  clusters. SVG turbulence below still bends each
+                  one into a soft curve. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
                     "linear-gradient(180deg," +
-                    "transparent 0 4%," +
-                    "var(--table-grain) 4% 5%," +
-                    "transparent 5% 7%," +
-                    "var(--table-grain) 7% 7.8%," +
-                    "transparent 7.8% 11%," +
-                    "var(--table-grain) 11% 12.2%," +
-                    "transparent 12.2% 22%," +
-                    "var(--table-grain) 22% 22.9%," +
-                    "transparent 22.9% 26%," +
-                    "var(--table-grain) 26% 27%," +
-                    "transparent 27% 30%," +
-                    "var(--table-grain) 30% 31%," +
-                    "transparent 31% 70%," +
-                    "var(--table-grain) 70% 71%," +
-                    "transparent 71% 74%," +
-                    "var(--table-grain) 74% 75%," +
-                    "transparent 75% 78%," +
-                    "var(--table-grain) 78% 79.2%," +
-                    "transparent 79.2% 89%," +
-                    "var(--table-grain) 89% 89.9%," +
-                    "transparent 89.9% 93%," +
-                    "var(--table-grain) 93% 94%," +
-                    "transparent 94% 96%," +
-                    "var(--table-grain) 96% 96.9%," +
-                    "transparent 96.9% 100%)",
+                    "transparent 0 8%," +
+                    "var(--table-grain) 8% 9.5%," +
+                    "transparent 9.5% 22%," +
+                    "var(--table-grain) 22% 23.5%," +
+                    "transparent 23.5% 36%," +
+                    "var(--table-grain) 36% 37.5%," +
+                    "transparent 37.5% 64%," +
+                    "var(--table-grain) 64% 65.5%," +
+                    "transparent 65.5% 78%," +
+                    "var(--table-grain) 78% 79.5%," +
+                    "transparent 79.5% 92%," +
+                    "var(--table-grain) 92% 93.5%," +
+                    "transparent 93.5% 100%)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
