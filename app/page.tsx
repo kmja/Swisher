@@ -2773,7 +2773,7 @@ export default function Page() {
                 return (
                 <div key={rep.id} data-row-id={rep.id} className="flex items-start gap-2">
                   <div
-                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >
                     {/* Top row uses items-start (not items-center) so a
                         multi-line description, the emoji and the price
@@ -2812,8 +2812,15 @@ export default function Page() {
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
                       </div>
-                      {rep.shared && !rep.isTip && (
-                        <span className="shrink-0 pt-2 text-base text-gray-400">{t.perShareUnit}</span>
+                      {!rep.isTip && (
+                        <span
+                          aria-hidden={!rep.shared}
+                          className={`shrink-0 self-start overflow-hidden whitespace-nowrap pt-2 text-base text-gray-400 transition-[max-width,opacity,padding] duration-220 ease-out ${
+                            rep.shared ? "max-w-[80px] pl-1 opacity-100" : "max-w-0 pl-0 opacity-0"
+                          }`}
+                        >
+                          {t.perShareUnit}
+                        </span>
                       )}
                     </div>
                     {!rep.isTip && (

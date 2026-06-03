@@ -1122,7 +1122,7 @@ export default function RoomPage() {
       return (
         <div ref={playEditOpen} key={it.id} data-item-id={it.id} className="origin-top space-y-2">
           <div
-            className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 ${
+            className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${
               editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"
             }`}
           >
@@ -1150,9 +1150,14 @@ export default function RoomPage() {
                   className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                 />
               </div>
-              {editDraft.shared && (
-                <span className="shrink-0 pt-2 text-base text-gray-400">{tx.perShareUnit}</span>
-              )}
+              <span
+                aria-hidden={!editDraft.shared}
+                className={`shrink-0 self-start overflow-hidden whitespace-nowrap pt-2 text-base text-gray-400 transition-[max-width,opacity,padding] duration-220 ease-out ${
+                  editDraft.shared ? "max-w-[80px] pl-1 opacity-100" : "max-w-0 pl-0 opacity-0"
+                }`}
+              >
+                {tx.perShareUnit}
+              </span>
             </div>
             <div className="mt-2 text-sm text-gray-500">
               {/* DELAT toggle on the left, share stepper on the
