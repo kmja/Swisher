@@ -278,7 +278,14 @@ function buildInitialChips(n: number): ChipSlot[] {
 // (size, tint, rotation, z) is still pinned to its addIndex, so a
 // chip never changes appearance once it's seated; only its angle
 // around the ring updates as the table grows or shrinks.
-const CIRCLE_SIZE = 200;
+// Container for the round-table widget. Width stays at 200 because
+// the side chips' centres are at x = ±65 and the largest chip's
+// outer ring lands at x = ±88 — anything narrower and we'd clip.
+// Height drops to 170 because the orbit's Y-radius is only 50,
+// leaving way more empty headroom above + below the table than the
+// component needed. ~12 px clearance to topmost / bottommost chip.
+const CIRCLE_WIDTH = 200;
+const CIRCLE_HEIGHT = 170;
 // The table is squashed into a 3 : 2 ellipse (120 × 80), so the chip
 // orbit is squashed to match — otherwise the top / bottom chips
 // floated way off the table while the side chips sat right on it.
@@ -461,7 +468,7 @@ function GroupVisual({ count }: { count: number }) {
       aria-hidden
       ref={clusterRef}
       className="relative isolate"
-      style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
+      style={{ width: CIRCLE_WIDTH, height: CIRCLE_HEIGHT }}
     >
       {/* Inline SVG filter for the tabletop wood grain. feTurbulence
           generates a 2-D Perlin-noise map; feDisplacementMap then
