@@ -523,17 +523,19 @@ function GroupVisual({ count }: { count: number }) {
                 Sits one tone below the lit top so the rim reads as
                 the shadow side of the same piece of wood. Pushed
                 up the dark-mode value so the whole table is
-                brighter against the dark card. */}
+                brighter against the dark card.
+                Explicit `key` here AND on the top below — without
+                them, React reconciles them positionally and they
+                shift one slot each time tableLegAngles() returns
+                a different number of legs, which would remount
+                the filtered stripe div and re-key the SVG
+                turbulence pattern. With keys these stay put. */}
             <div
+              key="rim"
               className="absolute inset-0 rounded-[50%] bg-[#f0f2f6] dark:bg-[#6e6e7c]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface ellipse. Light mode keeps bg-white to
-                stay in the input-chrome family. Dark mode flips to
-                a noticeably brighter tone than --color-surface so
-                the entire table reads as a lit object floating
-                above the (still-darker) card backdrop. */}
-            <div className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
               {/* Wood-grain on the tabletop. A non-repeating
                   linear-gradient lays SEVEN stripes at hand-picked
                   irregular vertical positions — different gaps
