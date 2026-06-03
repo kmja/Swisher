@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#ede9dd] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6c68]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#ddd0b0] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6859]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,15 +532,15 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#ede9dd] dark:bg-[#6e6c68]"
+              className="absolute inset-0 rounded-[50%] bg-[#ddd0b0] dark:bg-[#6e6859]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface gets a very subtle warm cast — #faf8f2
-                light, #7b7977 dark — instead of pure white / pure
-                cool gray. Just a hint of wood that lets the gray
-                grain lines read as growth rings, without leaving
-                the app's neutral palette family. */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#faf8f2] shadow-sm ring-1 ring-black/5 dark:bg-[#7b7977]">
+            {/* Top surface wears a clear blonde-wood cast now —
+                #f3ecdb light, #7d7665 dark — so the grain lines
+                sit on actual wood instead of warm-tinted paper.
+                Still on the muted side so it doesn't compete with
+                the swish pink elsewhere on the page. */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#f3ecdb] shadow-sm ring-1 ring-black/5 dark:bg-[#7d7665]">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
