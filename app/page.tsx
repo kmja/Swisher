@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#d9caac] shadow-sm ring-1 ring-black/5 dark:bg-[#9a8b70]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#a98a55] shadow-sm ring-1 ring-black/5 dark:bg-[#4e4028]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,18 +532,14 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#d9caac] dark:bg-[#9a8b70]"
+              className="absolute inset-0 rounded-[50%] bg-[#a98a55] dark:bg-[#4e4028]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Solid equivalents of the previous oak-with-alpha
-                approach — the values are precomputed blends of
-                full oak (#e8d8b8 top / #c9b389 rim) over the card
-                surface in each mode, so the table renders at the
-                same visual tone but without depending on whatever
-                sits behind the card.
-                  light  top #f1e7d4   rim/legs #d9caac
-                  dark   top #9d9484   rim/legs #9a8b70 */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#f1e7d4] shadow-sm ring-1 ring-black/5 dark:bg-[#9d9484]">
+            {/* Solid mid-oak palette — top #d4b884 / rim #a98a55 in
+                light, deeper warm browns in dark. Heavier than the
+                previous baked-blend tones so the table reads as
+                wood at a glance instead of warm chrome. */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#d4b884] shadow-sm ring-1 ring-black/5 dark:bg-[#6a583a]">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
