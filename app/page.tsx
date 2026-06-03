@@ -534,22 +534,34 @@ function GroupVisual({ count }: { count: number }) {
                 the entire table reads as a lit object floating
                 above the (still-darker) card backdrop. */}
             <div className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop. Start with straight
-                  horizontal stripes, then bend them through an
-                  SVG Perlin-noise displacement filter (defined
-                  below) so they wave + zig-zag the way real
-                  growth rings on a thick slab of wood do. The
-                  filter is keyed off two noise frequencies: low
-                  X (slow drift sideways) + high Y (rapid up/down
-                  warp), which is what makes plank grain look
-                  like flowing parallel ribbons. Slightly bigger
-                  stripe pitch than pre-warp so the displacement
-                  doesn't smear them into mush. */}
+              {/* Wood-grain on the tabletop. A non-repeating
+                  linear-gradient lays SEVEN stripes at hand-picked
+                  irregular vertical positions — different gaps
+                  between rings, a couple of thicker bands, so the
+                  pattern reads as growth rings on a slab rather
+                  than a mechanical pinstripe. The SVG turbulence
+                  filter below then bends + parts the stripes so
+                  the whole thing looks hand-drawn. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
-                    "repeating-linear-gradient(0deg, transparent 0 15px, var(--table-grain) 15px 17px)",
+                    "linear-gradient(180deg," +
+                    "transparent 0 4%," +
+                    "var(--table-grain) 4% 6.2%," +
+                    "transparent 6.2% 13%," +
+                    "var(--table-grain) 13% 14.4%," +
+                    "transparent 14.4% 33%," +
+                    "var(--table-grain) 33% 36.5%," +
+                    "transparent 36.5% 41%," +
+                    "var(--table-grain) 41% 42.8%," +
+                    "transparent 42.8% 58%," +
+                    "var(--table-grain) 58% 59.6%," +
+                    "transparent 59.6% 76%," +
+                    "var(--table-grain) 76% 79%," +
+                    "transparent 79% 89%," +
+                    "var(--table-grain) 89% 90.4%," +
+                    "transparent 90.4% 100%)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
@@ -589,13 +601,14 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            // Chip fill is opaque + matches the tabletop colour
-            // (white in light, the dark mid-gray in dark), so the
-            // chip occludes the wood grain underneath without
-            // standing out as a coloured patch — the only thing
-            // that defines the silhouette now is the thin ring +
-            // the muted person icon. "Subtle but not see-through."
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-white text-gray-500 ring-[1.5px] ring-gray-500 dark:bg-[#7a7a8a] dark:text-gray-300 dark:ring-gray-300"
+            // Opaque fill that's a step off the tabletop — light:
+            // a faint cool gray on the white wood, dark: a step
+            // BELOW the dark table tone — so the silhouette has
+            // some presence of its own and doesn't read as "table
+            // with a hole punched in it". Ring + icon stay
+            // intentionally light so it's the fill doing the
+            // work, not the border.
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#e7e7eb] text-gray-400 ring-1 ring-gray-400 dark:bg-[#6c6c78] dark:text-gray-500 dark:ring-gray-500"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
