@@ -1149,6 +1149,9 @@ export default function RoomPage() {
                   placeholder={t.pricePh}
                   className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                 />
+                {editDraft.shared && (
+                  <span className="mt-0.5 pr-1 text-right text-[10px] uppercase tracking-wide text-gray-400">{tx.perShareUnit}</span>
+                )}
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">

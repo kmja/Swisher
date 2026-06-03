@@ -2791,6 +2791,9 @@ export default function Page() {
                         {fx && rowOre > 0 && (
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
+                        {rep.shared && !rep.isTip && (
+                          <span className="mt-0.5 pr-1 text-right text-[10px] uppercase tracking-wide text-gray-400">{t.perShareUnit}</span>
+                        )}
                       </div>
                     </div>
                     {!rep.isTip && (

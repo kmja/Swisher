@@ -153,6 +153,9 @@ export interface Strings {
   sharedSplit: (n: number, amt: string) => string;
   splitWays: string;
   maybeShared: string;
+  /** Unit caption shown to the right of the price on a shared row, to
+   *  clarify the displayed amount is per share rather than the full row total. */
+  perShareUnit: string;
 
   // flow
   splitYourself: string;
@@ -320,6 +323,7 @@ const sv: Strings = {
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} SEK/pers`,
   splitWays: "Dela på",
   maybeShared: "Delas?",
+  perShareUnit: "per del",
 
   splitYourself: "Dela upp själv i stället",
   assignManually: "Fördela på nästa steg →",
@@ -482,6 +486,7 @@ const en: Strings = {
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} SEK each`,
   splitWays: "Split",
   maybeShared: "Shared?",
+  perShareUnit: "per share",
 
   splitYourself: "Split it yourself instead",
   assignManually: "Assign on the next screen →",
