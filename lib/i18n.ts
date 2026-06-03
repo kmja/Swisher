@@ -349,7 +349,7 @@ const sv: Strings = {
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} SEK`,
-  payWithSwish: (amt) => `Betala ${amt} SEK med Swish`,
+  payWithSwish: (amt) => `Betala ${amt} SEK med`,
   qrError: "Kunde inte skapa QR-kod. Använd länken nedan.",
   qrAlt: (name) => `Swish QR-kod för ${name}`,
   qrLockedTo: (payee) => `Skanna med valfri telefon · betalningen är låst till ${payee}`,
@@ -514,7 +514,7 @@ const en: Strings = {
 
   shareTitle: (name) => `Swish – ${name}`,
   shareText: (name, amt) => `${name}: ${amt} SEK`,
-  payWithSwish: (amt) => `Pay ${amt} SEK with Swish`,
+  payWithSwish: (amt) => `Pay ${amt} SEK with`,
   qrError: "Couldn't create a QR code. Use the link below.",
   qrAlt: (name) => `Swish QR code for ${name}`,
   qrLockedTo: (payee) => `Scan with any phone · payment is locked to ${payee}`,

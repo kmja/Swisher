@@ -6,7 +6,7 @@ import { formatIban } from "@/lib/sepa";
 import { formatOre } from "@/lib/money";
 import { formatEur } from "@/lib/currency";
 import { Money } from "@/components/Money";
-import SwishIcon from "@/components/SwishIcon";
+import SwishLogo from "@/components/SwishLogo";
 import type { Strings } from "@/lib/i18n";
 
 type Props = {
@@ -126,8 +126,8 @@ export default function QrCard({
             onClick={trackSwishOpen}
             className="mt-4 flex items-center justify-center gap-2.5 rounded-xl bg-swish px-4 py-4 text-base font-bold text-white shadow-sm active:bg-swish-dark"
           >
-            <SwishIcon size={26} className="shrink-0" />
             <span>{t.payWithSwish(sekAmount)}</span>
+            <SwishLogo height={22} className="shrink-0" />
           </a>
           <p className="mt-1.5 text-center text-xs text-gray-400">{t.swishOpensApp}</p>
         </>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
-import SwishIcon from "@/components/SwishIcon";
+import SwishLogo from "@/components/SwishLogo";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from "@/lib/categories";
@@ -75,7 +75,7 @@ const R = {
     markPaid: "Markera betald",
     cartCountPicked: (n: number) => `${n} vald${n === 1 ? "" : "a"}`,
     cartCountShared: (n: number) => `${n} delad${n === 1 ? "" : "e"}`,
-    payWithSwish: "Betala med Swish",
+    payWithSwish: "Betala med",
     waitingForGuests: "Väntar på gäster…",
     nobodyOwes: "Allt klart ✓",
     newReceipt: "Nytt kvitto",
@@ -143,7 +143,7 @@ const R = {
     markPaid: "Mark paid",
     cartCountPicked: (n: number) => `${n} picked`,
     cartCountShared: (n: number) => `${n} shared`,
-    payWithSwish: "Pay with Swish",
+    payWithSwish: "Pay with",
     waitingForGuests: "Waiting for guests…",
     nobodyOwes: "All clear ✓",
     newReceipt: "New receipt",
@@ -2234,8 +2234,8 @@ export default function RoomPage() {
                   <span>{t.doneOn}</span>
                 ) : (
                   <>
-                    <SwishIcon size={28} className="shrink-0" />
                     <span>{t.payWithSwish}</span>
+                    <SwishLogo height={22} className="shrink-0" />
                   </>
                 )}
               </a>
