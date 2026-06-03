@@ -73,8 +73,9 @@ const R = {
     nothingYet: "Du har inte petat i något än.",
     paid: "Betald",
     markPaid: "Markera betald",
-    cartCount: (n: number) => `${n} rätt${n === 1 ? "" : "er"} klar${n === 1 ? "" : "a"}`,
-    payWithSwishAmt: (amt: string) => `Betala ${amt} SEK med Swish`,
+    cartCountPicked: (n: number) => `${n} vald${n === 1 ? "" : "a"}`,
+    cartCountShared: (n: number) => `${n} delad${n === 1 ? "" : "e"}`,
+    payWithSwish: "Betala med Swish",
     waitingForGuests: "Väntar på gäster…",
     nobodyOwes: "Allt klart ✓",
     newReceipt: "Nytt kvitto",
@@ -140,8 +141,9 @@ const R = {
     nothingYet: "You haven't tapped anything yet.",
     paid: "Paid",
     markPaid: "Mark paid",
-    cartCount: (n: number) => `${n} item${n === 1 ? "" : "s"} claimed`,
-    payWithSwishAmt: (amt: string) => `Pay ${amt} SEK with Swish`,
+    cartCountPicked: (n: number) => `${n} picked`,
+    cartCountShared: (n: number) => `${n} shared`,
+    payWithSwish: "Pay with Swish",
     waitingForGuests: "Waiting for guests…",
     nobodyOwes: "All clear ✓",
     newReceipt: "New receipt",
@@ -2050,7 +2052,18 @@ export default function RoomPage() {
         }
         for (const v of cartMap.values()) cart.push(v);
         cart.sort((a, b) => b.oreEach * b.count - a.oreEach * a.count);
-        const cartItemCount = cart.reduce((acc, g) => acc + g.count, 0);
+        // Split the cart count into "items I picked for myself" vs
+        // "items the table is sharing that I'm in on". The tip
+        // travels separately as state.tipOre — it never appears in
+        // state.items here — so a guest who hasn't tapped anything
+        // sees "Inget taget än" rather than a count that includes
+        // the implicit tip line.
+        const mineCount = state.items.filter(
+          (it) => !it.shared && personId !== null && it.claimedBy.includes(personId),
+        ).length;
+        const sharedCount = state.items.filter(
+          (it) => it.shared && personId !== null && it.claimedBy.includes(personId),
+        ).length;
         const canSwish = !!state.payeeNumber;
         const swishUri = canSwish
           ? buildSwishUri({
@@ -2078,7 +2091,7 @@ export default function RoomPage() {
           }
         };
         return (
-          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-ink/95 text-white shadow-lg backdrop-blur">
+          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 text-white shadow-lg backdrop-blur">
             {cartOpen && (
               <div className="max-h-[42vh] overflow-y-auto border-b border-white/10 px-4 py-3 text-sm">
                 {cart.length === 0 ? (
@@ -2105,8 +2118,14 @@ export default function RoomPage() {
               className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left active:bg-white/5"
             >
               <span className="flex min-w-0 flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">{t.yourTotal}</span>
-                <span className="truncate text-xs text-white/70">{t.cartCount(cartItemCount)}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70">{t.yourTotal}</span>
+                <span className="truncate text-xs text-white/80">
+                  {mineCount === 0 && sharedCount === 0
+                    ? t.cartEmpty
+                    : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
@@ -2126,7 +2145,7 @@ export default function RoomPage() {
                 ) : (
                   <>
                     <SwishIcon size={28} className="shrink-0" />
-                    <span>{t.payWithSwishAmt(formatOre(myShare.totalOre))}</span>
+                    <span>{t.payWithSwish}</span>
                   </>
                 )}
               </a>
