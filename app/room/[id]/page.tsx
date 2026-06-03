@@ -1126,8 +1126,12 @@ export default function RoomPage() {
               editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span aria-hidden className="pl-1 text-3xl leading-none">
+            {/* Top row: items-start so the description never
+                drifts to the middle of the card as the row's
+                height grows under it. Matches the validation
+                step row. */}
+            <div className="flex items-start gap-2">
+              <span aria-hidden className="pl-1 pt-1.5 text-3xl leading-none">
                 <ItemEmoji description={editDraft.description} hint={it.category} modelEmoji={it.emoji} />
               </span>
               <input
@@ -1145,80 +1149,74 @@ export default function RoomPage() {
                   placeholder={t.pricePh}
                   className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
                 />
-                {/* Compact split-ways stepper below the price input,
-                    in a grid-rows reveal so the column grows
-                    smoothly on DELAT toggle. h-10 buttons keep the
-                    touch target up to native size on mobile; the
-                    glyphs and the N/M count stay text-base / text-
-                    xs so the controls don't look chunky. */}
-                <div
-                  className={`grid transition-[grid-template-rows] duration-220 ease-out ${
-                    editDraft.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    {/* Same vertical stepper layout as the items
-                        page: N/M on top (bigger again), − / + side-
-                        by-side below in the same w-20 column. */}
-                    <div className="mt-1 flex flex-col items-stretch gap-1">
-                      <span className="text-center text-xl font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          aria-label="−"
-                          onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
-                          className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                        >
-                          −
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="+"
-                          disabled={dv >= groupSize}
-                          onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
-                          className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
             <div className="mt-2 text-sm text-gray-500">
-              {/* DELAT toggle, left-aligned — exact mirror of the
-                  validation row's toggle position. */}
-              <button
-                type="button"
-                role="switch"
-                onClick={() =>
-                  setEditDraft({
-                    ...editDraft,
-                    shared: !editDraft.shared,
-                    shareCount: editDraft.shared ? undefined : editDraft.shareCount,
-                  })
-                }
-                aria-checked={editDraft.shared}
-                aria-label={tx.sharedToggle}
-                className="-m-2 inline-flex items-center gap-2.5 p-2"
-              >
-                <span
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                    editDraft.shared ? "bg-swish" : "bg-gray-300"
-                  }`}
+              {/* DELAT toggle on the left, share stepper on the
+                  right of the same row. Stepper slides in from
+                  the right when DELAT flips on. Mirror of the
+                  validation step layout. */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  onClick={() =>
+                    setEditDraft({
+                      ...editDraft,
+                      shared: !editDraft.shared,
+                      shareCount: editDraft.shared ? undefined : editDraft.shareCount,
+                    })
+                  }
+                  aria-checked={editDraft.shared}
+                  aria-label={tx.sharedToggle}
+                  className="-m-2 inline-flex items-center gap-2.5 p-2"
                 >
                   <span
-                    aria-hidden
-                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      editDraft.shared ? "translate-x-6" : "translate-x-1"
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                      editDraft.shared ? "bg-swish" : "bg-gray-300"
                     }`}
-                  />
-                </span>
-                <span className={`text-sm font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                  {tx.sharedLabel}
-                </span>
-              </button>
+                  >
+                    <span
+                      aria-hidden
+                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                        editDraft.shared ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </span>
+                  <span className={`text-sm font-semibold uppercase tracking-wide ${editDraft.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                    {tx.sharedLabel}
+                  </span>
+                </button>
+                <div
+                  aria-hidden={!editDraft.shared}
+                  className={`overflow-hidden transition-all duration-220 ease-out ${
+                    editDraft.shared ? "max-w-[180px] opacity-100" : "pointer-events-none max-w-0 opacity-0"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 pl-1">
+                    <button
+                      type="button"
+                      aria-label="−"
+                      tabIndex={editDraft.shared ? 0 : -1}
+                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.max(2, dv - 1) })}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                    >
+                      −
+                    </button>
+                    <span className="w-12 text-center text-lg font-bold tabular-nums text-ink">{dv}/{groupSize}</span>
+                    <button
+                      type="button"
+                      aria-label="+"
+                      tabIndex={editDraft.shared ? 0 : -1}
+                      disabled={dv >= groupSize}
+                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">

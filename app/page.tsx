@@ -562,7 +562,7 @@ function GroupVisual({ count }: { count: number }) {
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
-                    "repeating-linear-gradient(0deg, transparent 0 5px, var(--table-grain) 5px 6.5px)",
+                    "repeating-linear-gradient(0deg, transparent 0 9px, var(--table-grain) 9px 10.25px)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
@@ -2755,8 +2755,13 @@ export default function Page() {
                   <div
                     className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span aria-hidden className="pl-1 text-3xl leading-none">
+                    {/* Top row uses items-start (not items-center) so a
+                        multi-line description, the emoji and the price
+                        input all top-align — the description never
+                        drifts to the middle of the card as the row
+                        grows in height. */}
+                    <div className="flex items-start gap-2">
+                      <span aria-hidden className="pl-1 pt-1.5 text-3xl leading-none">
                         {rep.isTip ? "💝" : <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />}
                       </span>
                       <input
@@ -2766,7 +2771,7 @@ export default function Page() {
                         className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
                       />
                       {copies.length > 1 && (
-                        <span className="shrink-0 text-sm font-semibold text-gray-400">×{copies.length}</span>
+                        <span className="shrink-0 pt-2 text-sm font-semibold text-gray-400">×{copies.length}</span>
                       )}
                       <div className="flex w-20 shrink-0 flex-col items-stretch gap-1">
                         <input
@@ -2786,84 +2791,72 @@ export default function Page() {
                         {fx && rowOre > 0 && (
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
-                        {/* Compact split-ways stepper directly under the
-                            price input when the row is shared. Sits in
-                            a grid-rows-[0fr]→[1fr] reveal so the price
-                            column grows / shrinks smoothly when DELAT
-                            flips, instead of snapping the row into a
-                            taller layout. No "≈" readout next to it any
-                            more — the price input above already shows
-                            the per-person share. */}
-                        {!rep.isTip && (
-                          <div
-                            className={`grid transition-[grid-template-rows] duration-220 ease-out ${
-                              rep.shared ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                            }`}
-                          >
-                            <div className="overflow-hidden">
-                              {/* N/M on top, larger again; − + below in a
-                                  side-by-side pair so the column reads as
-                                  "this many ways" with the controls tucked
-                                  underneath instead of flanking a tiny
-                                  caption. */}
-                              <div className="mt-1 flex flex-col items-stretch gap-1">
-                                <span className="text-center text-xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
-                                <div className="flex gap-1">
-                                  <button
-                                    type="button"
-                                    aria-label="−"
-                                    onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
-                                  >
-                                    −
-                                  </button>
-                                  <button
-                                    type="button"
-                                    aria-label="+"
-                                    disabled={d >= groupSize}
-                                    onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                     {!rep.isTip && (
                       <div className="mt-2 text-sm text-gray-500">
-                        {/* DELAT toggle, left-aligned. The stepper has
-                            moved into the price column above so this
-                            row only needs the toggle itself; the
-                            maybeShared hint stays in its grid-rows
-                            reveal below. */}
-                        <button
-                          type="button"
-                          role="switch"
-                          onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
-                          aria-checked={rep.shared}
-                          aria-label={t.sharedToggle}
-                          className="-m-2 inline-flex items-center gap-2.5 p-2"
-                        >
-                          <span
-                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                              rep.shared ? "bg-swish" : "bg-gray-300"
-                            }`}
+                        {/* DELAT toggle on the left, share stepper on
+                            the right of the SAME row. The stepper is
+                            wrapped in a max-w + opacity reveal so it
+                            slides in from the right when DELAT flips
+                            on and folds away cleanly when it flips
+                            off — no row-height jump from the old
+                            grid-rows reveal under the price input. */}
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            role="switch"
+                            onClick={() => updateGroup(rep, { shared: !rep.shared, sharers: [], shareCount: rep.shared ? undefined : rep.shareCount })}
+                            aria-checked={rep.shared}
+                            aria-label={t.sharedToggle}
+                            className="-m-2 inline-flex items-center gap-2.5 p-2"
                           >
                             <span
-                              aria-hidden
-                              className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                                rep.shared ? "translate-x-6" : "translate-x-1"
+                              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                                rep.shared ? "bg-swish" : "bg-gray-300"
                               }`}
-                            />
-                          </span>
-                          <span className={`text-sm font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
-                            {t.sharedLabel}
-                          </span>
-                        </button>
+                            >
+                              <span
+                                aria-hidden
+                                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                  rep.shared ? "translate-x-6" : "translate-x-1"
+                                }`}
+                              />
+                            </span>
+                            <span className={`text-sm font-semibold uppercase tracking-wide ${rep.shared ? "text-swish-dark" : "text-gray-500"}`}>
+                              {t.sharedLabel}
+                            </span>
+                          </button>
+                          <div
+                            aria-hidden={!rep.shared}
+                            className={`overflow-hidden transition-all duration-220 ease-out ${
+                              rep.shared ? "max-w-[180px] opacity-100" : "pointer-events-none max-w-0 opacity-0"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 pl-1">
+                              <button
+                                type="button"
+                                aria-label="−"
+                                tabIndex={rep.shared ? 0 : -1}
+                                onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
+                              >
+                                −
+                              </button>
+                              <span className="w-12 text-center text-lg font-bold tabular-nums text-ink">{d}/{groupSize}</span>
+                              <button
+                                type="button"
+                                aria-label="+"
+                                tabIndex={rep.shared ? 0 : -1}
+                                disabled={d >= groupSize}
+                                onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                         <div
                           className={`grid transition-[grid-template-rows] duration-220 ease-out ${
                             !rep.shared && sharedSuggestion(rep.description) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
