@@ -2217,20 +2217,17 @@ export default function RoomPage() {
                 </span>
               </span>
             </button>
-            {/* Primary action. First tap of "Betala" only OPENS the
-                Swish deep link and sets paymentInitiated so the
-                button splits into Pay (re-tap to retry) and a
-                separate "I'm done" half — committing the row as
-                paid stays in the guest's hands instead of happening
-                silently behind the deep-link tap. iAmDone collapses
-                back to a single centred "✓ Klar" shell. */}
+            {/* Primary action. The first tap of "Betala" only OPENS
+                the Swish deep link and sets paymentInitiated, which
+                splits the button into a Pay (re-tap to retry) +
+                "I'm done" pair so committing the row as paid stays
+                an intentional second tap. iAmDone keeps the split
+                layout — the Swish half remains tappable in case the
+                guest needs to pay again, only the right half flips
+                to the green "✓ Klar" state. */}
             <div className="px-4 pb-4 pt-1">
             {canSwish && swishUri ? (
-              iAmDone ? (
-                <div className="rounded-2xl bg-emerald-500/20 px-5 py-4 text-center text-base font-semibold text-emerald-200">
-                  {t.doneOn}
-                </div>
-              ) : paymentInitiated ? (
+              paymentInitiated || iAmDone ? (
                 <div className="flex gap-2">
                   <a
                     href={swishUri}
@@ -2243,9 +2240,14 @@ export default function RoomPage() {
                   <button
                     type="button"
                     onClick={markDone}
-                    className="shrink-0 rounded-2xl bg-white/10 px-5 py-4 text-base font-semibold text-white/90 active:bg-white/15"
+                    disabled={iAmDone}
+                    className={`shrink-0 rounded-2xl px-5 py-4 text-base font-semibold ${
+                      iAmDone
+                        ? "bg-emerald-500/20 text-emerald-200"
+                        : "bg-white/10 text-white/90 active:bg-white/15"
+                    }`}
                   >
-                    {t.imDone}
+                    {iAmDone ? t.doneOn : t.imDone}
                   </button>
                 </div>
               ) : (
