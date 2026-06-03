@@ -536,34 +536,26 @@ function GroupVisual({ count }: { count: number }) {
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
             <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain on the tabletop. A non-repeating
-                  linear-gradient lays SEVEN stripes at hand-picked
-                  irregular vertical positions — different gaps
-                  between rings, a couple of thicker bands, so the
-                  pattern reads as growth rings on a slab rather
-                  than a mechanical pinstripe. The SVG turbulence
-                  filter below then bends + parts the stripes so
-                  the whole thing looks hand-drawn. */}
+              {/* Wood-grain on the tabletop. Just FOUR stripes at
+                  hand-picked irregular positions — a vague
+                  impression of growth rings rather than a full
+                  pattern. The SVG turbulence filter then bends
+                  these few lines into curves so the table reads
+                  as wood without feeling busy. */}
               <div
                 className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
                     "linear-gradient(180deg," +
-                    "transparent 0 4%," +
-                    "var(--table-grain) 4% 6.2%," +
-                    "transparent 6.2% 13%," +
-                    "var(--table-grain) 13% 14.4%," +
-                    "transparent 14.4% 33%," +
-                    "var(--table-grain) 33% 36.5%," +
-                    "transparent 36.5% 41%," +
-                    "var(--table-grain) 41% 42.8%," +
-                    "transparent 42.8% 58%," +
-                    "var(--table-grain) 58% 59.6%," +
-                    "transparent 59.6% 76%," +
-                    "var(--table-grain) 76% 79%," +
-                    "transparent 79% 89%," +
-                    "var(--table-grain) 89% 90.4%," +
-                    "transparent 90.4% 100%)",
+                    "transparent 0 14%," +
+                    "var(--table-grain) 14% 15.8%," +
+                    "transparent 15.8% 38%," +
+                    "var(--table-grain) 38% 40.5%," +
+                    "transparent 40.5% 64%," +
+                    "var(--table-grain) 64% 67%," +
+                    "transparent 67% 86%," +
+                    "var(--table-grain) 86% 87.8%," +
+                    "transparent 87.8% 100%)",
                   filter: "url(#kvitt-wood-grain)",
                 }}
               />
@@ -611,7 +603,7 @@ function GroupVisual({ count }: { count: number }) {
             // and the icon swings to the opposite end of the
             // gray ramp from the fill so it stays clearly legible
             // on either chip colour.
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#ededf0] text-gray-600 ring-1 ring-gray-300 dark:bg-[#70707c] dark:text-gray-200 dark:ring-[#5a5a64]"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#f2f2f5] text-gray-600 ring-1 ring-gray-300 dark:bg-[#75758a] dark:text-gray-200 dark:ring-[#5a5a64]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
