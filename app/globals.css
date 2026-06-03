@@ -9,12 +9,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Swish primary brand pink. Shifted one tonal step darker than
-     #ee5c9a so the official "Dark BG" Swish logo (white-glow
-     wordmark) has enough surface contrast to read on the Pay
-     button. Active / pressed state drops another step. */
-  --color-swish: #d6457f;
-  --color-swish-dark: #b73970;
+  --color-swish: #ee5c9a;
+  --color-swish-dark: #d6457f;
   --color-ink: #1b1b1f;
   /* Semantic surface tokens. Light values here; the dark-mode
      media query at the bottom swaps them for their dim equivalents.
