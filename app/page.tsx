@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#a98a55] shadow-sm ring-1 ring-black/5 dark:bg-[#4e4028]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#a98a55] shadow-sm ring-1 ring-black/5 dark:bg-[#322820]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,14 +532,15 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#a98a55] dark:bg-[#4e4028]"
+              className="absolute inset-0 rounded-[50%] bg-[#a98a55] dark:bg-[#322820]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Solid mid-oak palette — top #d4b884 / rim #a98a55 in
-                light, deeper warm browns in dark. Heavier than the
-                previous baked-blend tones so the table reads as
-                wood at a glance instead of warm chrome. */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#d4b884] shadow-sm ring-1 ring-black/5 dark:bg-[#6a583a]">
+            {/* Solid mid-oak palette in light mode (top #d4b884 /
+                rim #a98a55); dark mode drops to a deeper, less-
+                saturated walnut (top #483a24 / rim #322820) so the
+                table reads as wood sitting in a dimly-lit room
+                rather than a backlit slab. */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#d4b884] shadow-sm ring-1 ring-black/5 dark:bg-[#483a24]">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
@@ -593,7 +594,7 @@ function GroupVisual({ count }: { count: number }) {
           so 1 / 2 / 3 don't make the centre tick from frame to
           frame as the chips orbit around it. */}
       <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-        <span className="text-4xl font-medium tabular-nums text-gray-700">{count || "–"}</span>
+        <span className="text-4xl font-medium tabular-nums text-[#f7eccd]">{count || "–"}</span>
       </div>
       {visibleChips.map((chip, i) => {
         const look = chipLook(chip.addIndex);
