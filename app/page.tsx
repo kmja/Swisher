@@ -2787,29 +2787,27 @@ export default function Page() {
                         <span className="shrink-0 pt-2 text-sm font-semibold text-gray-400">×{copies.length}</span>
                       )}
                       <div className="flex w-20 shrink-0 flex-col items-stretch gap-1">
-                        <div className="flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-2">
-                          <input
-                            value={
-                              priceDraft?.id === rep.id
-                                ? priceDraft.value
-                                : rep.shared
-                                ? formatOre(Math.floor(rowOre / Math.max(1, d)))
-                                : rep.priceInput
-                            }
-                            onChange={(e) => setPriceDraft({ id: rep.id, value: e.target.value })}
-                            onBlur={() => commitPriceDraft(rep)}
-                            inputMode="decimal"
-                            placeholder={t.pricePlaceholder}
-                            className="min-w-0 flex-1 bg-transparent text-right outline-none"
-                          />
-                          {rep.shared && !rep.isTip && (
-                            <span className="shrink-0 text-[11px] text-gray-400">{t.perShareUnit}</span>
-                          )}
-                        </div>
+                        <input
+                          value={
+                            priceDraft?.id === rep.id
+                              ? priceDraft.value
+                              : rep.shared
+                              ? formatOre(Math.floor(rowOre / Math.max(1, d)))
+                              : rep.priceInput
+                          }
+                          onChange={(e) => setPriceDraft({ id: rep.id, value: e.target.value })}
+                          onBlur={() => commitPriceDraft(rep)}
+                          inputMode="decimal"
+                          placeholder={t.pricePlaceholder}
+                          className="w-full rounded-lg bg-gray-50 px-2 py-2 text-right outline-none"
+                        />
                         {fx && rowOre > 0 && (
                           <span className="mt-0.5 pr-1 text-right text-[10px] text-gray-400">{formatNative(rowOre, fx)}</span>
                         )}
                       </div>
+                      {rep.shared && !rep.isTip && (
+                        <span className="shrink-0 pt-2.5 text-[11px] text-gray-400">{t.perShareUnit}</span>
+                      )}
                     </div>
                     {!rep.isTip && (
                       <div className="mt-2 text-sm text-gray-500">
