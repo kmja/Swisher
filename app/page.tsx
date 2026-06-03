@@ -2389,14 +2389,20 @@ export default function Page() {
               </>
             )}
 
-            {/* Setup card floats over the centre of the viewfinder so the
-                viewport keeps its size. After a 1 s warm-up the card rises
-                from below into a vertically-centred resting frame; it then
-                stays up while OCR runs AND while we're holding for the
-                host's name + valid phone (scanReady), so a host still
-                mid-typing isn't kicked off the screen. */}
+            {/* Setup card is pinned to the bottom edge of the SCREEN,
+                not to the viewfinder rectangle, so it reads as a
+                global "while you wait" sheet rather than something
+                glued onto the photo. After a 1 s warm-up it rises
+                from below; it then stays up while OCR runs AND
+                while we're holding for the host's name + valid
+                phone (scanReady), so a host still mid-typing
+                isn't kicked off the screen. Outer wrapper is
+                position:fixed with a flex-centre so the inner
+                card sits in the same max-w-md column as the
+                rest of the app on tablet-width viewports. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && !hostCardDismissed && (
-              <div className="scan-card-rise pointer-events-auto absolute inset-x-3 bottom-3 z-20 space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
+            <div className="pointer-events-none fixed inset-x-0 bottom-3 z-20 flex justify-center px-3">
+              <div className="scan-card-rise pointer-events-auto w-full max-w-md space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
                 {/* Section header. "Under tiden…" is the loud bold
                     headline; "Vem la ut för notan?" returns as the
                     subhead under it (was removed last pass — turns
@@ -2554,6 +2560,7 @@ export default function Page() {
                   );
                 })()}
               </div>
+            </div>
             )}
             {/* Capture-step CTAs ride along the bottom of the viewfinder
                 so they're always visible regardless of viewport height.
