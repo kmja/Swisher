@@ -499,7 +499,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#c9b389] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -511,19 +511,19 @@ function GroupVisual({ count }: { count: number }) {
             })}
             {/* Bottom rim ellipse — the table's side / thickness.
                 Sits one tone below the lit top so the rim reads as
-                the shadow side of the same piece of wood. Pushed
-                up the dark-mode value so the whole table is
-                brighter against the dark card. */}
+                the shadow side of the same piece of wood. Light
+                mode = deeper oak; dark = brighter tone so the
+                whole table contrasts against the dim card. */}
             <div
-              className="absolute inset-0 rounded-[50%] bg-[#f0f2f6] dark:bg-[#6e6e7c]"
+              className="absolute inset-0 rounded-[50%] bg-[#c9b389] dark:bg-[#6e6e7c]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface ellipse. Light mode keeps bg-white to
-                stay in the input-chrome family. Dark mode flips to
-                a noticeably brighter tone than --color-surface so
-                the entire table reads as a lit object floating
-                above the (still-darker) card backdrop. */}
-            <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
+            {/* Top surface ellipse. Light mode wears a warm light-
+                oak tone so the table reads as a distinct wood
+                object against the white card (matching the brown
+                wood-grain stripes painted on it). Dark mode keeps
+                the brighter mid-tone gray. */}
+            <div className="absolute inset-0 rounded-[50%] bg-[#e8d8b8] shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
               {/* Wood-grain stripes on the tabletop — straight
                   horizontal lines running along the table's long
                   axis, like a plank top. rounded-[50%] clips the
