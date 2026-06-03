@@ -277,13 +277,13 @@ const CIRCLE_SIZE = 200;
 // The table is squashed into a 3 : 2 ellipse (120 × 80), so the chip
 // orbit is squashed to match — otherwise the top / bottom chips
 // floated way off the table while the side chips sat right on it.
-// X-radius stays close to the old 72; Y-radius shrinks to ~48 so the
-// orbit's aspect roughly matches the tabletop's.
-const CIRCLE_RADIUS_X = 72;
-const CIRCLE_RADIUS_Y = 56;
-// Tabletop ellipse radii (the white disc the chips perch on).
-const TABLE_RADIUS_X = 60;
-const TABLE_RADIUS_Y = 47;
+// Orbit + tabletop shrunk together so the chips still perch on the
+// rim — they're proportional, so reducing both by the same fraction
+// preserves the "chips sit right on the edge" relationship.
+const CIRCLE_RADIUS_X = 65;
+const CIRCLE_RADIUS_Y = 50;
+const TABLE_RADIUS_X = 53;
+const TABLE_RADIUS_Y = 41;
 
 function slotPosition(slot: number, total: number) {
   // 12 o'clock seat at slot 0, walking clockwise. If only one chip
@@ -524,16 +524,15 @@ function GroupVisual({ count }: { count: number }) {
                 the entire table reads as a lit object floating
                 above the (still-darker) card backdrop. */}
             <div className="absolute inset-0 rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain rings on the tabletop —
-                  repeating-radial-gradient paints concentric
-                  arcs every ~6 px out from the centre. Alpha is
-                  tuned to read as a clear wood texture without
-                  competing with the count number on top. */}
+              {/* Wood-grain stripes on the tabletop — straight
+                  horizontal lines running along the table's long
+                  axis, like a plank top. rounded-[50%] clips the
+                  stripes to the ellipse so they don't poke out. */}
               <div
                 className="pointer-events-none absolute inset-0 rounded-[50%]"
                 style={{
                   backgroundImage:
-                    "repeating-radial-gradient(ellipse at center, transparent 0 4.5px, var(--table-grain) 4.5px 6px)",
+                    "repeating-linear-gradient(0deg, transparent 0 4.5px, var(--table-grain) 4.5px 6px)",
                 }}
               />
               {/* Inset bottom shadow on a child div so the parent's
