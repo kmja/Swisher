@@ -602,12 +602,14 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-gray-600 dark:brightness-90"
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full text-gray-600 ring-2 ring-gray-400 dark:brightness-90 dark:ring-gray-300"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
               transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) rotate(${look.rot}deg)`,
-              background: look.tint,
+              // Tint at ~33 % alpha so the chip's fill recedes and
+              // the gray ring + person icon do the visual work.
+              background: `${look.tint}55`,
               zIndex: behind ? look.z : 30 + look.z,
             }}
           >
