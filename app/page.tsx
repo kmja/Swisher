@@ -2481,8 +2481,8 @@ export default function Page() {
                   </div>
                 </div>
                 <div>
-                  <p className="mt-3 text-sm text-gray-500">{t.groupSizeLabel}</p>
-                  <div className="mt-1 flex items-center justify-center gap-3">
+                  <p className="mt-6 text-sm text-gray-500">{t.groupSizeLabel}</p>
+                  <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       aria-label="−"
