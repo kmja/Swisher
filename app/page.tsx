@@ -458,6 +458,24 @@ function GroupVisual({ count }: { count: number }) {
       className="relative isolate"
       style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }}
     >
+      {/* Inline SVG filter for the tabletop wood grain. feTurbulence
+          generates a 2-D Perlin-noise map; feDisplacementMap then
+          uses it to shove pixels of the source (the straight stripe
+          gradient) around — strong in Y (high baseFrequency.y) so
+          horizontal lines wave up and down, weak in X (low
+          baseFrequency.x) so the waves drift slowly side-to-side
+          instead of breaking into static. Net effect: ribbons that
+          flow + cluster + part like real growth rings on a thick
+          plank. Lives here (rather than in app/layout.tsx) so it
+          only loads on the items step where GroupVisual renders. */}
+      <svg width="0" height="0" aria-hidden className="absolute">
+        <defs>
+          <filter id="kvitt-wood-grain" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="turbulence" baseFrequency="0.022 0.55" numOctaves="2" seed="7" />
+            <feDisplacementMap in="SourceGraphic" scale="14" />
+          </filter>
+        </defs>
+      </svg>
       {/* Round dining table. Built from TWO stacked ellipses so the
           tipped-forward disc actually looks like it has a finished
           edge with thickness:
@@ -523,16 +541,24 @@ function GroupVisual({ count }: { count: number }) {
                 object against the white card (matching the brown
                 wood-grain stripes painted on it). Dark mode keeps
                 the brighter mid-tone gray. */}
-            <div className="absolute inset-0 rounded-[50%] bg-[#e8d8b8] shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
-              {/* Wood-grain stripes on the tabletop — straight
-                  horizontal lines running along the table's long
-                  axis, like a plank top. rounded-[50%] clips the
-                  stripes to the ellipse so they don't poke out. */}
+            <div className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#e8d8b8] shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
+              {/* Wood-grain on the tabletop. Start with straight
+                  horizontal stripes, then bend them through an
+                  SVG Perlin-noise displacement filter (defined
+                  below) so they wave + zig-zag the way real
+                  growth rings on a thick slab of wood do. The
+                  filter is keyed off two noise frequencies: low
+                  X (slow drift sideways) + high Y (rapid up/down
+                  warp), which is what makes plank grain look
+                  like flowing parallel ribbons. Slightly bigger
+                  stripe pitch than pre-warp so the displacement
+                  doesn't smear them into mush. */}
               <div
-                className="pointer-events-none absolute inset-0 rounded-[50%]"
+                className="pointer-events-none absolute -inset-2"
                 style={{
                   backgroundImage:
-                    "repeating-linear-gradient(0deg, transparent 0 4.5px, var(--table-grain) 4.5px 6px)",
+                    "repeating-linear-gradient(0deg, transparent 0 5px, var(--table-grain) 5px 6.5px)",
+                  filter: "url(#kvitt-wood-grain)",
                 }}
               />
               {/* Inset bottom shadow on a child div so the parent's
