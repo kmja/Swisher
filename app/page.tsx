@@ -79,17 +79,22 @@ function sortByCategory(arr: UiItem[]): UiItem[] {
 // 200-px container; smaller and ten of them at a packed table would
 // rattle around with too much air between them.
 const CHIP_SIZES = [40, 34, 42, 36, 38, 34, 40, 42, 36, 40];
+// Dusty-rose / mauve palette — pulled down from the pale pinks the
+// chips used to wear because those washed out against the white
+// table + card and read as "pastel sticker". Lower lightness and
+// lower saturation gives the pile a grounded, painterly look in
+// light mode; dark mode further softens via saturate-50 brightness-90.
 const CHIP_TINTS = [
-  "#f9c4db",
-  "#fce5ef",
-  "#fad1e3",
-  "#fbdbe9",
-  "#f9c8dd",
-  "#fce2ed",
-  "#facee1",
-  "#fbd5e5",
-  "#fce7f0",
-  "#fcdeeb",
+  "#c89aa9",
+  "#d4a8b6",
+  "#bd8ea0",
+  "#cca0ae",
+  "#c193a4",
+  "#d2a6b3",
+  "#bf90a1",
+  "#cba0ae",
+  "#d6abb7",
+  "#c69bab",
 ];
 const CHIP_LIFTS = [2, -6, 5, -2, 8, -4, 0, 6, -9, 3];
 const CHIP_ROTATIONS = [-5, 7, -1, 4, 2, -8, 6, -3, 1, -6];
@@ -517,7 +522,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#c9b389] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#f0f2f6] shadow-sm ring-1 ring-black/5 dark:bg-[#6e6e7c]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -529,19 +534,19 @@ function GroupVisual({ count }: { count: number }) {
             })}
             {/* Bottom rim ellipse — the table's side / thickness.
                 Sits one tone below the lit top so the rim reads as
-                the shadow side of the same piece of wood. Light
-                mode = deeper oak; dark = brighter tone so the
-                whole table contrasts against the dim card. */}
+                the shadow side of the same piece of wood. Pushed
+                up the dark-mode value so the whole table is
+                brighter against the dark card. */}
             <div
-              className="absolute inset-0 rounded-[50%] bg-[#c9b389] dark:bg-[#6e6e7c]"
+              className="absolute inset-0 rounded-[50%] bg-[#f0f2f6] dark:bg-[#6e6e7c]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Top surface ellipse. Light mode wears a warm light-
-                oak tone so the table reads as a distinct wood
-                object against the white card (matching the brown
-                wood-grain stripes painted on it). Dark mode keeps
-                the brighter mid-tone gray. */}
-            <div className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#e8d8b8] shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
+            {/* Top surface ellipse. Light mode keeps bg-white to
+                stay in the input-chrome family. Dark mode flips to
+                a noticeably brighter tone than --color-surface so
+                the entire table reads as a lit object floating
+                above the (still-darker) card backdrop. */}
+            <div className="absolute inset-0 overflow-hidden rounded-[50%] bg-white shadow-sm ring-1 ring-black/5 dark:bg-[#7a7a8a]">
               {/* Wood-grain on the tabletop. Start with straight
                   horizontal stripes, then bend them through an
                   SVG Perlin-noise displacement filter (defined
