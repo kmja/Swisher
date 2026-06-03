@@ -2456,7 +2456,7 @@ export default function Page() {
                       type="button"
                       aria-label="−"
                       onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-3xl font-bold leading-none text-gray-600 active:bg-gray-300"
                     >
                       −
                     </button>
@@ -2465,7 +2465,7 @@ export default function Page() {
                       type="button"
                       aria-label="+"
                       onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-3xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-3xl font-bold leading-none text-gray-600 active:bg-gray-300"
                     >
                       +
                     </button>
