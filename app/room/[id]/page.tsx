@@ -73,8 +73,9 @@ const R = {
     nothingYet: "Du har inte petat i något än.",
     paid: "Betald",
     markPaid: "Markera betald",
-    cartCountPicked: (n: number) => `${n} vald${n === 1 ? "" : "a"}`,
-    cartCountShared: (n: number) => `${n} delad${n === 1 ? "" : "e"}`,
+    cartPickedItems: (n: number) => `${n} ${n === 1 ? "vald rätt" : "valda rätter"}`,
+    cartSharedItems: (n: number) => `${n} ${n === 1 ? "delad rätt" : "delade rätter"}`,
+    cartSharedShort: (n: number) => `${n} ${n === 1 ? "delad" : "delade"}`,
     payWithSwish: "Betala med",
     waitingForGuests: "Väntar på gäster…",
     nobodyOwes: "Allt klart ✓",
@@ -141,8 +142,9 @@ const R = {
     nothingYet: "You haven't tapped anything yet.",
     paid: "Paid",
     markPaid: "Mark paid",
-    cartCountPicked: (n: number) => `${n} picked`,
-    cartCountShared: (n: number) => `${n} shared`,
+    cartPickedItems: (n: number) => `${n} picked item${n === 1 ? "" : "s"}`,
+    cartSharedItems: (n: number) => `${n} shared item${n === 1 ? "" : "s"}`,
+    cartSharedShort: (n: number) => `${n} shared`,
     payWithSwish: "Pay with",
     waitingForGuests: "Waiting for guests…",
     nobodyOwes: "All clear ✓",
@@ -2060,15 +2062,19 @@ export default function RoomPage() {
           rawCategory?: string;
           category: Category;
           isShared: boolean;
+          /** Number of ways a shared item is split — used to render the
+           *  "/N" secondary-font marker next to the line. */
+          shareCount?: number;
         };
         const lineMap = new Map<string, CartLine>();
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
-          const oreEach = it.shared
-            ? Math.floor(it.priceOre / (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize))
-            : Math.floor(it.priceOre / Math.max(1, it.claimedBy.length));
+          const denom = it.shared
+            ? (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize)
+            : Math.max(1, it.claimedBy.length);
+          const oreEach = Math.floor(it.priceOre / denom);
           const isShared = isFullyShared(it, groupSize);
-          const k = `${it.description}|${oreEach}|${isShared ? 1 : 0}`;
+          const k = `${it.description}|${oreEach}|${isShared ? 1 : 0}|${isShared ? denom : 0}`;
           const ex = lineMap.get(k);
           if (ex) ex.count++;
           else
@@ -2080,6 +2086,7 @@ export default function RoomPage() {
               rawCategory: it.category,
               category: categoryFor(it.description, it.category),
               isShared,
+              shareCount: isShared ? denom : undefined,
             });
         }
         const linesByCategory: Partial<Record<Category, CartLine[]>> = {};
@@ -2164,9 +2171,8 @@ export default function RoomPage() {
                     if (!items || items.length === 0) return null;
                     return (
                       <div key={cat} className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/55">
-                          <span aria-hidden className="text-base leading-none">{CATEGORY_EMOJI[cat]}</span>
-                          <span>{CATEGORY_LABEL[lang][cat]}</span>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                          {CATEGORY_LABEL[lang][cat]}
                         </div>
                         <ul className="space-y-1">
                           {items.map((line, i) => (
@@ -2177,8 +2183,8 @@ export default function RoomPage() {
                               <span className="min-w-0 flex-1 truncate text-white/90">
                                 {line.count > 1 && <span className="text-white/55 tabular-nums">{line.count}× </span>}
                                 {line.description}
-                                {line.isShared && (
-                                  <span className="ml-1.5 text-[11px] text-white/45" aria-label={tx.sharedToggle}>🤝</span>
+                                {line.isShared && line.shareCount && (
+                                  <span className="ml-1 text-xs tabular-nums text-white/45" aria-label={tx.sharedToggle}>/{line.shareCount}</span>
                                 )}
                               </span>
                               <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
@@ -2205,9 +2211,11 @@ export default function RoomPage() {
               <span className="min-w-0 flex-1 truncate text-sm text-white/80">
                 {mineCount === 0 && sharedCount === 0
                   ? t.cartEmpty
-                  : [mineCount > 0 ? t.cartCountPicked(mineCount) : null, sharedCount > 0 ? t.cartCountShared(sharedCount) : null]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  : mineCount === 0
+                  ? t.cartSharedItems(sharedCount)
+                  : sharedCount === 0
+                  ? t.cartPickedItems(mineCount)
+                  : `${t.cartPickedItems(mineCount)} · ${t.cartSharedShort(sharedCount)}`}
               </span>
               <span className="flex shrink-0 flex-col items-end leading-tight">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{t.yourTotal}</span>
