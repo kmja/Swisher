@@ -603,14 +603,15 @@ function GroupVisual({ count }: { count: number }) {
               if (el) chipElsRef.current.set(chip.addIndex, el);
               else chipElsRef.current.delete(chip.addIndex);
             }}
-            // Opaque fill that's a step off the tabletop — light:
-            // a faint cool gray on the white wood, dark: a step
-            // BELOW the dark table tone — so the silhouette has
-            // some presence of its own and doesn't read as "table
-            // with a hole punched in it". Ring + icon stay
-            // intentionally light so it's the fill doing the
-            // work, not the border.
-            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#e7e7eb] text-gray-400 ring-1 ring-gray-400 dark:bg-[#6c6c78] dark:text-gray-500 dark:ring-gray-500"
+            // Opaque fill set just one step off the tabletop — a
+            // pale cool gray on the white wood / a step under the
+            // dark table tone. Ring is a very faint hairline (one
+            // tonal step from the fill) so the chip silhouette
+            // reads as "soft pebble" rather than "outlined badge",
+            // and the icon swings to the opposite end of the
+            // gray ramp from the fill so it stays clearly legible
+            // on either chip colour.
+            className="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full bg-[#ededf0] text-gray-600 ring-1 ring-gray-300 dark:bg-[#70707c] dark:text-gray-200 dark:ring-[#5a5a64]"
             style={{
               width: `${look.size}px`,
               height: `${look.size}px`,
