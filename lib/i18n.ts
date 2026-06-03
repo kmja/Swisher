@@ -323,7 +323,7 @@ const sv: Strings = {
   sharedSplit: (n, amt) => `${n} sätt · ≈ ${amt} SEK/pers`,
   splitWays: "Dela på",
   maybeShared: "Delas?",
-  perShareUnit: "per del",
+  perShareUnit: "/pp",
 
   splitYourself: "Dela upp själv i stället",
   assignManually: "Fördela på nästa steg →",
@@ -486,7 +486,7 @@ const en: Strings = {
   sharedSplit: (n, amt) => `${n} ways · ≈ ${amt} SEK each`,
   splitWays: "Split",
   maybeShared: "Shared?",
-  perShareUnit: "per share",
+  perShareUnit: "/pp",
 
   splitYourself: "Split it yourself instead",
   assignManually: "Assign on the next screen →",
