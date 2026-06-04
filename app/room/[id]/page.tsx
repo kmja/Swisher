@@ -237,10 +237,17 @@ export default function RoomPage() {
   const [addingItem, setAddingItem] = useState(false);
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
-  // Snapshot of the most-recently-removed item, shown as a transient undo toast
-  // above the sticky footer. Claims aren't restored — the addItem action only
-  // round-trips description/price/shared/shareCount/category/emoji.
+  // Snapshot of a removed item, shown as a transient undo toast above
+  // the sticky footer. Multiple removals stack — each snapshot gets
+  // its own toast with its own undo + auto-dismiss timer, so quickly
+  // removing several rows doesn't overwrite the previous toast.
+  // Claims aren't restored — the addItem action only round-trips
+  // description/price/shared/shareCount/category/emoji.
   type RemovedSnapshot = {
+    /** Unique id for this removal event, used as the React key and
+     *  to address the toast for dismiss / undo without colliding
+     *  on duplicate descriptions. */
+    id: string;
     description: string;
     priceOre: number;
     shared: boolean;
@@ -251,9 +258,15 @@ export default function RoomPage() {
      *  the row in its original slot rather than appending it to the end. */
     index: number;
   };
-  const [pendingUndo, setPendingUndo] = useState<RemovedSnapshot | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+  const [pendingUndos, setPendingUndos] = useState<RemovedSnapshot[]>([]);
+  const undoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  useEffect(() => {
+    const timers = undoTimers.current;
+    return () => {
+      for (const t of timers.values()) clearTimeout(t);
+      timers.clear();
+    };
+  }, []);
 
   // Sync the payee name / number drafts FROM the server state, but
   // only when the input isn't focused — otherwise a live update from
@@ -1006,7 +1019,11 @@ export default function RoomPage() {
     const idx = state?.items.findIndex((i) => i.id === itemId) ?? -1;
     const item = idx >= 0 ? state?.items[idx] : undefined;
     if (item) {
-      setPendingUndo({
+      const snapId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const snap: RemovedSnapshot = {
+        id: snapId,
         description: item.description,
         priceOre: item.priceOre,
         shared: !!item.shared,
@@ -1014,9 +1031,13 @@ export default function RoomPage() {
         category: item.category,
         emoji: item.emoji,
         index: idx,
-      });
-      if (undoTimer.current) clearTimeout(undoTimer.current);
-      undoTimer.current = setTimeout(() => setPendingUndo(null), 6000);
+      };
+      setPendingUndos((prev) => [...prev, snap]);
+      const timer = setTimeout(() => {
+        setPendingUndos((prev) => prev.filter((s) => s.id !== snapId));
+        undoTimers.current.delete(snapId);
+      }, 6000);
+      undoTimers.current.set(snapId, timer);
     }
     // Optimistic: drop the row from local state immediately so the FLIP
     // layout effect can animate the neighbours into the gap right away
@@ -1025,11 +1046,13 @@ export default function RoomPage() {
     setState((prev) => (prev ? { ...prev, items: prev.items.filter((i) => i.id !== itemId) } : prev));
     await postAction({ action: "removeItem", itemId });
   }
-  async function undoRemoval() {
-    if (!pendingUndo) return;
-    const snap = pendingUndo;
-    setPendingUndo(null);
-    if (undoTimer.current) clearTimeout(undoTimer.current);
+  async function undoRemoval(snapId: string) {
+    const snap = pendingUndos.find((s) => s.id === snapId);
+    if (!snap) return;
+    setPendingUndos((prev) => prev.filter((s) => s.id !== snapId));
+    const timer = undoTimers.current.get(snapId);
+    if (timer) clearTimeout(timer);
+    undoTimers.current.delete(snapId);
     // Mark the next-appearing item that matches (description, priceOre)
     // so the FLIP effect can swipe it in from the right — visually the
     // reverse of the left-swipe that removed it. addItem hands us a
@@ -2283,23 +2306,27 @@ export default function RoomPage() {
           </div>
         );
       })()}
-      {pendingUndo && (
-        <div className="fixed inset-x-0 bottom-28 z-50 mx-auto max-w-md px-4">
-          {/* key on description so the countdown restarts when the user removes
-              another item before the previous toast expires. */}
-          <div key={pendingUndo.description} className="relative overflow-hidden rounded-xl bg-red-600 px-3 py-2.5 text-sm text-white shadow-lg ring-1 ring-red-700/40">
-            <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate">🗑 {t.removedItem(pendingUndo.description || t.editRow)}</span>
-              <button
-                type="button"
-                onClick={undoRemoval}
-                className="shrink-0 rounded-lg bg-white px-3 py-1 font-semibold text-red-700 active:bg-red-50"
-              >
-                {t.undo}
-              </button>
+      {pendingUndos.length > 0 && (
+        <div className="fixed inset-x-0 bottom-28 z-50 mx-auto flex max-w-md flex-col gap-2 px-4">
+          {/* One toast per removal so quickly deleting several rows
+              shows a stack instead of overwriting the previous toast.
+              Each toast carries its own snap.id so the 6-second
+              countdown is per-item. */}
+          {pendingUndos.map((snap) => (
+            <div key={snap.id} className="relative overflow-hidden rounded-xl bg-red-600 px-3 py-2.5 text-sm text-white shadow-lg ring-1 ring-red-700/40">
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate">🗑 {t.removedItem(snap.description || t.editRow)}</span>
+                <button
+                  type="button"
+                  onClick={() => undoRemoval(snap.id)}
+                  className="shrink-0 rounded-lg bg-white px-3 py-1 font-semibold text-red-700 active:bg-red-50"
+                >
+                  {t.undo}
+                </button>
+              </div>
+              <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80" />
             </div>
-            <span aria-hidden className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80" />
-          </div>
+          ))}
         </div>
       )}
       {/* Ghost: a card-shaped chip pinned to the source row's bounding
