@@ -457,23 +457,29 @@ export default function RoomPage() {
     });
   }, [itemIdsSig]);
 
-  // Play the fly-to-shared animation imperatively via WAAPI. We
-  // translate from (source top-left, scale 1) to (target centre, scale
-  // 0.4) over ~620 ms with a "land into a slot" curve — the row
-  // shrinks as it travels so it visually settles into the section
-  // header. If the target is off-screen the same math just sends the
-  // ghost off the edge of the viewport.
+  // Play the fly-to-shared animation imperatively via WAAPI. Drawn out
+  // in three beats so the host can actually follow what's happening:
+  //   1) lift  (0 → 18 %)  the row hops up a few px + scales up
+  //             slightly, like it's being picked off the table
+  //   2) float (18 → 45 %) it just hovers there for a beat
+  //   3) glide (45 → 100 %) it travels to the shared section header
+  //                          while shrinking + fading into the slot
+  // Total ~1.25 s. Per-keyframe easings so each phase has its own
+  // curve (pop-in for the lift, near-linear for the float, ease-in
+  // for the glide so it accelerates into its landing).
   useLayoutEffect(() => {
     if (!flyingItem || !flyingRef.current || typeof flyingRef.current.animate !== "function") return;
     const dx = flyingItem.target.x - (flyingItem.source.x + flyingItem.source.w / 2);
     const dy = flyingItem.target.y - (flyingItem.source.y + flyingItem.source.h / 2);
     const anim = flyingRef.current.animate(
       [
-        { transform: "translate(0px, 0px) scale(1)", opacity: 1 },
-        { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(0.85)`, opacity: 1, offset: 0.55 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0 },
+        { transform: "translate(0px, 0px) scale(1)", opacity: 1, offset: 0, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        { transform: "translate(0px, -14px) scale(1.04)", opacity: 1, offset: 0.18, easing: "linear" },
+        { transform: "translate(0px, -14px) scale(1.04)", opacity: 1, offset: 0.45, easing: "cubic-bezier(0.4, 0, 0.6, 1)" },
+        { transform: `translate(${dx * 0.55}px, ${dy * 0.55}px) scale(0.72)`, opacity: 1, offset: 0.80 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0, offset: 1 },
       ],
-      { duration: 620, easing: "cubic-bezier(0.45, 0.05, 0.5, 0.95)", fill: "forwards" },
+      { duration: 1250, fill: "forwards" },
     );
     const clear = () => setFlyingItem(null);
     anim.onfinish = clear;
@@ -1077,7 +1083,6 @@ export default function RoomPage() {
     return computeRoomShares(state.items, diners, state.tipOre, state.groupSize ?? 0);
   }, [state]);
 
-  const unclaimedCount = (state?.items ?? []).filter((i) => !i.shared && i.claimedBy.length === 0).length;
   const myShare = shares.find((s) => s.dinerId === personId);
   const isPayee = !!state && personId === state.payeePersonId;
   const nameById = useMemo(() => new Map((state?.people ?? []).map((p) => [p.id, p.name])), [state]);
@@ -1916,11 +1921,6 @@ export default function RoomPage() {
                 );
               })()}
             </div>
-            {unclaimedCount > 0 ? (
-              <p className="mt-2 text-xs text-amber-600">{t.unclaimed(unclaimedCount)}</p>
-            ) : (
-              <p className="mt-2 text-xs text-emerald-600">{t.allClaimed}</p>
-            )}
             {addingItem ? (
               <div className="mt-2 flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-swish/40">
                 <input
