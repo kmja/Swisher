@@ -198,7 +198,7 @@ export default function HistoryPage() {
             href="/"
             aria-label={t.newReceipt}
             title={t.newReceipt}
-            className="flex h-11 w-11 items-center justify-center justify-self-start rounded-xl bg-swish text-2xl font-semibold leading-none text-black shadow-sm active:bg-swish-dark"
+            className="flex h-11 w-11 items-center justify-center justify-self-start rounded-xl bg-swish text-2xl font-semibold leading-none text-white shadow-sm active:bg-swish-dark"
           >
             +
           </a>

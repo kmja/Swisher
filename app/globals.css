@@ -9,8 +9,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-swish: #ee5c9a;
-  --color-swish-dark: #d6457f;
+  /* Swish primary brand pink — pulled one tonal step darker than
+     the literal brand #ee5c9a so white-on-swish primary labels
+     clear ~4.2 : 1 contrast (AA-Large pass; close to AA normal)
+     instead of the original 3.2 : 1. swish-dark drops one more
+     step for the pressed state. */
+  --color-swish: #d6457f;
+  --color-swish-dark: #b73970;
   --color-ink: #1b1b1f;
   /* Semantic surface tokens. Light values here; the dark-mode
      media query at the bottom swaps them for their dim equivalents.

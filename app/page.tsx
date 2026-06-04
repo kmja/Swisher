@@ -184,7 +184,7 @@ function CaptureShutterButton({
     >
       <span aria-hidden className="block h-[54px] w-[54px] rounded-full bg-white shadow-inner" />
       {typeof count === "number" && count > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-swish px-1.5 text-[11px] font-bold text-black shadow-md ring-2 ring-white">
+        <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-swish px-1.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white">
           {count}
         </span>
       )}
@@ -213,7 +213,7 @@ function CaptureCommitButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`pointer-events-auto relative flex items-center justify-center rounded-full bg-swish font-bold text-black shadow-2xl ring-[3px] ring-white/95 active:bg-swish-dark active:scale-95 transition-transform ${size}`}
+      className={`pointer-events-auto relative flex items-center justify-center rounded-full bg-swish font-bold text-white shadow-2xl ring-[3px] ring-white/95 active:bg-swish-dark active:scale-95 transition-transform ${size}`}
     >
       ✓
       {typeof count === "number" && count > 0 && !compact && (
@@ -509,7 +509,7 @@ function GroupVisual({ count }: { count: number }) {
               return (
                 <div
                   key={i}
-                  className="absolute h-3 w-1.5 rounded-b-md bg-[#a98a55] shadow-sm ring-1 ring-black/5 dark:bg-[#322820]"
+                  className="absolute h-3 w-1.5 rounded-b-md bg-[#a98a55] shadow-sm ring-1 ring-black/5 dark:bg-[#46464e]"
                   style={{
                     left: `${TABLE_RADIUS_X + pos.x}px`,
                     top: `${TABLE_RADIUS_Y + pos.y + RIM_DEPTH - 4}px`,
@@ -532,15 +532,17 @@ function GroupVisual({ count }: { count: number }) {
                 turbulence pattern. With keys these stay put. */}
             <div
               key="rim"
-              className="absolute inset-0 rounded-[50%] bg-[#a98a55] dark:bg-[#322820]"
+              className="absolute inset-0 rounded-[50%] bg-[#a98a55] dark:bg-[#46464e]"
               style={{ transform: `translateY(${RIM_DEPTH}px)` }}
             />
-            {/* Solid mid-oak palette in light mode (top #d4b884 /
-                rim #a98a55); dark mode drops to a deeper, less-
-                saturated walnut (top #483a24 / rim #322820) so the
-                table reads as wood sitting in a dimly-lit room
-                rather than a backlit slab. */}
-            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#d4b884] shadow-sm ring-1 ring-black/5 dark:bg-[#483a24]">
+            {/* Mid-oak in LIGHT mode (top #d4b884 / rim #a98a55).
+                Dark mode swaps to neutral cool grays (top #5e5e68 /
+                rim #46464e) — a warm brown next to the rest of the
+                dark palette (#161618 page, #2f2f37 cards, #4a4a55
+                muted surfaces) read as a clash. The wood-grain
+                stripes still carry the wood character on top of
+                the gray surface. */}
+            <div key="top" className="absolute inset-0 overflow-hidden rounded-[50%] bg-[#d4b884] shadow-sm ring-1 ring-black/5 dark:bg-[#5e5e68]">
               {/* Wood-grain on the tabletop — TEN thin (1 px) stripes
                   alternating from the left and right edges, each
                   reaching 34-54 % across. Five sit in the top half,
@@ -2273,7 +2275,7 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={retakeShot}
-                      className="rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-black shadow-sm active:bg-swish-dark"
+                      className="rounded-xl bg-swish px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-swish-dark"
                     >
                       {t.retakePhoto}
                     </button>
@@ -2358,7 +2360,7 @@ export default function Page() {
                       )}
                     </div>
                     {pendingShots.length > 0 && (
-                      <span className="absolute left-1/2 bottom-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-black shadow-lg">
+                      <span className="absolute left-1/2 bottom-2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-swish px-3 py-1 text-[11px] font-semibold text-white shadow-lg">
                         📷 {pendingShots.length}
                       </span>
                     )}
@@ -2569,7 +2571,7 @@ export default function Page() {
                         }, 450);
                       }}
                       disabled={!canCommit || hostReady}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3 text-base font-semibold text-black active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3 text-base font-semibold text-white active:bg-swish-dark disabled:bg-gray-200 disabled:text-gray-400"
                     >
                       {hostDoneFlash ? (
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -3189,7 +3191,7 @@ export default function Page() {
                             type="button"
                             onClick={() => toggleSharer(it.id, d.id)}
                             className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition ${
-                              on ? "bg-swish text-black ring-swish" : "bg-white text-gray-600 ring-gray-200"
+                              on ? "bg-swish text-white ring-swish" : "bg-white text-gray-600 ring-gray-200"
                             }`}
                           >
                             {d.name}
@@ -3572,7 +3574,7 @@ function Footer({
             type="button"
             onClick={onCreateRoom}
             disabled={!roomReady || creatingRoom}
-            className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-black active:bg-swish-dark disabled:opacity-40"
+            className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
           >
             {creatingRoom ? t.creatingRoom : t.createRoom}
           </button>
@@ -3582,7 +3584,7 @@ function Footer({
             type="button"
             onClick={onForward}
             disabled={!canForward}
-            className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-black active:bg-swish-dark disabled:opacity-40"
+            className="flex-1 rounded-xl bg-swish px-5 py-3 font-semibold text-white active:bg-swish-dark disabled:opacity-40"
           >
             {t.createQr}
           </button>

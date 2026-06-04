@@ -20,7 +20,7 @@ export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (
           onClick={() => onChange(l)}
           className={`px-3 py-2 ${
             lang === l
-              ? "bg-swish text-black"
+              ? "bg-swish text-white"
               : "text-gray-500 ring-2 ring-inset ring-gray-300 active:bg-gray-100"
           }`}
         >
