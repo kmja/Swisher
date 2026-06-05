@@ -42,6 +42,14 @@ export interface Strings {
   scanning: string;
   scanPhrases: string[];
   itemsFound: (n: number) => string;
+  /** Status text shown in the setup card's subheader slot while OCR
+   *  is still pulling text off the photo (replaced by linesFound
+   *  once the model returns and the count starts ticking up). */
+  readingReceipt: string;
+  /** "n lines / rader hittade" — replaces the readingReceipt copy
+   *  the moment the OCR response lands; counts up as scanCount
+   *  animates from 0 → mapped.length. */
+  linesFound: (n: number) => string;
   /** Soft intro for the host setup card overlaid on the live scan. */
   inTheMeantime: string;
   /** Explanations behind the setup-card "Why do we need this?" disclosure. */
@@ -231,6 +239,8 @@ const sv: Strings = {
   scanning: "Skannar kvittot…",
   scanPhrases: ["Läser av rätter…", "Hittar priser…", "Känner igen rätter…", "Snart klar…"],
   itemsFound: (n) => `${n} rätter tillagda`,
+  readingReceipt: "Läser kvittot…",
+  linesFound: (n) => `${n} rader hittade`,
   inTheMeantime: "Under tiden…",
   whyTooltipTitle: "Varför behöver vi det här?",
   whyName: "Visas i rummet så att gästerna ser vem de Swishar till.",
@@ -396,6 +406,8 @@ const en: Strings = {
   scanning: "Scanning receipt…",
   scanPhrases: ["Reading lines…", "Finding prices…", "Recognising items…", "Almost done…"],
   itemsFound: (n) => `${n} items added`,
+  readingReceipt: "Reading the receipt…",
+  linesFound: (n) => `${n} lines found`,
   inTheMeantime: "In the meantime…",
   whyTooltipTitle: "Why do we need this?",
   whyName: "Shown in the room so guests know who they're paying.",

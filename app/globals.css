@@ -291,3 +291,19 @@ textarea {
 .scan-glow {
   animation: scan-glow 1.1s ease-in-out infinite;
 }
+
+/* OCR "found-line" markers — translucent pink horizontal bars that
+   fade in one after another over the photo while OCR runs, so the
+   sweep doesn't just look like a screensaver. Each bar carries its
+   own animation-delay from a per-element inline style. scaleX 0 → 1
+   from the left edge mimics a line being "read" left-to-right. */
+@keyframes ocr-line-reveal {
+  0% { opacity: 0; transform: scaleX(0); }
+  60% { opacity: 0.95; transform: scaleX(1); }
+  100% { opacity: 0.55; transform: scaleX(1); }
+}
+.ocr-line {
+  opacity: 0;
+  transform-origin: left;
+  animation: ocr-line-reveal 0.45s ease-out forwards;
+}

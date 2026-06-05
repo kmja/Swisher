@@ -2285,8 +2285,47 @@ export default function Page() {
             )}
             {ocrLoading && (
               <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute inset-0 bg-black/40" />
-                <div className="scan-grid absolute inset-0 opacity-40" />
+                {/* Lighter dim so the captured photo stays the hero —
+                    user needs to SEE the receipt being scanned, not a
+                    pink grid. */}
+                <div className="absolute inset-0 bg-black/20" />
+                <div className="scan-grid absolute inset-0 opacity-20" />
+                {/* Fake "found-line" markers — 14 translucent pink bars
+                    at plausible text-row y-positions and widths, with
+                    staggered fade-ins so it reads as the OCR landing
+                    on text lines one after another. Deterministic per
+                    scan (positions baked into the array) so the same
+                    photo always lights up the same shape, and the
+                    pattern feels designed rather than glitchy. */}
+                <div className="pointer-events-none absolute inset-4">
+                  {[
+                    { y: 9,  x: 6,  w: 50 },
+                    { y: 14, x: 6,  w: 38 },
+                    { y: 19, x: 6,  w: 55 },
+                    { y: 25, x: 6,  w: 42 },
+                    { y: 31, x: 6,  w: 48 },
+                    { y: 37, x: 6,  w: 34 },
+                    { y: 43, x: 6,  w: 52 },
+                    { y: 49, x: 6,  w: 45 },
+                    { y: 55, x: 6,  w: 40 },
+                    { y: 61, x: 6,  w: 38 },
+                    { y: 67, x: 6,  w: 50 },
+                    { y: 73, x: 6,  w: 44 },
+                    { y: 80, x: 6,  w: 36 },
+                    { y: 87, x: 6,  w: 30 },
+                  ].map((bar, i) => (
+                    <span
+                      key={i}
+                      className="ocr-line absolute h-[5px] rounded-full bg-swish/65 shadow-[0_0_8px_2px_rgba(238,92,154,0.55)]"
+                      style={{
+                        top: `${bar.y}%`,
+                        left: `${bar.x}%`,
+                        width: `${bar.w}%`,
+                        animationDelay: `${i * 0.16}s`,
+                      }}
+                    />
+                  ))}
+                </div>
                 {/* sweeping band + bright glowing beam */}
                 <div className="scanline absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-transparent via-swish/45 to-transparent" />
                 <div className="scanline absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
@@ -2436,7 +2475,21 @@ export default function Page() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xl font-bold leading-tight text-ink">{t.inTheMeantime}</p>
-                    <p className="mt-3 text-sm text-gray-500">{t.payerTitle}</p>
+                    {/* Subheader swaps from "Vem la ut för notan?" to a
+                        scan-progress readout while OCR is running, so
+                        the host can see the photo IS being read:
+                          • ocrLoading + no count yet  →  "Läser kvittot…"
+                          • scanCount animating         →  "n rader hittade"
+                          • neither                     →  default payer prompt
+                        Both phases land in the same gray text slot
+                        so the card height doesn't jiggle. */}
+                    <p className="mt-3 text-sm text-gray-500">
+                      {ocrLoading
+                        ? t.readingReceipt
+                        : scanCount !== null
+                        ? t.linesFound(scanCount)
+                        : t.payerTitle}
+                    </p>
                   </div>
                   {contactsApi && (
                     <button
