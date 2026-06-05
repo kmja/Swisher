@@ -2474,22 +2474,20 @@ export default function Page() {
                     far right, only mounts on Android Chromium. */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
+                    {/* Small status caption shown ABOVE the
+                        "Under tiden…" headline while OCR is still
+                        running or the count is animating up — gives
+                        the host a clear scan-in-progress signal
+                        without disturbing the "Vem la ut för notan?"
+                        subheader below. Hides itself when there's
+                        nothing to report. */}
+                    {(ocrLoading || scanCount !== null) && (
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-swish-dark">
+                        {ocrLoading ? t.readingReceipt : t.linesFound(scanCount ?? 0)}
+                      </p>
+                    )}
                     <p className="text-xl font-bold leading-tight text-ink">{t.inTheMeantime}</p>
-                    {/* Subheader swaps from "Vem la ut för notan?" to a
-                        scan-progress readout while OCR is running, so
-                        the host can see the photo IS being read:
-                          • ocrLoading + no count yet  →  "Läser kvittot…"
-                          • scanCount animating         →  "n rader hittade"
-                          • neither                     →  default payer prompt
-                        Both phases land in the same gray text slot
-                        so the card height doesn't jiggle. */}
-                    <p className="mt-3 text-sm text-gray-500">
-                      {ocrLoading
-                        ? t.readingReceipt
-                        : scanCount !== null
-                        ? t.linesFound(scanCount)
-                        : t.payerTitle}
-                    </p>
+                    <p className="mt-3 text-sm text-gray-500">{t.payerTitle}</p>
                   </div>
                   {contactsApi && (
                     <button
