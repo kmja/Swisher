@@ -1320,8 +1320,22 @@ export default function RoomPage() {
     const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
     const anyQuickEdit = editingDesc || editingPrice;
     return (
-      <div
-          key={it.id}
+      <div key={it.id} className="relative">
+        {/* Reveal layers behind the row. Two halves: left lights up
+            the swish pink with a pencil glyph (uncovered by right
+            swipe → edit), right lights up red with a trash glyph
+            (uncovered by left swipe → delete). Clipped to the same
+            rounded shape as the row, pointer-events-none so the
+            swipe gesture still lands on the row itself. */}
+        <div className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-2xl">
+          <div className="flex flex-1 items-center bg-swish pl-5 text-white">
+            <PencilIcon size={22} />
+          </div>
+          <div className="flex flex-1 items-center justify-end bg-red-600 pr-5 text-white">
+            <TrashIcon size={22} />
+          </div>
+        </div>
+        <div
           data-item-id={it.id}
           role="button"
           tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
@@ -1344,12 +1358,6 @@ export default function RoomPage() {
           }}
           className={`relative flex min-w-0 cursor-pointer touch-pan-y select-none items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
             mine
-              // Opaque colours so the red swipe-reveal layer behind the row
-              // doesn't bleed through. `bg-swish/10` over the page bg used to
-              // resolve to ~#f4e6ee; freeze that as the literal mine colour.
-              // sharesFull keeps a soft gray (no opacity-60, which would let
-              // red show through) with dimmed text for the "no more shares"
-              // signal.
               ? "bg-[#f4e6ee] ring-swish"
               : sharesFull
               ? "bg-gray-100 text-gray-400 ring-black/5"
@@ -1457,6 +1465,7 @@ export default function RoomPage() {
         >
           <PencilIcon />
         </button>
+        </div>
       </div>
     );
   }
@@ -2474,6 +2483,31 @@ function PencilIcon({ size = 16 }: { size?: number }) {
     >
       <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
       <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+// Lucide "trash-2" — used as the reveal-layer hint behind a row that's
+// being swiped left.
+function TrashIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   );
 }
