@@ -549,9 +549,9 @@ export default function RoomPage() {
         lpTimer.current = null;
       }
     }
-    // Rubber-band the right direction so users feel the asymmetry.
-    const offset = dx < 0 ? dx : dx * 0.25;
-    s.el.style.transform = `translateX(${offset}px)`;
+    // Both directions are real actions now (left = remove, right =
+    // edit), so the transform tracks 1:1 without rubber-banding.
+    s.el.style.transform = `translateX(${dx}px)`;
     s.el.style.transition = "";
   };
   const onSwipeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -561,15 +561,21 @@ export default function RoomPage() {
       return;
     }
     const dx = e.clientX - s.startX;
-    const threshold = -110;
+    const threshold = 110;
     const el = s.el;
     const itemId = s.itemId;
-    if (dx < threshold) {
-      // Commit: slide the row off-screen, fade, then drop it from state.
+    if (dx < -threshold) {
+      // Left commit: slide the row off-screen, fade, then drop it.
       el.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
       el.style.transform = "translateX(-120%)";
       el.style.opacity = "0";
       window.setTimeout(() => removeItemRow(itemId), 180);
+    } else if (dx > threshold) {
+      // Right commit: spring back and open the edit form for this row.
+      el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+      el.style.transform = "translateX(0)";
+      const it = state?.items.find((i) => i.id === itemId);
+      if (it) openEdit(it);
     } else {
       // Spring back to neutral.
       el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
@@ -1379,22 +1385,24 @@ export default function RoomPage() {
                   className="min-w-0 flex-1 rounded-lg bg-white px-2 py-1 outline-none ring-1 ring-swish/40"
                 />
               ) : (
-                <span
-                  onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "description" }))}
-                  onPointerMove={moveLongPress}
-                  onPointerUp={cancelLongPress}
-                  onPointerCancel={cancelLongPress}
-                  onClick={swallowLongPressClick}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="min-w-0 truncate select-none [-webkit-touch-callout:none]"
-                >
-                  {it.description}
+                <>
+                  <span
+                    onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "description" }))}
+                    onPointerMove={moveLongPress}
+                    onPointerUp={cancelLongPress}
+                    onPointerCancel={cancelLongPress}
+                    onClick={swallowLongPressClick}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="min-w-0 flex-1 truncate select-none [-webkit-touch-callout:none]"
+                  >
+                    {it.description}
+                  </span>
                   {it.shared && (
-                    <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
+                    <span className="shrink-0 text-xs font-normal tabular-nums text-gray-400">
                       {sharesTaken}/{shareCap}
                     </span>
                   )}
-                </span>
+                </>
               )}
             </span>
             {it.shared && (
@@ -1456,8 +1464,14 @@ export default function RoomPage() {
   type ItemRow = RoomState["items"][number];
   type ItemGroup = { copies: ItemRow[]; mine: ItemRow[]; available: ItemRow[]; others: ItemRow[] };
 
-  /** Build a (description+price+shareCount) key so identical copies group together. */
+  /** Build a (description+price+shareCount) key so identical copies
+   *  group together — but bail out on shared rows so they render
+   *  individually via claimItemRow. The multi-copy renderer doesn't
+   *  carry the "Dela på N · price" partial-share indicator + per-row
+   *  share count, so grouping a partial-share would hide who's in
+   *  on it; per-row keeps that surfaced. */
   function groupKey(it: ItemRow): string {
+    if (it.shared) return it.id;
     return `${it.description}|${it.priceOre}|${it.shareCount ?? ""}`;
   }
 
@@ -1503,10 +1517,10 @@ export default function RoomPage() {
             </span>
             <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
               <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
-              <span className="min-w-0 truncate">
-                {rep.description}
-                {availableCount > 0 && <span className="ml-1 text-xs font-normal text-gray-400">×{availableCount}</span>}
-              </span>
+              <span className="min-w-0 flex-1 truncate">{rep.description}</span>
+              {availableCount > 0 && (
+                <span className="shrink-0 text-xs font-normal text-gray-400">×{availableCount}</span>
+              )}
             </span>
             <Money
               ore={taken ? myTotalOre : rep.priceOre}
@@ -1880,8 +1894,10 @@ export default function RoomPage() {
                                 <span className="text-emerald-500">✓</span>
                                 <span className="min-w-0 flex-1 truncate text-gray-400 line-through">
                                   {rep.description}
-                                  {totalCount > 1 && <span className="ml-1">×{totalCount}</span>}
                                 </span>
+                                {totalCount > 1 && (
+                                  <span className="shrink-0 text-gray-400 line-through">×{totalCount}</span>
+                                )}
                                 <span className="shrink-0 text-xs text-gray-400">{othersClaimerNames(g)}</span>
                                 <span className="shrink-0 text-gray-400 line-through">{formatOre(rep.priceOre)}</span>
                               </button>

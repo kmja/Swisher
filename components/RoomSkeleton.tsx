@@ -114,32 +114,32 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1 pt-0.5">
-            <div className="h-6 w-3/5 animate-pulse rounded bg-gray-200" />
-            <div className="mt-2 h-4 w-2/5 animate-pulse rounded bg-gray-100" />
+            <div className="skel-shimmer h-6 w-3/5 rounded" />
+            <div className="skel-shimmer-light mt-2 h-4 w-2/5 rounded" />
           </div>
           <div className="flex shrink-0 items-start gap-2">
-            <div className="h-[88px] w-[88px] animate-pulse rounded-lg bg-gray-100" />
+            <div className="skel-shimmer-light h-[88px] w-[88px] rounded-lg" />
             <div className="flex flex-col gap-2">
-              <div className="h-11 w-11 animate-pulse rounded-xl bg-gray-100" />
-              <div className="h-11 w-11 animate-pulse rounded-xl bg-gray-100" />
+              <div className="skel-shimmer-light h-11 w-11 rounded-xl" />
+              <div className="skel-shimmer-light h-11 w-11 rounded-xl" />
             </div>
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="h-12 animate-pulse rounded-xl bg-gray-100" />
-          <div className="h-12 animate-pulse rounded-xl bg-gray-100" />
+          <div className="skel-shimmer-light h-12 rounded-xl" />
+          <div className="skel-shimmer-light h-12 rounded-xl" />
         </div>
-        <div className="mt-3 h-12 animate-pulse rounded-xl bg-gray-100" />
+        <div className="skel-shimmer-light mt-3 h-12 rounded-xl" />
       </section>
 
       {/* Items list placeholder — six rows of varying widths. */}
       <section className="flex flex-col gap-2">
-        <div className="h-5 w-24 animate-pulse rounded bg-gray-200" />
+        <div className="skel-shimmer h-5 w-24 rounded" />
         {[80, 65, 75, 60, 70, 55].map((w, i) => (
           <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-black/5">
-            <div className="h-6 w-6 animate-pulse rounded-full bg-gray-100" />
-            <div className="h-4 animate-pulse rounded bg-gray-100" style={{ width: `${w}%` }} />
-            <div className="ml-auto h-4 w-14 animate-pulse rounded bg-gray-100" />
+            <div className="skel-shimmer-light h-6 w-6 rounded-full" />
+            <div className="skel-shimmer-light h-4 rounded" style={{ width: `${w}%` }} />
+            <div className="skel-shimmer-light ml-auto h-4 w-14 rounded" />
           </div>
         ))}
       </section>
