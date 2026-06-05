@@ -179,9 +179,15 @@ export default function QrDialog({
           type="button"
           onClick={onClose}
           aria-label={labels.close}
-          className="absolute right-3 top-3 flex h-16 w-16 items-center justify-center rounded-full text-5xl leading-none text-gray-500 active:bg-gray-100"
+          className="absolute right-3 top-3 flex h-16 w-16 items-center justify-center rounded-full text-gray-500 active:bg-gray-100"
         >
-          ×
+          {/* Use an SVG × instead of the unicode glyph so the cross
+              fills the button instead of riding small in the centre
+              of the font's em-box. Stroke width matches the dialog
+              chrome weight. */}
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" aria-hidden>
+            <path d="M6 6 L18 18 M6 18 L18 6" />
+          </svg>
         </button>
         {/* Header block mirrors the room-page top-section hierarchy:
             text-xl font-bold for the place / title and a mt-0.5
