@@ -18,6 +18,7 @@ import { Money, FxProvider } from "@/components/Money";
 import { currencyFlag, flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
 import { analyzeImageQuality, type ImageQuality } from "@/lib/imageQuality";
+import { detectTextLines, type DetectedLine } from "@/lib/detectLines";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import LangToggle from "@/components/LangToggle";
 import type { Diner, LineItem } from "@/lib/types";
@@ -1041,6 +1042,11 @@ export default function Page() {
   const [ocrModel, setOcrModel] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
+  // Text-row rectangles detected from the captured photo's pixels —
+  // black ink on white paper makes a dark-row scan a good enough
+  // approximation that we can paint REAL "found line" markers on the
+  // photo while the OCR call runs in the background.
+  const [detectedLines, setDetectedLines] = useState<DetectedLine[]>([]);
   // Pre-scan quality hint. Filled by analyzeImageQuality whenever a
   // new shot is committed to imageUrl, cleared when the host retakes
   // or commits to OCR. Surfaces as a non-blocking warning chip above
@@ -1381,6 +1387,22 @@ export default function Page() {
     const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
     return () => clearInterval(iv);
   }, [ocrLoading]);
+
+  // Detect text rows in the captured photo as soon as OCR kicks off —
+  // shows up as a stream of pink rectangles laid down on the receipt
+  // while the model is still working. Reset on each new scan / when
+  // we leave the loading state so the next photo gets fresh markers.
+  useEffect(() => {
+    if (!ocrLoading || !imageUrl) {
+      setDetectedLines([]);
+      return;
+    }
+    let cancelled = false;
+    detectTextLines(imageUrl).then((lines) => {
+      if (!cancelled) setDetectedLines(lines);
+    });
+    return () => { cancelled = true; };
+  }, [ocrLoading, imageUrl]);
 
   // Show the setup card 1 s into the scan (just long enough for the user to
   // register "okay it's scanning"). Cleared when the host actually leaves
@@ -2290,38 +2312,24 @@ export default function Page() {
                     pink grid. */}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="scan-grid absolute inset-0 opacity-20" />
-                {/* Fake "found-line" markers — 14 translucent pink bars
-                    at plausible text-row y-positions and widths, with
-                    staggered fade-ins so it reads as the OCR landing
-                    on text lines one after another. Deterministic per
-                    scan (positions baked into the array) so the same
-                    photo always lights up the same shape, and the
-                    pattern feels designed rather than glitchy. */}
-                <div className="pointer-events-none absolute inset-4">
-                  {[
-                    { y: 9,  x: 6,  w: 50 },
-                    { y: 14, x: 6,  w: 38 },
-                    { y: 19, x: 6,  w: 55 },
-                    { y: 25, x: 6,  w: 42 },
-                    { y: 31, x: 6,  w: 48 },
-                    { y: 37, x: 6,  w: 34 },
-                    { y: 43, x: 6,  w: 52 },
-                    { y: 49, x: 6,  w: 45 },
-                    { y: 55, x: 6,  w: 40 },
-                    { y: 61, x: 6,  w: 38 },
-                    { y: 67, x: 6,  w: 50 },
-                    { y: 73, x: 6,  w: 44 },
-                    { y: 80, x: 6,  w: 36 },
-                    { y: 87, x: 6,  w: 30 },
-                  ].map((bar, i) => (
+                {/* Real "found-line" markers — rectangles computed by
+                    detectTextLines from the captured photo's actual
+                    pixels (dark rows ≈ text rows). Each fades in with
+                    a staggered delay so the markers visibly cascade
+                    down the receipt while the OCR call is in flight.
+                    Cap the per-marker delay at 1.5 s total so long
+                    receipts don't take forever to light up. */}
+                <div className="pointer-events-none absolute inset-0">
+                  {detectedLines.map((line, i) => (
                     <span
                       key={i}
-                      className="ocr-line absolute h-[5px] rounded-full bg-swish/65 shadow-[0_0_8px_2px_rgba(238,92,154,0.55)]"
+                      className="ocr-line absolute rounded-[2px] bg-swish/45 shadow-[0_0_6px_2px_rgba(238,92,154,0.45)]"
                       style={{
-                        top: `${bar.y}%`,
-                        left: `${bar.x}%`,
-                        width: `${bar.w}%`,
-                        animationDelay: `${i * 0.16}s`,
+                        top: `${line.y}%`,
+                        left: `${line.x}%`,
+                        width: `${line.w}%`,
+                        height: `${Math.max(0.6, Math.min(2.5, line.h))}%`,
+                        animationDelay: `${Math.min(1.5, i * 0.05)}s`,
                       }}
                     />
                   ))}
