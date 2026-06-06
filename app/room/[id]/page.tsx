@@ -553,6 +553,10 @@ export default function RoomPage() {
     // edit), so the transform tracks 1:1 without rubber-banding.
     s.el.style.transform = `translateX(${dx}px)`;
     s.el.style.transition = "";
+    // Light up only the reveal layer the user is actively pulling
+    // toward — the opposite side stays at opacity 0, so a spring-
+    // back bounce never paints the wrong-direction colour.
+    showRevealForDirection(s.el, dx);
   };
   const onSwipeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     const s = swipeRef.current;
@@ -581,6 +585,10 @@ export default function RoomPage() {
       el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
       el.style.transform = "translateX(0)";
     }
+    // Drop the reveal layers the moment the gesture is over — the
+    // row's spring-back animation runs against bare background,
+    // not against a lingering pink/red plate.
+    hideReveals(el);
     swipeRef.current = null;
   };
   const onSwipeCancel = () => {
@@ -588,8 +596,27 @@ export default function RoomPage() {
     if (s?.armed) {
       s.el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
       s.el.style.transform = "translateX(0)";
+      hideReveals(s.el);
     }
     swipeRef.current = null;
+  };
+  // Helpers for the swipe-reveal opacity dance — pulled out so the
+  // pointer move / up / cancel branches stay readable.
+  const showRevealForDirection = (rowEl: HTMLElement, dx: number) => {
+    const wrapper = rowEl.parentElement;
+    if (!wrapper) return;
+    const edit = wrapper.querySelector<HTMLElement>("[data-reveal=\"edit\"]");
+    const del = wrapper.querySelector<HTMLElement>("[data-reveal=\"delete\"]");
+    if (edit) edit.style.opacity = dx > 0 ? "1" : "0";
+    if (del) del.style.opacity = dx < 0 ? "1" : "0";
+  };
+  const hideReveals = (rowEl: HTMLElement) => {
+    const wrapper = rowEl.parentElement;
+    if (!wrapper) return;
+    const edit = wrapper.querySelector<HTMLElement>("[data-reveal=\"edit\"]");
+    const del = wrapper.querySelector<HTMLElement>("[data-reveal=\"delete\"]");
+    if (edit) edit.style.opacity = "0";
+    if (del) del.style.opacity = "0";
   };
   const cancelLongPress = useCallback(() => {
     if (lpTimer.current) {
@@ -1321,17 +1348,18 @@ export default function RoomPage() {
     const anyQuickEdit = editingDesc || editingPrice;
     return (
       <div key={it.id} className="relative">
-        {/* Reveal layers behind the row. Two halves: left lights up
-            the swish pink with a pencil glyph (uncovered by right
-            swipe → edit), right lights up red with a trash glyph
-            (uncovered by left swipe → delete). Clipped to the same
-            rounded shape as the row, pointer-events-none so the
-            swipe gesture still lands on the row itself. */}
+        {/* Reveal layers behind the row, hidden until the user is
+            actively swiping. Edit reveal is grayscale so it doesn't
+            shout brand pink for a neutral action; delete stays red.
+            opacity-0 keeps them out of sight when at rest; the
+            swipe handlers flip each layer's opacity imperatively as
+            the gesture moves so a bounce-back spring doesn't leave
+            a flash of colour behind the row. */}
         <div className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-2xl">
-          <div className="flex flex-1 items-center bg-swish pl-5 text-white">
+          <div data-reveal="edit" className="flex flex-1 items-center bg-gray-600 pl-5 text-white opacity-0">
             <PencilIcon size={22} />
           </div>
-          <div className="flex flex-1 items-center justify-end bg-red-600 pr-5 text-white">
+          <div data-reveal="delete" className="flex flex-1 items-center justify-end bg-red-600 pr-5 text-white opacity-0">
             <TrashIcon size={22} />
           </div>
         </div>
