@@ -308,35 +308,36 @@ textarea {
   animation: ocr-line-reveal 0.45s ease-out forwards;
 }
 
-/* Skeleton shimmer — a soft highlight sweeps left → right across
-   the placeholder bar every 1.6 s. Replaces Tailwind's animate-pulse
-   on the loading-state cards so the skeletons read as "loading
-   right now" rather than just static gray. */
+/* Skeleton shimmer — a translucent highlight sweeps left → right
+   across the placeholder bar every 1.5 s. Uses a transform-driven
+   pseudo-element overlay (vs animating background-position, which
+   silently no-ops on some Chromium/Safari combos) so the sweep
+   reliably runs. Two variants split by base colour for the heavier
+   title bars vs lighter content bars. */
 @keyframes skel-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
-.skel-shimmer {
-  background-color: rgb(229 231 235); /* gray-200 base */
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.7) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  background-size: 200% 100%;
-  background-repeat: no-repeat;
-  animation: skel-shimmer 1.6s ease-in-out infinite;
-}
+.skel-shimmer,
 .skel-shimmer-light {
-  background-color: rgb(243 244 246); /* gray-100 base for softer bars */
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.skel-shimmer { background-color: rgb(229 231 235); /* gray-200 */ }
+.skel-shimmer-light { background-color: rgb(243 244 246); /* gray-100 */ }
+.skel-shimmer::after,
+.skel-shimmer-light::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.8) 50%,
     rgba(255, 255, 255, 0) 100%
   );
-  background-size: 200% 100%;
-  background-repeat: no-repeat;
-  animation: skel-shimmer 1.6s ease-in-out infinite;
+  transform: translateX(-100%);
+  animation: skel-shimmer 1.5s ease-in-out infinite;
+  pointer-events: none;
 }
