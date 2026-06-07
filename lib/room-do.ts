@@ -57,6 +57,12 @@ export type RoomState = {
 
 export type RoomInit = {
   id: string;
+  /** Optional client-provided host person id. Lets the items page
+   *  navigate to the room with an optimistic state whose
+   *  payeePersonId matches what the server eventually stores, so the
+   *  bootstrap state and the first server poll don't disagree on
+   *  who the host is. Falls back to a fresh uid() when absent. */
+  hostId?: string;
   payeeName: string;
   payeeNumber: string;
   method?: "swish" | "sepa";
@@ -72,7 +78,7 @@ export type RoomInit = {
    *  per-claim state writes stay small; fetched via the /images endpoint. */
   images?: string[];
   groupSize?: number;
-  items: { description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
+  items: { id?: string; description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -94,7 +100,13 @@ export class RoomDO extends DurableObject {
   async init(data: RoomInit): Promise<RoomState> {
     const existing = await this.load();
     if (existing) return existing;
-    const host: RoomPerson = { id: uid(), name: data.payeeName.trim().slice(0, 40) || "Värd" };
+    // Honour a client-supplied host id when it's well-formed (UUID),
+    // so the items page's optimistic state lines up with what we
+    // store. Falls back to a fresh id otherwise.
+    const validUid = (s: unknown): s is string =>
+      typeof s === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s);
+    const hostId = validUid(data.hostId) ? data.hostId : uid();
+    const host: RoomPerson = { id: hostId, name: data.payeeName.trim().slice(0, 40) || "Värd" };
     const state: RoomState = {
       id: data.id,
       createdAt: Date.now(),
@@ -124,7 +136,7 @@ export class RoomDO extends DurableObject {
           typeof data.groupSize === "number" && data.groupSize >= 2 ? Math.round(data.groupSize) : 1;
         const fully = isFullyShared({ shared: it.shared === true, shareCount }, groupSize);
         return {
-          id: uid(),
+          id: validUid(it.id) ? it.id : uid(),
           description: it.description.slice(0, 80),
           priceOre: Math.max(0, Math.round(it.priceOre)),
           category: it.category,

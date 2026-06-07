@@ -20,6 +20,7 @@ import { addHistory } from "@/lib/history";
 import { buildSwishUri } from "@/lib/swish";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
+import { pendingCreateKey, type PendingCreatePayload } from "@/lib/optimisticRoom";
 
 type Lang = "sv" | "en";
 
@@ -194,6 +195,16 @@ export default function RoomPage() {
   const [status, setStatus] = useState<"loading" | "ok" | "notfound" | "unavailable">(
     () => (state ? "ok" : "loading"),
   );
+  // Set when the room page replays a pending create-room POST and it
+  // comes back non-2xx — surfaces as a top banner with a retry
+  // button. Cleared when retry succeeds.
+  const [createError, setCreateError] = useState<string | null>(null);
+  // Counter that increments each time the user taps "Retry" after a
+  // create-room failure, so the replay effect can re-fire the POST.
+  const [createRetryCount, setCreateRetryCount] = useState(0);
+  // Guards the create-room replay from firing twice if React strict-
+  // mode mounts the effect twice in dev; cleared on retry.
+  const createInFlightRef = useRef(false);
   const [personId, setPersonId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
@@ -674,6 +685,63 @@ export default function RoomPage() {
   //      the dialog's growing-from / shrinking-back-into animation.
   const inviteOnMountRef = useRef(false);
   const prewarmedOnMountRef = useRef(false);
+  // Replay any pending create-room POST the items page stashed before
+  // navigating optimistically. The optimistic bootstrap state is
+  // already on screen — this effect makes the room real on the
+  // server in the background and either swaps in the confirmed
+  // state on success, or surfaces an error banner with a retry
+  // button on failure. Re-runs whenever createRetryCount ticks
+  // (the retry button bumps it).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem(pendingCreateKey(code));
+    if (!raw) return;
+    if (createInFlightRef.current) return;
+    createInFlightRef.current = true;
+    let cancelled = false;
+    let payload: PendingCreatePayload;
+    try {
+      payload = JSON.parse(raw) as PendingCreatePayload;
+    } catch {
+      sessionStorage.removeItem(pendingCreateKey(code));
+      createInFlightRef.current = false;
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/room", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok) {
+          setCreateError(
+            (data && typeof data.error === "string" && data.error) || "Could not create the room.",
+          );
+          createInFlightRef.current = false;
+          return;
+        }
+        // Server confirmed; clear the pending payload so a refresh
+        // doesn't replay it, and replace the optimistic state with
+        // the canonical one the DO returned. The next poll would
+        // pick this up anyway, but doing it here removes any
+        // window where someone could see stale optimism.
+        sessionStorage.removeItem(pendingCreateKey(code));
+        if (data && data.state) setState(data.state as RoomState);
+        setCreateError(null);
+        createInFlightRef.current = false;
+      } catch {
+        if (cancelled) return;
+        setCreateError("Could not create the room.");
+        createInFlightRef.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [code, createRetryCount]);
   useEffect(() => {
     const wantsInvite = searchParams.get("invite") === "1";
     const wasPrewarmed = searchParams.get("prewarmed") === "1";
@@ -1644,6 +1712,30 @@ export default function RoomPage() {
           the right; the sticky nav and step strip above stay anchored
           so the wizard chrome feels continuous between steps. */}
       <div ref={playRoomEnter} className="flex flex-col gap-4">
+
+      {createError && (
+        <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v5" />
+              <path d="M12 16h.01" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1 leading-snug">{createError}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setCreateError(null);
+              createInFlightRef.current = false;
+              setCreateRetryCount((n) => n + 1);
+            }}
+            className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm active:bg-red-700"
+          >
+            {lang === "sv" ? "Försök igen" : "Retry"}
+          </button>
+        </div>
+      )}
 
       {/* Share / invite — top of the room reads as a header / title now:
           place name as the hero, date subtitle, a small live QR with the

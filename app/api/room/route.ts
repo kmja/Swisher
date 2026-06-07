@@ -30,6 +30,15 @@ export async function POST(req: Request) {
   }
 
   let body: {
+    /** Optional client-supplied room code, used so the items page can
+     *  build an optimistic room state under the same code it
+     *  navigates to (no server round-trip on the critical path).
+     *  Must match the ALPHABET / length we'd otherwise generate. */
+    id?: string;
+    /** Optional client-supplied host person id (UUID). Lets the
+     *  bootstrap room state line up with what the DO stores so the
+     *  first poll doesn't reshuffle people. */
+    hostId?: string;
     payeeName?: string;
     payeeNumber?: string;
     message?: string;
@@ -43,7 +52,7 @@ export async function POST(req: Request) {
     payeeIban?: string;
     images?: string[];
     groupSize?: number;
-    items?: { description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown }[];
+    items?: { id?: unknown; description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown }[];
   };
   try {
     body = await req.json();
@@ -64,6 +73,7 @@ export async function POST(req: Request) {
 
   const items = (Array.isArray(body.items) ? body.items : [])
     .map((it) => ({
+      id: typeof it?.id === "string" ? it.id : undefined,
       description: String(it?.description ?? "").trim(),
       priceOre: Math.round(Number(it?.priceOre)),
       category: typeof it?.category === "string" ? it.category : undefined,
@@ -77,10 +87,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Add at least one item." }, { status: 400 });
   }
 
-  const id = newCode();
+  // Honour a client-supplied room code if it matches the format we'd
+  // otherwise generate. init() is idempotent, so retrying the POST
+  // for the same id (e.g. a flaky network) returns the existing room
+  // rather than spawning a duplicate.
+  const requestedId = typeof body.id === "string" ? body.id.toUpperCase() : "";
+  const id =
+    requestedId.length === 6 && /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/.test(requestedId)
+      ? requestedId
+      : newCode();
+  const hostId = typeof body.hostId === "string" ? body.hostId : undefined;
   const stub = ns.get(ns.idFromName(id));
   const state = await stub.init({
     id,
+    hostId,
     payeeName: String(body.payeeName ?? "").slice(0, 40),
     payeeNumber,
     method,

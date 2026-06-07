@@ -8,7 +8,6 @@ import { computeShares, formatOre, parseAmountToOre } from "@/lib/money";
 import { isValidPhone, normalizePhone } from "@/lib/swish";
 import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa";
 import KvittLogo from "@/components/KvittLogo";
-import RoomSkeleton from "@/components/RoomSkeleton";
 import StepHeader from "@/components/StepHeader";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
@@ -19,6 +18,7 @@ import { currencyFlag, flagEmoji, formatNative, regionName, type Fx } from "@/li
 import { addHistory } from "@/lib/history";
 import { analyzeImageQuality, type ImageQuality } from "@/lib/imageQuality";
 import { detectTextLines, type DetectedLine } from "@/lib/detectLines";
+import { buildOptimisticRoomState, generateRoomCode, pendingCreateKey, type PendingCreatePayload } from "@/lib/optimisticRoom";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import LangToggle from "@/components/LangToggle";
 import type { Diner, LineItem } from "@/lib/types";
@@ -2059,77 +2059,87 @@ export default function Page() {
   // type anything if they don't want to.
   const roomReady = validItems.length > 0 && payDestOk;
 
-  async function createRoom() {
+  function createRoom() {
     if (!roomReady || creatingRoom) return;
     setCreatingRoom(true);
     setRoomError(null);
-    // Hold router.replace until the wizard slide has played all the
-    // way through, even if the POST returns sooner. Without this the
-    // page can unmount mid-animation and the room page snaps in.
-    const slideStartedAt = Date.now();
-    const SLIDE_MS = 320;
     try {
-      const res = await fetch("/api/room", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          payeeName: diners[0].name.trim() || t.genericHostName,
-          payeeNumber: payerPhone,
-          method,
-          payeeIban: method === "sepa" ? normalizeIban(payeeIban) : "",
-          message,
-          place: mealLabel.trim(),
-          date: eventDate,
-          tipOre,
-          currency,
-          rate: fxRate ?? 1,
-          country: country ?? "",
-          images: images.slice(0, 5),
-          groupSize: groupSize >= 2 ? groupSize : undefined,
-          items: foodItems.map((it) => ({
-            description: it.description.trim() || t.rowFallback,
-            priceOre: parseAmountToOre(it.priceInput) ?? 0,
-            category: categoryFor(it.description, it.category),
-            emoji: it.emoji,
-            // Shared items split across the whole room (pre-claimed for everyone),
-            // rather than becoming separate claimable slots.
-            shared: it.shared,
-            // Freeze the group size onto each shared item so the room uses it as
-            // the divisor — otherwise the room falls back to "current people in
-            // the room", which is just the host (→ 2) until others join.
-            shareCount: it.shareCount && it.shareCount > 0
-              ? it.shareCount
-              : it.shared && groupSize > 0 ? groupSize : undefined,
-          })),
-        }),
+      // Items page has every field the DO needs — generate the room
+      // code + host id + per-item ids client-side, build the matching
+      // optimistic state, and stash both that AND the POST payload
+      // for the room page to replay. The server respects the supplied
+      // ids, so the bootstrap state lines up exactly with what
+      // eventually lands in storage — no first-poll jiggle.
+      const id = generateRoomCode();
+      const hostId = crypto.randomUUID();
+      const optimisticPayeeName = diners[0].name.trim() || t.genericHostName;
+      const optimisticPayeeNumber = payerPhone;
+      const optimisticPayeeIban = method === "sepa" ? normalizeIban(payeeIban) : "";
+      const itemsPayload = foodItems.map((it) => ({
+        id: crypto.randomUUID(),
+        description: it.description.trim() || t.rowFallback,
+        priceOre: parseAmountToOre(it.priceInput) ?? 0,
+        category: categoryFor(it.description, it.category),
+        emoji: it.emoji,
+        shared: it.shared,
+        // Freeze the group size onto each shared item so the room uses
+        // it as the divisor — otherwise the room falls back to
+        // "current people in the room", which is just the host (→ 2)
+        // until others join.
+        shareCount:
+          it.shareCount && it.shareCount > 0
+            ? it.shareCount
+            : it.shared && groupSize > 0 ? groupSize : undefined,
+      }));
+      const optimistic = buildOptimisticRoomState({
+        id,
+        hostId,
+        payeeName: optimisticPayeeName,
+        payeeNumber: optimisticPayeeNumber,
+        method,
+        payeeIban: optimisticPayeeIban,
+        message,
+        place: mealLabel.trim(),
+        date: eventDate,
+        tipOre,
+        currency,
+        rate: fxRate ?? 1,
+        country: country ?? "",
+        imageCount: images.slice(0, 5).length,
+        groupSize: groupSize >= 2 ? groupSize : undefined,
+        items: itemsPayload,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not create the room.");
+      const pending: PendingCreatePayload = {
+        id,
+        hostId,
+        payeeName: optimisticPayeeName,
+        payeeNumber: optimisticPayeeNumber,
+        message,
+        method,
+        payeeIban: optimisticPayeeIban,
+        place: mealLabel.trim(),
+        date: eventDate,
+        tipOre,
+        currency,
+        rate: fxRate ?? 1,
+        country: country ?? "",
+        images: images.slice(0, 5),
+        groupSize: groupSize >= 2 ? groupSize : undefined,
+        items: itemsPayload,
+      };
       try {
-        localStorage.setItem(`swisher-room:${data.id}`, data.personId);
-        // Hand the freshly-init'd room state to the room page so it
-        // can render real content immediately instead of waiting on
-        // its own GET round-trip. One-shot — the room page clears
-        // the key on read.
-        if (data.state) {
-          sessionStorage.setItem(`kvitt-room-bootstrap:${data.id}`, JSON.stringify(data.state));
-        }
+        localStorage.setItem(`swisher-room:${id}`, hostId);
+        sessionStorage.setItem(`kvitt-room-bootstrap:${id}`, JSON.stringify(optimistic));
+        sessionStorage.setItem(pendingCreateKey(id), JSON.stringify(pending));
       } catch {
         /* storage unavailable */
       }
-      addHistory({ id: data.id, place: mealLabel.trim(), date: eventDate, role: "host" });
-      // Replace, not push: the items/setup step shouldn't be reachable via the
-      // back button once a room exists (it'd risk spawning a second room and
-      // orphaning the first). Going back from the room goes outside the app;
-      // "New receipt" in the room nav is the way to start fresh.
-      // ?invite=1 tells the room page to pop the QR/share dialog straight away
-      // — the host's first job is to invite the table, not to scroll items.
-      // ?prewarmed=1 tells the room page to skip its own slide-in animation —
-      // the skeleton overlay below has already slid into place, a second
-      // slide on top would feel like a glitch.
-      const remaining = SLIDE_MS - (Date.now() - slideStartedAt);
-      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-      router.replace(`/room/${data.id}?invite=1&prewarmed=1`);
+      addHistory({ id, place: mealLabel.trim(), date: eventDate, role: "host" });
+      // Replace, not push: the items/setup step shouldn't be reachable
+      // via the back button once a room exists. ?invite=1 pops the
+      // QR/share dialog straight away; ?prewarmed=1 tells the room
+      // page to skip its slide-in.
+      router.replace(`/room/${id}?invite=1&prewarmed=1`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
       setCreatingRoom(false);
@@ -2215,13 +2225,12 @@ export default function Page() {
   // --- render ----------------------------------------------------------------
   return (
     <FxProvider value={fx}>
-    {/* Skeleton overlay shown the moment "Skapa rum" is tapped. Slides
-        in from the right (matching the room page's own playRoomEnter)
-        so the host sees the room-shaped chrome instantly while the
-        create-room POST is still in flight. router.replace below adds
-        ?prewarmed=1 so the real room page skips its slide-in and the
-        swap from skeleton → live content has no visible jump. */}
-    {creatingRoom && <RoomSkeleton play />}
+    {/* Host's createRoom path now builds an optimistic room state from
+        the items page's local data and hands it to the room page via
+        sessionStorage, so the host navigates directly to a fully-
+        rendered room without ever waiting on the create-room POST.
+        That made the skeleton overlay we used to mount here purely
+        decorative — gone now. */}
     <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-dvh overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
