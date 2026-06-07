@@ -2960,7 +2960,7 @@ export default function Page() {
                               >
                                 −
                               </button>
-                              <span className="w-12 text-center text-lg font-bold tabular-nums text-ink">{d}/{groupSize}</span>
+                              <span className="w-12 text-center text-lg font-normal tabular-nums text-ink">{d}/{groupSize}</span>
                               <button
                                 type="button"
                                 aria-label="+"
@@ -3224,7 +3224,7 @@ export default function Page() {
                       >
                         −
                       </button>
-                      <span className="min-w-[3.5rem] text-center text-2xl font-bold tabular-nums text-ink">{d}/{groupSize}</span>
+                      <span className="min-w-[3.5rem] text-center text-2xl font-normal tabular-nums text-ink">{d}/{groupSize}</span>
                       <button
                         type="button"
                         aria-label="+"
