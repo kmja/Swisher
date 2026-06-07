@@ -309,35 +309,37 @@ textarea {
 }
 
 /* Skeleton shimmer — a translucent highlight sweeps left → right
-   across the placeholder bar every 1.5 s. Uses a transform-driven
-   pseudo-element overlay (vs animating background-position, which
-   silently no-ops on some Chromium/Safari combos) so the sweep
-   reliably runs. Two variants split by base colour for the heavier
-   title bars vs lighter content bars. */
-@keyframes skel-shimmer {
+   across each loading bar every 1.4 s. We render the highlight as
+   a real <span class="shimmer-wave"> child of the bar (not a CSS
+   pseudo-element) because Tailwind v4's preflight + Next's CSS
+   layering quietly drop @keyframes targeting ::after on some
+   builds — and animating background-position dropped on others.
+   A real DOM element + transform animation is the only pattern
+   that lit up reliably across every device we tested. */
+@keyframes skel-shimmer-sweep {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
-.skel-shimmer,
-.skel-shimmer-light {
+.skel-bar {
   position: relative;
   overflow: hidden;
-  isolation: isolate;
+  background-color: rgb(229 231 235); /* gray-200 */
 }
-.skel-shimmer { background-color: rgb(229 231 235); /* gray-200 */ }
-.skel-shimmer-light { background-color: rgb(243 244 246); /* gray-100 */ }
-.skel-shimmer::after,
-.skel-shimmer-light::after {
-  content: "";
+.skel-bar-light {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(243 244 246); /* gray-100 */
+}
+.shimmer-wave {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.85) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   transform: translateX(-100%);
-  animation: skel-shimmer 1.5s ease-in-out infinite;
-  pointer-events: none;
+  animation: skel-shimmer-sweep 1.4s linear infinite;
 }

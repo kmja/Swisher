@@ -2860,7 +2860,7 @@ export default function Page() {
                 return (
                 <div key={rep.id} data-row-id={rep.id} className="flex items-start gap-2">
                   <div
-                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${rep.shared ? "bg-swish/5 ring-swish/30" : lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
                   >
                     {/* Top row uses items-start (not items-center) so a
                         multi-line description, the emoji and the price
@@ -3193,7 +3193,7 @@ export default function Page() {
             return (
               <div
                 key={it.id}
-                className={`rounded-2xl p-3 shadow-sm ring-1 ${it.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"}`}
+                className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">

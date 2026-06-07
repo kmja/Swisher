@@ -1194,9 +1194,7 @@ export default function RoomPage() {
       return (
         <div ref={playEditOpen} key={it.id} data-item-id={it.id} className="origin-top space-y-2">
           <div
-            className={`min-w-0 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${
-              editDraft.shared ? "bg-swish/5 ring-swish/30" : "bg-white ring-black/5"
-            }`}
+            className="min-w-0 rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5"
           >
             {/* Top row: items-start so the description never
                 drifts to the middle of the card as the row's

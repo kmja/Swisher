@@ -3,15 +3,15 @@
 import type { Lang } from "@/lib/i18n";
 
 /** SV/EN toggle pill; controlled by the parent's lang state.
- *  The non-active half wears an inset ring so it reads as its own
- *  outlined button — without it the white toggle blends straight
- *  into the white header backdrop and only the pink active half
- *  is visible. (Container ring dropped; if we kept it the inactive
- *  half would render with a 2 px doubled outline at three of its
- *  edges where its ring met the container's.) */
+ *  Outline lives on the CONTAINER now (ring-2 ring-gray-300) so it
+ *  frames the whole pill as one shape. The inactive half no longer
+ *  carries its own inset ring — that's what made the left edge of
+ *  the inactive button look like a stray pinstripe meeting the pink
+ *  active half. Active = pink fill; inactive = plain white inside
+ *  the framed pill. */
 export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
   return (
-    <div className="inline-flex overflow-hidden rounded-full bg-white text-sm font-semibold shadow-sm">
+    <div className="inline-flex overflow-hidden rounded-full bg-white text-sm font-semibold shadow-sm ring-2 ring-gray-300">
       {(["sv", "en"] as Lang[]).map((l) => (
         <button
           key={l}
@@ -21,7 +21,7 @@ export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (
           className={`px-3 py-2 ${
             lang === l
               ? "bg-swish text-white"
-              : "text-gray-500 ring-2 ring-inset ring-gray-300 active:bg-gray-100"
+              : "text-gray-500 active:bg-gray-100"
           }`}
         >
           {l.toUpperCase()}
