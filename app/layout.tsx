@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,16 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read Cloudflare's CF-IPCountry header at request time and bake it
+  // into the document as a global. Beats persisting a cookie — the
+  // signal lives only for the lifetime of this response, never lands
+  // in storage, and so doesn't drag us under cookie-consent rules.
+  // Falls back to "" in local dev / non-Cloudflare runtimes, which
+  // detectCountry() handles by walking down to navigator.language.
+  const hdrs = await headers();
+  const rawCountry = (hdrs.get("cf-ipcountry") ?? "").toUpperCase();
+  const country = /^[A-Z]{2}$/.test(rawCountry) ? rawCountry : "";
   return (
     <html lang="sv">
       <head>
@@ -60,6 +70,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "(function(){var d=document.documentElement,l=document.getElementById('kvitt-manifest'),m=window.matchMedia('(prefers-color-scheme: dark)');function apply(dark){d.classList.toggle('dark',dark);if(l)l.href=dark?'/manifest-dark.webmanifest':'/manifest.webmanifest';}function pin(){try{return localStorage.getItem('kvitt-theme');}catch(e){return null;}}var p=pin();apply(p==='dark'||(p!=='light'&&m.matches));try{m.addEventListener('change',function(e){if(pin())return;apply(e.matches);});}catch(e){m.addListener(function(e){if(pin())return;apply(e.matches);});}window.__kvittSetTheme=function(t){try{if(t==='dark'||t==='light')localStorage.setItem('kvitt-theme',t);else localStorage.removeItem('kvitt-theme');}catch(e){}apply(t==='dark'||(t!=='light'&&m.matches));};window.__kvittGetTheme=function(){return pin();};})();",
           }}
         />
+        {/* Cloudflare-derived country signal, injected once per
+            request. detectCountry() in lib/locales.ts reads this
+            window global; lives only for the lifetime of the
+            response, never stored. Avoids the cookie that GDPR
+            would push us toward needing consent for. */}
+        {country && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.__kvittCountry=${JSON.stringify(country)};`,
+            }}
+          />
+        )}
       </head>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>

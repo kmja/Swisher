@@ -17,37 +17,17 @@ const CODE_PATTERN = /^\/([A-Za-z0-9]{6})$/;
 
 export function middleware(req: NextRequest) {
   const match = req.nextUrl.pathname.match(CODE_PATTERN);
-  const response = match
-    ? (() => {
-        const url = req.nextUrl.clone();
-        url.pathname = `/room/${match[1].toUpperCase()}`;
-        return NextResponse.rewrite(url);
-      })()
-    : NextResponse.next();
-
-  // Cloudflare attaches CF-IPCountry to every incoming request. We
-  // stash it as a cookie so the client (which is otherwise
-  // statically rendered) can read the user's physical country
-  // without a round-trip — used to default the payout rail (Swish
-  // vs SEPA) for hosts whose device language is English but who
-  // are physically in Sweden.
-  const country = (req.headers.get("cf-ipcountry") ?? "").toUpperCase();
-  if (/^[A-Z]{2}$/.test(country)) {
-    response.cookies.set("kvitt-country", country, {
-      maxAge: 60 * 60 * 24 * 30,
-      sameSite: "lax",
-      path: "/",
-    });
-  }
-  return response;
+  if (!match) return NextResponse.next();
+  const code = match[1].toUpperCase();
+  const url = req.nextUrl.clone();
+  url.pathname = `/room/${code}`;
+  return NextResponse.rewrite(url);
 }
 
 export const config = {
-  // Match every path EXCEPT api routes, the Next.js asset directory,
-  // and anything that looks like a static file (has a dot in the last
-  // path segment — sitemap.xml, favicon.ico, manifest.webmanifest, …).
-  // That covers the bare-code rewrite paths AND every regular page
-  // arrival, so the cookie is set whether the user hits "/", a room
-  // link, or a history/split page directly.
-  matcher: ["/((?!api|_next|.*\\..*).*)"],
+  // Skip everything we already route or serve as a static asset. The
+  // negative lookahead catches "anything with a dot in the last path
+  // segment" too (sitemap.xml, favicon.ico, manifest.webmanifest, …)
+  // so the middleware only ever sees naked top-level paths.
+  matcher: ["/((?!api|room|split|history|debug|_next|.*\\..*).*)"],
 };

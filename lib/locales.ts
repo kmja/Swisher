@@ -41,9 +41,9 @@ export function localeFor(code: Lang): Locale {
 }
 
 /** Best-effort ISO 3166-1 alpha-2 country guess. Order of trust:
- *    1. kvitt-country cookie  — set by middleware from Cloudflare's
- *       CF-IPCountry header on every page request. Physical-IP
- *       signal, beats any device-language heuristic.
+ *    1. window.__kvittCountry  — Cloudflare CF-IPCountry header
+ *       inlined by the root layout at request time. Physical-IP
+ *       signal, no persistence, no cookie, no GDPR consent banner.
  *    2. navigator.language region tag — e.g. "sv-SE" → "SE". Often
  *       carries the user's region even when the language is "en".
  *    3. Intl.DateTimeFormat timezone — "Europe/Stockholm" → "SE", and
@@ -51,10 +51,11 @@ export function localeFor(code: Lang): Locale {
  *  Returns null when nothing lands on a recognised country. */
 export function detectCountry(): string | null {
   if (typeof window === "undefined") return null;
-  // 1. Cloudflare IP-country cookie (set by middleware).
-  if (typeof document !== "undefined") {
-    const m = document.cookie.match(/(?:^|;\s*)kvitt-country=([A-Za-z]{2})\b/);
-    if (m) return m[1].toUpperCase();
+  // 1. Server-injected CF-IPCountry (lives only on window — no
+  //    cookie / no localStorage, so no consent question).
+  const w = window as unknown as { __kvittCountry?: string };
+  if (typeof w.__kvittCountry === "string" && /^[A-Z]{2}$/.test(w.__kvittCountry)) {
+    return w.__kvittCountry;
   }
   // 2. navigator.language region tag.
   const nav = typeof navigator !== "undefined" ? navigator.language : "";
