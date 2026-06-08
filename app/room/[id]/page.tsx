@@ -822,10 +822,9 @@ export default function RoomPage() {
     setLang(detectDefaultLang());
     if (detectCountry() === "SE") {
       // Swish payment link — amount left editable, message pre-filled.
-      // Replace 0700000000 with your registered Swish number.
       const payload = JSON.stringify({
         version: 1,
-        payee: { value: "0700000000", editable: false },
+        payee: { value: "0738164635", editable: false },
         amount: { value: 20, editable: true },
         message: { value: "Kvitt", editable: false },
       });
