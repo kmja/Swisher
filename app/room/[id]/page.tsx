@@ -11,7 +11,7 @@ import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
-import { detectDefaultLang } from "@/lib/locales";
+import { detectDefaultLang, detectCountry } from "@/lib/locales";
 import KvittLogo from "@/components/KvittLogo";
 import RoomSkeleton from "@/components/RoomSkeleton";
 import StepHeader from "@/components/StepHeader";
@@ -256,6 +256,7 @@ export default function RoomPage() {
   // share ↔ total conversion. Committed back to editDraft on blur.
   const [editPriceDraft, setEditPriceDraft] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
+  const [donateHref, setDonateHref] = useState("https://ko-fi.com/kvitt");
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
   // Snapshot of a removed item, shown as a transient undo toast above
@@ -819,6 +820,17 @@ export default function RoomPage() {
 
   useEffect(() => {
     setLang(detectDefaultLang());
+    if (detectCountry() === "SE") {
+      // Swish payment link — amount left editable, message pre-filled.
+      // Replace 0700000000 with your registered Swish number.
+      const payload = JSON.stringify({
+        version: 1,
+        payee: { value: "0700000000", editable: false },
+        amount: { value: 20, editable: true },
+        message: { value: "Kvitt", editable: false },
+      });
+      setDonateHref(`swish://payment?data=${encodeURIComponent(payload)}`);
+    }
     try {
       const pid = localStorage.getItem(storageKey);
       if (pid) setPersonId(pid);
@@ -2562,7 +2574,7 @@ export default function RoomPage() {
           clear of the guest's fixed pay footer. Update the href in
           one place when the donation handle changes. */}
       <a
-        href="https://ko-fi.com/kvitt"
+        href={donateHref}
         target="_blank"
         rel="noopener noreferrer"
         className="mx-auto mt-6 inline-flex items-center gap-1.5 self-center rounded-full bg-white px-3.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200 active:bg-gray-50"
