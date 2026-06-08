@@ -94,6 +94,7 @@ const R = {
     undo: "Ångra",
     save: "Spara",
     cancel: "Avbryt",
+    donate: "Bjud Kvitt på en kaffe",
   },
   en: {
     loading: "Loading the room…",
@@ -163,6 +164,7 @@ const R = {
     undo: "Undo",
     save: "Save",
     cancel: "Cancel",
+    donate: "Buy Kvitt a coffee",
   },
 };
 
@@ -2554,6 +2556,20 @@ export default function RoomPage() {
           </div>
         </div>
       )}
+      {/* Subtle "buy me a coffee" link at the bottom of the room
+          content. Sits inside the playRoomEnter wrapper so it slides
+          in with the rest of the body; pb-32 on the main keeps it
+          clear of the guest's fixed pay footer. Update the href in
+          one place when the donation handle changes. */}
+      <a
+        href="https://ko-fi.com/kvitt"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mx-auto mt-6 inline-flex items-center gap-1.5 self-center rounded-full bg-white px-3.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200 active:bg-gray-50"
+      >
+        <span aria-hidden>☕</span>
+        <span>{t.donate}</span>
+      </a>
       </div>
       <QrDialog
         open={shareOpen}
