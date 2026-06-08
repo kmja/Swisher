@@ -184,7 +184,7 @@ function CaptureShutterButton({
       title={label}
       className="pointer-events-auto relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-[3px] border-white/95 shadow-2xl active:scale-95 transition-transform disabled:opacity-40"
     >
-      <span aria-hidden className="block h-[54px] w-[54px] rounded-full bg-white shadow-inner" />
+      <span aria-hidden className="block h-[54px] w-[54px] rounded-full bg-[#ffffff] shadow-inner" />
       {typeof count === "number" && count > 0 && (
         <span className="absolute -right-1 -top-1 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-swish px-1.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white">
           {count}
@@ -2229,7 +2229,7 @@ export default function Page() {
         rendered room without ever waiting on the create-room POST.
         That made the skeleton overlay we used to mount here purely
         decorative — gone now. */}
-    <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-dvh overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
+    <main className={`mx-auto flex max-w-md flex-col px-4 ${step === "capture" ? "h-[100svh] overflow-hidden pb-4" : "min-h-dvh pb-28"}`}>
       <header className="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-300/80 bg-white/95 px-4 py-3 shadow-[0_2px_8px_-2px_rgba(15,15,30,0.08)] backdrop-blur">
         <div className="grid grid-cols-3 items-center gap-2">
           <div className="flex items-center gap-2 justify-self-start">
