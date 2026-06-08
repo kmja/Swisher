@@ -40,19 +40,30 @@ export function localeFor(code: Lang): Locale {
   return LOCALES.find((l) => l.code === code) ?? LOCALES[1]; /* en fallback */
 }
 
-/** Best-effort ISO 3166-1 alpha-2 country guess. Reads the region tag
- *  off navigator.language first (e.g. "sv-SE" → "SE"), then falls back
- *  to the timezone returned by Intl.DateTimeFormat (e.g.
- *  "Europe/Stockholm" → "SE"). Returns null when neither signal lands
- *  on a known country. */
+/** Best-effort ISO 3166-1 alpha-2 country guess. Order of trust:
+ *    1. kvitt-country cookie  — set by middleware from Cloudflare's
+ *       CF-IPCountry header on every page request. Physical-IP
+ *       signal, beats any device-language heuristic.
+ *    2. navigator.language region tag — e.g. "sv-SE" → "SE". Often
+ *       carries the user's region even when the language is "en".
+ *    3. Intl.DateTimeFormat timezone — "Europe/Stockholm" → "SE", and
+ *       a handful of other major European cities mapped through.
+ *  Returns null when nothing lands on a recognised country. */
 export function detectCountry(): string | null {
   if (typeof window === "undefined") return null;
+  // 1. Cloudflare IP-country cookie (set by middleware).
+  if (typeof document !== "undefined") {
+    const m = document.cookie.match(/(?:^|;\s*)kvitt-country=([A-Za-z]{2})\b/);
+    if (m) return m[1].toUpperCase();
+  }
+  // 2. navigator.language region tag.
   const nav = typeof navigator !== "undefined" ? navigator.language : "";
   const parts = nav.split("-");
   if (parts.length > 1) {
     const region = parts[parts.length - 1].toUpperCase();
     if (/^[A-Z]{2}$/.test(region)) return region;
   }
+  // 3. Timezone fallback.
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
     const city = tz.split("/").pop()?.toLowerCase() ?? "";
