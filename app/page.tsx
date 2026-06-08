@@ -1191,6 +1191,11 @@ export default function Page() {
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
+  // Ring buffer of the last few language switches. When the trail ends
+  // with sv → no → da → sv (the three Scandinavian sisters and back),
+  // unhide the debug dialog. The button itself stays hidden — this
+  // gesture is the only way in.
+  const langTrailRef = useRef<Lang[]>([]);
   // Debug-only state. The buttons in the Dialogs section of the
   // debug panel flip these so we can preview each modal / banner
   // without having to walk through the live capture / scan / share
@@ -1286,6 +1291,19 @@ export default function Page() {
       localStorage.setItem("swisher-lang", next);
     } catch {
       /* storage unavailable */
+    }
+    if (next !== prev) {
+      const trail = langTrailRef.current;
+      if (trail.length === 0) trail.push(prev);
+      trail.push(next);
+      if (trail.length > 4) trail.splice(0, trail.length - 4);
+      if (
+        trail.length === 4 &&
+        trail[0] === "sv" && trail[1] === "no" &&
+        trail[2] === "da" && trail[3] === "sv"
+      ) {
+        setDebugOpen(true);
+      }
     }
   }, []);
 
@@ -2243,19 +2261,8 @@ export default function Page() {
                 🕘
               </a>
             ) : null}
-            <button
-              type="button"
-              onClick={() => setDebugOpen(true)}
-              aria-label="Debug"
-              title="Debug"
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-500 active:bg-gray-200"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8h.01" />
-                <path d="M11 12h1v5h1" />
-              </svg>
-            </button>
+            {/* Debug panel is hidden — open it by switching language
+                sv → no → da → sv in that order (see applyLang). */}
           </div>
           <KvittLogo className="justify-self-center" />
           <div className="justify-self-end">
