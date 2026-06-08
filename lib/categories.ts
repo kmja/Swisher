@@ -14,11 +14,19 @@ import type { Lang } from "./i18n";
 
 const svLabels: Record<Category, string> = { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" };
 const enLabels: Record<Category, string> = { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", other: "Other" };
-// Other European codes reuse en until real translations land — same
-// fallback pattern lib/i18n.ts uses for the rest of the copy.
+const deLabels: Record<Category, string> = { starter: "Vorspeisen", food: "Hauptgerichte", drink: "Getränke", dessert: "Dessert", other: "Sonstiges" };
+const frLabels: Record<Category, string> = { starter: "Entrées", food: "Plats", drink: "Boissons", dessert: "Dessert", other: "Autre" };
+const esLabels: Record<Category, string> = { starter: "Entrantes", food: "Principales", drink: "Bebidas", dessert: "Postre", other: "Otros" };
+const itLabels: Record<Category, string> = { starter: "Antipasti", food: "Secondi", drink: "Bevande", dessert: "Dolci", other: "Altro" };
+const nlLabels: Record<Category, string> = { starter: "Voorgerechten", food: "Hoofdgerechten", drink: "Drank", dessert: "Dessert", other: "Overig" };
+const daLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", other: "Øvrigt" };
+const noLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", other: "Annet" };
+const fiLabels: Record<Category, string> = { starter: "Alkuruoat", food: "Pääruoat", drink: "Juomat", dessert: "Jälkiruoka", other: "Muut" };
+const plLabels: Record<Category, string> = { starter: "Przystawki", food: "Dania główne", drink: "Napoje", dessert: "Desery", other: "Inne" };
+const ptLabels: Record<Category, string> = { starter: "Entradas", food: "Pratos principais", drink: "Bebidas", dessert: "Sobremesa", other: "Outros" };
 export const CATEGORY_LABEL: Record<Lang, Record<Category, string>> = {
-  sv: svLabels, en: enLabels, de: enLabels, fr: enLabels, es: enLabels, it: enLabels,
-  nl: enLabels, da: enLabels, no: enLabels, fi: enLabels, pl: enLabels, pt: enLabels,
+  sv: svLabels, en: enLabels, de: deLabels, fr: frLabels, es: esLabels, it: itLabels,
+  nl: nlLabels, da: daLabels, no: noLabels, fi: fiLabels, pl: plLabels, pt: ptLabels,
 };
 
 export function normalizeCategory(v: unknown): Category {

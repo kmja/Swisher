@@ -14,9 +14,12 @@
  */
 import type { Lang } from "./i18n";
 
-// Anything that isn't Swedish gets the English long-form fallback —
-// matches how the rest of the app falls back to en for languages we
-// haven't translated yet.
+// BCP 47 tag per supported UI language, used for Intl date formatting.
+const LOCALE_TAG: Record<Lang, string> = {
+  sv: "sv-SE", en: "en-US", de: "de-DE", fr: "fr-FR", es: "es-ES", it: "it-IT",
+  nl: "nl-NL", da: "da-DK", no: "nb-NO", fi: "fi-FI", pl: "pl-PL", pt: "pt-PT",
+};
+
 export function formatReceiptDate(iso: string, lang: Lang): string {
   if (!iso) return iso;
   const d = new Date(`${iso}T00:00:00`);
@@ -26,13 +29,25 @@ export function formatReceiptDate(iso: string, lang: Lang): string {
 
   const day = d.getDate();
   if (lang === "sv") {
+    // Swedish wants an ordinal suffix and the article "den" — Intl
+    // doesn't emit those, so build the string by hand.
     const weekday = new Intl.DateTimeFormat("sv-SE", { weekday: "long" }).format(d);
     const month = new Intl.DateTimeFormat("sv-SE", { month: "long" }).format(d);
     return `${weekday} den ${day}${swedishOrdinalSuffix(day)} ${month}`;
   }
-  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(d);
-  const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(d);
-  return `${weekday}, ${month} ${day}${englishOrdinalSuffix(day)}`;
+  if (lang === "en") {
+    // English convention: ordinal day ("Sunday, March 15th").
+    const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(d);
+    const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(d);
+    return `${weekday}, ${month} ${day}${englishOrdinalSuffix(day)}`;
+  }
+  // Everyone else: let Intl pick the locale's own ordering and separators
+  // (e.g. "Sonntag, 15. März", "dimanche 15 mars", "niedziela, 15 marca").
+  return new Intl.DateTimeFormat(LOCALE_TAG[lang], {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(d);
 }
 
 function englishOrdinalSuffix(n: number): string {
