@@ -10,7 +10,7 @@ import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa
 import KvittLogo from "@/components/KvittLogo";
 import StepHeader from "@/components/StepHeader";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
-import { detectDefaultLang } from "@/lib/locales";
+import { detectDefaultLang, detectDefaultMethod } from "@/lib/locales";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -1200,8 +1200,13 @@ export default function Page() {
 
   const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
   const [payerPhone, setPayerPhone] = useState("");
-  // Payout rail: Swish (SEK) by default; SEPA/EPC (EUR) for euro receipts.
-  const [payMethod, setPayMethod] = useState<"swish" | "sepa">("swish");
+  // Payout rail: defaults to Swish for Swedish users and SEPA / EPC for
+  // everyone else (detected from navigator.language's region tag, with
+  // a timezone fallback). The OCR currency-based override below still
+  // wins once a receipt is parsed — this just keeps the setup card
+  // showing the right input from the moment it pops up, since the host
+  // starts typing their Swish number / IBAN before OCR finishes.
+  const [payMethod, setPayMethod] = useState<"swish" | "sepa">(() => detectDefaultMethod());
   const [payeeIban, setPayeeIban] = useState("");
   const [splitId, setSplitId] = useState<string | null>(null);
 

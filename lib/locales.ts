@@ -40,6 +40,50 @@ export function localeFor(code: Lang): Locale {
   return LOCALES.find((l) => l.code === code) ?? LOCALES[1]; /* en fallback */
 }
 
+/** Best-effort ISO 3166-1 alpha-2 country guess. Reads the region tag
+ *  off navigator.language first (e.g. "sv-SE" → "SE"), then falls back
+ *  to the timezone returned by Intl.DateTimeFormat (e.g.
+ *  "Europe/Stockholm" → "SE"). Returns null when neither signal lands
+ *  on a known country. */
+export function detectCountry(): string | null {
+  if (typeof window === "undefined") return null;
+  const nav = typeof navigator !== "undefined" ? navigator.language : "";
+  const parts = nav.split("-");
+  if (parts.length > 1) {
+    const region = parts[parts.length - 1].toUpperCase();
+    if (/^[A-Z]{2}$/.test(region)) return region;
+  }
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    const city = tz.split("/").pop()?.toLowerCase() ?? "";
+    // Mapping is intentionally short — just the timezones whose city
+    // pin uniquely identifies a country we care about (Sweden vs the
+    // rest of Europe, for the Swish-vs-SEPA default).
+    if (city === "stockholm") return "SE";
+    if (city === "copenhagen") return "DK";
+    if (city === "oslo") return "NO";
+    if (city === "helsinki") return "FI";
+    if (city === "berlin") return "DE";
+    if (city === "paris") return "FR";
+    if (city === "madrid") return "ES";
+    if (city === "rome") return "IT";
+    if (city === "amsterdam") return "NL";
+    if (city === "warsaw") return "PL";
+    if (city === "lisbon") return "PT";
+    if (city === "london") return "GB";
+  } catch {
+    /* Intl unavailable */
+  }
+  return null;
+}
+
+/** Default payout rail for a freshly-opened items page. Swish for
+ *  Swedish users, SEPA for everyone else (which is also what the OCR
+ *  currency-based override picks once the receipt is parsed). */
+export function detectDefaultMethod(): "swish" | "sepa" {
+  return detectCountry() === "SE" ? "swish" : "sepa";
+}
+
 /** Try to read a previously-pinned language from localStorage; falls
  *  through to navigator.language when there's nothing stored, finally
  *  to "sv" when even that's unavailable. */
