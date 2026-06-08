@@ -563,21 +563,28 @@ const en: Strings = {
   sepaSettlesEur: "Payments are made in euros via bank transfer (SEPA).",
 };
 
-// Only sv + en have real translations today; every other supported
-// code points at the en strings so the dropdown can offer the language
-// without breaking the app. Plugging in a real translation later is a
-// one-line swap right here.
+import { de } from "./i18n/de";
+import { fr } from "./i18n/fr";
+import { es } from "./i18n/es";
+import { it } from "./i18n/it";
+import { nl } from "./i18n/nl";
+import { da } from "./i18n/da";
+import { no } from "./i18n/no";
+import { fi } from "./i18n/fi";
+import { pl } from "./i18n/pl";
+import { pt } from "./i18n/pt";
+
 export const translations: Record<Lang, Strings> = {
   sv,
   en,
-  de: en,
-  fr: en,
-  es: en,
-  it: en,
-  nl: en,
-  da: en,
-  no: en,
-  fi: en,
-  pl: en,
-  pt: en,
+  de,
+  fr,
+  es,
+  it,
+  nl,
+  da,
+  no,
+  fi,
+  pl,
+  pt,
 };
