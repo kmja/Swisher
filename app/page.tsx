@@ -10,6 +10,7 @@ import { isValidIban, normalizeIban, formatIban, ibanBankName } from "@/lib/sepa
 import KvittLogo from "@/components/KvittLogo";
 import StepHeader from "@/components/StepHeader";
 import { translations, type Lang, type Strings } from "@/lib/i18n";
+import { detectDefaultLang } from "@/lib/locales";
 import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, sharedSuggestion } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
@@ -1284,20 +1285,12 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem("swisher-lang");
-    } catch {
-      /* storage unavailable */
-    }
-    if (stored === "sv" || stored === "en") applyLang(stored, "sv");
-    else if (
-      typeof navigator !== "undefined" &&
-      navigator.language &&
-      !navigator.language.toLowerCase().startsWith("sv")
-    ) {
-      applyLang("en", "sv");
-    }
+    // First load picks the language from storage if pinned, otherwise
+    // matches the browser's preferred language to one of the locales
+    // we support. Falls back to "sv" (the app's default) when neither
+    // signal lands on a supported code.
+    const detected = detectDefaultLang();
+    if (detected !== "sv") applyLang(detected, "sv");
   }, [applyLang]);
 
   const message = useMemo(

@@ -10,9 +10,15 @@ export const CATEGORY_EMOJI: Record<Category, string> = {
   other: "🧾",
 };
 
-export const CATEGORY_LABEL: Record<"sv" | "en", Record<Category, string>> = {
-  sv: { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" },
-  en: { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", other: "Other" },
+import type { Lang } from "./i18n";
+
+const svLabels: Record<Category, string> = { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" };
+const enLabels: Record<Category, string> = { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", other: "Other" };
+// Other European codes reuse en until real translations land — same
+// fallback pattern lib/i18n.ts uses for the rest of the copy.
+export const CATEGORY_LABEL: Record<Lang, Record<Category, string>> = {
+  sv: svLabels, en: enLabels, de: enLabels, fr: enLabels, es: enLabels, it: enLabels,
+  nl: enLabels, da: enLabels, no: enLabels, fi: enLabels, pl: enLabels, pt: enLabels,
 };
 
 export function normalizeCategory(v: unknown): Category {

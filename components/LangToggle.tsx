@@ -1,32 +1,89 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/lib/i18n";
+import { LOCALES, localeFor } from "@/lib/locales";
 
-/** SV/EN toggle pill; controlled by the parent's lang state.
- *  Outline lives on the CONTAINER now (ring-2 ring-gray-300) so it
- *  frames the whole pill as one shape. The inactive half no longer
- *  carries its own inset ring — that's what made the left edge of
- *  the inactive button look like a stray pinstripe meeting the pink
- *  active half. Active = pink fill; inactive = plain white inside
- *  the framed pill. */
+/** Dropdown that opens to the supported European languages. Replaces
+ *  the old SV/EN pill — same `lang` + `onChange` contract so every
+ *  call site picks up the new UI for free. Closed state shows just
+ *  the active flag + 2-letter abbreviation; open state lists every
+ *  supported locale as a flag + abbreviation + autonym row. */
 export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const active = localeFor(lang);
+
+  // Close on outside click + Escape so the menu doesn't strand if the
+  // user taps elsewhere on the page.
+  useEffect(() => {
+    if (!open) return;
+    const onDocPointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDocPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="inline-flex overflow-hidden rounded-full bg-white text-sm font-semibold shadow-sm ring-2 ring-gray-300">
-      {(["sv", "en"] as Lang[]).map((l) => (
-        <button
-          key={l}
-          type="button"
-          aria-pressed={lang === l}
-          onClick={() => onChange(l)}
-          className={`px-3 py-2 ${
-            lang === l
-              ? "bg-swish text-white"
-              : "text-gray-500 active:bg-gray-100"
-          }`}
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={active.name}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-2 ring-gray-300 active:bg-gray-50"
+      >
+        <span aria-hidden className="text-base leading-none">{active.flag}</span>
+        <span>{active.abbr}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          aria-label="Language"
+          className="absolute right-0 top-full z-50 mt-1 max-h-[60vh] w-44 overflow-y-auto rounded-xl bg-white py-1 text-sm font-medium shadow-xl ring-1 ring-black/10"
         >
-          {l.toUpperCase()}
-        </button>
-      ))}
+          {LOCALES.map((l) => {
+            const selected = l.code === lang;
+            return (
+              <li key={l.code}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(l.code);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left ${
+                    selected ? "bg-swish/10 text-swish-dark" : "text-gray-700 active:bg-gray-100"
+                  }`}
+                >
+                  <span aria-hidden className="text-base leading-none">{l.flag}</span>
+                  <span className="w-7 shrink-0 tabular-nums">{l.abbr}</span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{l.name}</span>
+                  {selected && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-swish-dark" aria-hidden>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

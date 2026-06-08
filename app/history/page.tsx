@@ -10,47 +10,49 @@ import LangToggle, { saveLang } from "@/components/LangToggle";
 import KvittLogo from "@/components/KvittLogo";
 import type { RoomState } from "@/lib/room-do";
 import type { Diner } from "@/lib/types";
+import type { Lang } from "@/lib/i18n";
+import { detectDefaultLang } from "@/lib/locales";
 
-type Lang = "sv" | "en";
-
-const R = {
-  sv: {
-    title: "Historik",
-    empty: "Inga delade kvitton än.",
-    emptyHint: "Skanna ett kvitto och bjud in – så dyker det upp här.",
-    newReceipt: "Dela nytt kvitto",
-    loading: "Laddar…",
-    gone: "Rummet är inte längre tillgängligt",
-    remove: "Ta bort",
-    host: "Du samlar in",
-    guest: "Din del",
-    paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
-    outstanding: (amt: string) => `${amt} kvar att få in`,
-    allSettled: "Allt inbetalt ✓",
-    waitingForGuests: "Väntar på gäster…",
-    youOwe: (amt: string) => `Du ska betala ${amt}`,
-    youPaid: "Du har betalat ✓",
-    nothing: "Inget att betala",
-  },
-  en: {
-    title: "History",
-    empty: "No split receipts yet.",
-    emptyHint: "Scan a receipt and invite people — it'll show up here.",
-    newReceipt: "Split a new receipt",
-    loading: "Loading…",
-    gone: "Room no longer available",
-    remove: "Remove",
-    host: "You collect",
-    guest: "Your share",
-    paidOf: (paid: number, total: number) => `${paid} of ${total} paid`,
-    outstanding: (amt: string) => `${amt} outstanding`,
-    allSettled: "All settled ✓",
-    waitingForGuests: "Waiting for guests…",
-    youOwe: (amt: string) => `You owe ${amt}`,
-    youPaid: "You're paid up ✓",
-    nothing: "Nothing to pay",
-  },
-} as const;
+const sv = {
+  title: "Historik",
+  empty: "Inga delade kvitton än.",
+  emptyHint: "Skanna ett kvitto och bjud in – så dyker det upp här.",
+  newReceipt: "Dela nytt kvitto",
+  loading: "Laddar…",
+  gone: "Rummet är inte längre tillgängligt",
+  remove: "Ta bort",
+  host: "Du samlar in",
+  guest: "Din del",
+  paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
+  outstanding: (amt: string) => `${amt} kvar att få in`,
+  allSettled: "Allt inbetalt ✓",
+  waitingForGuests: "Väntar på gäster…",
+  youOwe: (amt: string) => `Du ska betala ${amt}`,
+  youPaid: "Du har betalat ✓",
+  nothing: "Inget att betala",
+};
+const en: typeof sv = {
+  title: "History",
+  empty: "No split receipts yet.",
+  emptyHint: "Scan a receipt and invite people — it'll show up here.",
+  newReceipt: "Split a new receipt",
+  loading: "Loading…",
+  gone: "Room no longer available",
+  remove: "Remove",
+  host: "You collect",
+  guest: "Your share",
+  paidOf: (paid, total) => `${paid} of ${total} paid`,
+  outstanding: (amt) => `${amt} outstanding`,
+  allSettled: "All settled ✓",
+  waitingForGuests: "Waiting for guests…",
+  youOwe: (amt) => `You owe ${amt}`,
+  youPaid: "You're paid up ✓",
+  nothing: "Nothing to pay",
+};
+// Other European locales fall back to en until real translations land.
+const R: Record<Lang, typeof sv> = {
+  sv, en, de: en, fr: en, es: en, it: en, nl: en, da: en, no: en, fi: en, pl: en, pt: en,
+};
 
 type Summary =
   | { status: "loading" }
@@ -81,13 +83,7 @@ export default function HistoryPage() {
   const t = R[lang];
 
   useEffect(() => {
-    try {
-      const l = localStorage.getItem("swisher-lang");
-      if (l === "sv" || l === "en") setLang(l);
-      else if (typeof navigator !== "undefined" && !navigator.language?.toLowerCase().startsWith("sv")) setLang("en");
-    } catch {
-      /* ignore */
-    }
+    setLang(detectDefaultLang());
     setEntries(readHistory());
   }, []);
 

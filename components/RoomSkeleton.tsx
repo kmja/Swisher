@@ -5,6 +5,7 @@ import KvittLogo from "./KvittLogo";
 import LangToggle from "./LangToggle";
 import StepHeader, { type WizardStep } from "./StepHeader";
 import { translations, type Lang } from "@/lib/i18n";
+import { detectDefaultLang } from "@/lib/locales";
 
 /**
  * Skeleton of the room page, shown the instant the host taps "Skapa
@@ -26,12 +27,7 @@ export default function RoomSkeleton({ play = false }: { play?: boolean }) {
   // SV/EN pill matches the user's choice instead of forcing "sv".
   const [lang, setLang] = useState<Lang>("sv");
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("swisher-lang");
-      if (stored === "sv" || stored === "en") setLang(stored);
-    } catch {
-      /* storage unavailable */
-    }
+    setLang(detectDefaultLang());
   }, []);
   const t = translations[lang];
 

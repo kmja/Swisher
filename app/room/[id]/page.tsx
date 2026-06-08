@@ -11,6 +11,7 @@ import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
+import { detectDefaultLang } from "@/lib/locales";
 import KvittLogo from "@/components/KvittLogo";
 import RoomSkeleton from "@/components/RoomSkeleton";
 import StepHeader from "@/components/StepHeader";
@@ -22,7 +23,7 @@ import type { RoomState } from "@/lib/room-do";
 import type { Diner, Share } from "@/lib/types";
 import { pendingCreateKey, type PendingCreatePayload } from "@/lib/optimisticRoom";
 
-type Lang = "sv" | "en";
+import type { Lang } from "@/lib/i18n";
 
 const R = {
   sv: {
@@ -163,7 +164,14 @@ const R = {
     save: "Save",
     cancel: "Cancel",
   },
-} as const;
+};
+
+// Widen the room-page's local R map so any supported Lang code resolves
+// to en until real translations exist for that locale.
+const Rx: Record<Lang, typeof R.sv> = {
+  sv: R.sv, en: R.en, de: R.en, fr: R.en, es: R.en, it: R.en,
+  nl: R.en, da: R.en, no: R.en, fi: R.en, pl: R.en, pt: R.en,
+};
 
 const initials = (name: string) =>
   name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
@@ -662,7 +670,7 @@ export default function RoomPage() {
   }, []);
   useEffect(() => () => cancelLongPress(), [cancelLongPress]);
 
-  const t = R[lang];
+  const t = Rx[lang];
   const tx = translations[lang];
 
   // When the host lands here from createRoom (?invite=1), pop the
@@ -808,10 +816,8 @@ export default function RoomPage() {
   }, []);
 
   useEffect(() => {
+    setLang(detectDefaultLang());
     try {
-      const l = localStorage.getItem("swisher-lang");
-      if (l === "sv" || l === "en") setLang(l);
-      else if (typeof navigator !== "undefined" && !navigator.language?.toLowerCase().startsWith("sv")) setLang("en");
       const pid = localStorage.getItem(storageKey);
       if (pid) setPersonId(pid);
     } catch {

@@ -12,7 +12,12 @@
  *  Invalid / empty input is passed through untouched so callers can use
  *  this anywhere a receipt date might be.
  */
-export function formatReceiptDate(iso: string, lang: "sv" | "en"): string {
+import type { Lang } from "./i18n";
+
+// Anything that isn't Swedish gets the English long-form fallback —
+// matches how the rest of the app falls back to en for languages we
+// haven't translated yet.
+export function formatReceiptDate(iso: string, lang: Lang): string {
   if (!iso) return iso;
   const d = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return iso;

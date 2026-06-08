@@ -14,46 +14,48 @@ import LangToggle, { saveLang } from "@/components/LangToggle";
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
-type Lang = "sv" | "en";
+import type { Lang } from "@/lib/i18n";
+import { detectDefaultLang } from "@/lib/locales";
 
-const R = {
-  sv: {
-    loading: "Laddar…",
-    notFound: "Den här delningen finns bara på telefonen den skapades på.",
-    toStart: "Till start",
-    newReceipt: "Nytt kvitto",
-    history: "Historik",
-    collect: "Att få in",
-    allPaid: "Allt inbetalt ✓",
-    paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
-    paid: "Betald",
-    markPaid: "Markera betald",
-    editItems: "Rätta belopp",
-    doneEditing: "Klar",
-    addRow: "Lägg till",
-    namePh: "Namn",
-    pricePh: "0,00",
-    removeRow: "Ta bort",
-  },
-  en: {
-    loading: "Loading…",
-    notFound: "This split only exists on the device it was created on.",
-    toStart: "To start",
-    newReceipt: "New receipt",
-    history: "History",
-    collect: "To collect",
-    allPaid: "All settled ✓",
-    paidOf: (paid: number, total: number) => `${paid} of ${total} paid`,
-    paid: "Paid",
-    markPaid: "Mark paid",
-    editItems: "Fix amounts",
-    doneEditing: "Done",
-    addRow: "Add",
-    namePh: "Name",
-    pricePh: "0.00",
-    removeRow: "Remove",
-  },
-} as const;
+const sv = {
+  loading: "Laddar…",
+  notFound: "Den här delningen finns bara på telefonen den skapades på.",
+  toStart: "Till start",
+  newReceipt: "Nytt kvitto",
+  history: "Historik",
+  collect: "Att få in",
+  allPaid: "Allt inbetalt ✓",
+  paidOf: (paid: number, total: number) => `${paid} av ${total} betalda`,
+  paid: "Betald",
+  markPaid: "Markera betald",
+  editItems: "Rätta belopp",
+  doneEditing: "Klar",
+  addRow: "Lägg till",
+  namePh: "Namn",
+  pricePh: "0,00",
+  removeRow: "Ta bort",
+};
+const en: typeof sv = {
+  loading: "Loading…",
+  notFound: "This split only exists on the device it was created on.",
+  toStart: "To start",
+  newReceipt: "New receipt",
+  history: "History",
+  collect: "To collect",
+  allPaid: "All settled ✓",
+  paidOf: (paid, total) => `${paid} of ${total} paid`,
+  paid: "Paid",
+  markPaid: "Mark paid",
+  editItems: "Fix amounts",
+  doneEditing: "Done",
+  addRow: "Add",
+  namePh: "Name",
+  pricePh: "0.00",
+  removeRow: "Remove",
+};
+const R: Record<Lang, typeof sv> = {
+  sv, en, de: en, fr: en, es: en, it: en, nl: en, da: en, no: en, fi: en, pl: en, pt: en,
+};
 
 function money(ore: number, fx: Fx): string {
   const native = formatNative(ore, fx);
@@ -74,13 +76,7 @@ export default function SplitPage() {
   const tx = translations[lang];
 
   useEffect(() => {
-    try {
-      const l = localStorage.getItem("swisher-lang");
-      if (l === "sv" || l === "en") setLang(l);
-      else if (typeof navigator !== "undefined" && !navigator.language?.toLowerCase().startsWith("sv")) setLang("en");
-    } catch {
-      /* ignore */
-    }
+    setLang(detectDefaultLang());
     setSplit(readLocalSplit(id));
   }, [id]);
 

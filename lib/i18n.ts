@@ -1,4 +1,16 @@
-export type Lang = "sv" | "en";
+export type Lang =
+  | "sv"
+  | "en"
+  | "de"
+  | "fr"
+  | "es"
+  | "it"
+  | "nl"
+  | "da"
+  | "no"
+  | "fi"
+  | "pl"
+  | "pt";
 
 export interface Strings {
   /** Label shown on the language toggle for the *other* language. */
@@ -551,4 +563,21 @@ const en: Strings = {
   sepaSettlesEur: "Payments are made in euros via bank transfer (SEPA).",
 };
 
-export const translations: Record<Lang, Strings> = { sv, en };
+// Only sv + en have real translations today; every other supported
+// code points at the en strings so the dropdown can offer the language
+// without breaking the app. Plugging in a real translation later is a
+// one-line swap right here.
+export const translations: Record<Lang, Strings> = {
+  sv,
+  en,
+  de: en,
+  fr: en,
+  es: en,
+  it: en,
+  nl: en,
+  da: en,
+  no: en,
+  fi: en,
+  pl: en,
+  pt: en,
+};
