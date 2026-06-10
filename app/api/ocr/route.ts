@@ -40,7 +40,9 @@ Rules:
   · Generic placeholder + specific variant: "Softdrink nr 2" + "Coca Cola 0,4" → "Softdrink nr 2 - Coca Cola 0,4"; the very next "Softdrink nr 2" line with "Bonaqua Glassf" below it → "Softdrink nr 2 - Bonaqua Glassflaska". Two identical-looking parent lines with different continuations are DIFFERENT items — preserve the variant so the human can tell which drink was which.
   · Generic + specific wine / beer: "Husets vin" + "Pinot Noir" → "Husets vin - Pinot Noir"; "Tap" + "Brooklyn Lager" → "Brooklyn Lager"; "Glas vin" + "Sybille Kuntz Riesling" → "Glas vin - Sybille Kuntz Riesling".
   · Modifier lines: "Pizza Margherita" + "extra ost" → "Pizza Margherita, extra ost".
+  · Dietary / preparation variants on indented sub-lines belong to the parent line above — even when they carry a small surcharge. Merge their description into the parent and add their price to the parent's price, instead of emitting them as a separate item. Trigger words include: glutenfri / gluten-free, vegansk / vegan, vegetarisk / vegetarian / veggie, laktosfri / lactose-free / dairy-free / mjölkfri, ekologisk / organic, mild / spicy / hot, well-done / medium / rare, "extra X", "utan X" / "no X". Example: "* Lafayette D *  165,00" with indented "1 x glutenfri  13,00" below → ONE item, description "Lafayette D, glutenfri", price 178,00. By contrast, indented side dishes and sauces with their own real prices ("Cajun", "Lemon-chive", "Sweet potato", "Fries", "Tryffel", "Cheddar") are NOT dietary variants — keep them as separate items.
   Output exactly one item per parent line. If you see N indented unpriced continuation lines, they belong to the priced line directly above — never emit them as separate items.
+- DROP 0-price lines entirely: a printed item line with price 0 (free water "Vatten", complimentary bread, an included no-cost modifier like "vegetarisk" 0,00) is not a billable item. Do NOT emit it as an item at all — neither standalone nor merged.
 - Second pass: after reading, review every description against your full knowledge of Swedish and Nordic restaurant menus and correct anything that doesn't read as a real item — covering dishes (löjrom, råraka, rostbiff, oxfilé, entrecôte, råbiff, gravlax, toast skagen, plankstek, raggmunk, ärtsoppa…), ingredients/garnishes (kantarell, svamp duxelle, rödbeta, hjortron, brioche, pastrami, matjessill, tryffel…), drinks, beers and wines incl. styles and producer/brewery/winery brands (helles, veteöl, IPA, pilsner, lager, vienna, pinot noir, riesling…), and common shorthand (40cl, "gl"=glas, "fl"=flaska, "st"=stycken, "/hg"=per hekto). Fix OCR slips and odd-looking words to the closest real Swedish/Nordic item — but only correct spelling, never swap in a different dish, and never invent anything not printed.
 - "price" is the total charged for the WHOLE line in SEK — the number in the rightmost (total) column. For "2 Bryggkaffe 35,00 70,00" price is 70; for "3 Stor Lager 195,00" price is 195. "quantity" is the leading count of units on the line (default 1). Always read the line total, never the per-unit price, so the items add up to the receipt total.
 - Read every price digit by digit and keep the digit count right — thermal receipts are faint and dropping a trailing zero (reading 1180 as 118, or 590 as 59) is a common mistake. Check each price carefully.
@@ -163,6 +165,10 @@ function extractJson(text: string): OcrResult {
       const description = String(it?.description ?? "").trim();
       const price = Number(it?.price);
       if (!description || !Number.isFinite(price)) continue;
+      // Drop 0-price lines (free water, complimentary modifier). The
+      // prompt asks the model to skip these but enforce it here too so
+      // a stray "Vatten 0,00" never makes it into the items list.
+      if (price === 0) continue;
       const shared = it?.shared === true;
       const category = typeof it?.category === "string" ? it.category : undefined;
       const emoji = typeof it?.emoji === "string" ? it.emoji : undefined;
@@ -197,10 +203,12 @@ function extractJson(text: string): OcrResult {
     const q = obj.match(/"quantity"\s*:\s*(\d+)/);
     const ym = obj.match(/"y"\s*:\s*(\d+(?:\.\d+)?)/);
     if (d && p) {
+      const priceNum = Number(p[1]);
+      if (priceNum === 0) continue;
       const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
       const shared = /"shared"\s*:\s*true/.test(obj);
       const y = ym ? Number(ym[1]) : undefined;
-      for (const partOre of splitOre(Math.round(Number(p[1]) * 100), qty)) {
+      for (const partOre of splitOre(Math.round(priceNum * 100), qty)) {
         items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], emoji: em?.[1], y });
       }
     }
