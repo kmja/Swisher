@@ -2706,9 +2706,20 @@ export default function RoomPage() {
                   const mine = copies.filter((c) => personId !== null && c.claimedBy.includes(personId));
                   const available = copies.filter((c) => c.claimedBy.length === 0);
                   const others = copies.filter((c) => c.claimedBy.length > 0 && !(personId !== null && c.claimedBy.includes(personId)));
-                  const g: ItemGroup = { copies, mine, available, others };
-                  if (mine.length > 0 || available.length > 0) mainGroups.push(g);
-                  else othersGroups.push(g);
+                  // Split mixed groups: the main claim row only counts
+                  // mine + available copies (so its ×N badge tracks
+                  // claimables), and any copies already taken by other
+                  // diners surface as their own strike-through entry in
+                  // the "klara" footer below — same treatment a fully
+                  // claimed-by-others item gets. Otherwise the row reads
+                  // ×1 with no hint that a second copy is gone.
+                  if (mine.length > 0 || available.length > 0) {
+                    const mainCopies = [...mine, ...available];
+                    mainGroups.push({ copies: mainCopies, mine, available, others: [] });
+                  }
+                  if (others.length > 0) {
+                    othersGroups.push({ copies: others, mine: [], available: [], others });
+                  }
                 }
                 const othersClaimerNames = (g: ItemGroup) =>
                   Array.from(new Set(g.copies.flatMap((c) => c.claimedBy)))
