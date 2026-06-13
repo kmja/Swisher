@@ -278,6 +278,11 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["kyckling", "kycklingfilé", "kycklingbröst", "kycklinglår", "kycklinglever", "chicken"]), "🐔"],
   [makeMatcher(["vingar", "wings"]), "🍗"],
   [makeMatcher(["korv", "varmkorv", "falukorv", "isterband", "prinskorv", "hotdog", "grillkorv"]), "🌭"],
+  // Sandwiches outrank the meat rules below so "macka fläsk" / "skinkmacka"
+  // / "ostmacka" land on 🥪 instead of the filling's animal icon. Räkmacka
+  // and toast skagen are caught earlier by the ci:skagen custom icon, so
+  // those still get their specialised illustration first.
+  [makeMatcher(["fralla", "macka", "mackor", "smörgås", "knäcke", "sandwich", "panini", "sub"]), "🥪"],
   // Animal-specific meat icons (specific keywords first; generic "kött/stek" falls through to 🥩).
   [makeMatcher(["lamm", "lammracks", "lammkotlett", "lammstek", "lammgryta", "lammfilé", "lammkebab", "lammkött", "lammbog"]), "🐑"],
   [makeMatcher(["fläsk", "fläskfilé", "fläskkarré", "fläsklägg", "gris", "grisfilé", "griskind", "skinka", "prosciutto", "bacon"]), "🐖"],
@@ -298,7 +303,6 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["banh mi", "banhmi", "bahn mi", "bánh mì"]), "🥖"],
   [makeMatcher(["taco", "tacos", "burrito", "quesadilla", "nachos"]), "🌮"],
   [makeMatcher(["kebab", "falafel", "shawarma", "gyros", "wrap"]), "🥙"],
-  [makeMatcher(["fralla", "macka", "mackor", "smörgås", "knäcke", "sandwich", "panini", "sub"]), "🥪"],
   [makeMatcher(["bröd", "baguette", "focaccia"]), "🥖"],
   [makeMatcher(["mozzarella", "ost", "cheese", "brie"]), "🧀"],
   [makeMatcher(["ägg", "omelett", "äggröra"]), "🍳"],
