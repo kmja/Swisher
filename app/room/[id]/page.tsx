@@ -75,6 +75,7 @@ const R = {
     nothingYet: "Du har inte petat i något än.",
     paid: "Betald",
     markPaid: "Markera betald",
+    alreadyPaid: "Redan betald",
     cartPickedItems: (n: number) => `${n} ${n === 1 ? "vald rätt" : "valda rätter"}`,
     cartSharedItems: (n: number) => `${n} ${n === 1 ? "delad rätt" : "delade rätter"}`,
     cartSharedShort: (n: number) => `${n} ${n === 1 ? "delad" : "delade"}`,
@@ -145,6 +146,7 @@ const R = {
     nothingYet: "You haven't tapped anything yet.",
     paid: "Paid",
     markPaid: "Mark paid",
+    alreadyPaid: "Already paid",
     cartPickedItems: (n: number) => `${n} picked item${n === 1 ? "" : "s"}`,
     cartSharedItems: (n: number) => `${n} shared item${n === 1 ? "" : "s"}`,
     cartSharedShort: (n: number) => `${n} shared`,
@@ -215,6 +217,7 @@ const R = {
     nothingYet: "Du hast noch nichts ausgewählt.",
     paid: "Bezahlt",
     markPaid: "Als bezahlt markieren",
+    alreadyPaid: "Bereits bezahlt",
     cartPickedItems: (n: number) => `${n} ${n === 1 ? "ausgewählter Artikel" : "ausgewählte Artikel"}`,
     cartSharedItems: (n: number) => `${n} ${n === 1 ? "geteilter Artikel" : "geteilte Artikel"}`,
     cartSharedShort: (n: number) => `${n} geteilt`,
@@ -285,6 +288,7 @@ const R = {
     nothingYet: "Tu n'as encore rien sélectionné.",
     paid: "Payé",
     markPaid: "Marquer comme payé",
+    alreadyPaid: "Déjà payé",
     cartPickedItems: (n: number) => `${n} article${n === 1 ? "" : "s"} sélectionné${n === 1 ? "" : "s"}`,
     cartSharedItems: (n: number) => `${n} article${n === 1 ? "" : "s"} partagé${n === 1 ? "" : "s"}`,
     cartSharedShort: (n: number) => `${n} partagé${n === 1 ? "" : "s"}`,
@@ -355,6 +359,7 @@ const R = {
     nothingYet: "Aún no has seleccionado nada.",
     paid: "Pagado",
     markPaid: "Marcar como pagado",
+    alreadyPaid: "Ya pagado",
     cartPickedItems: (n: number) => `${n} artículo${n === 1 ? "" : "s"} seleccionado${n === 1 ? "" : "s"}`,
     cartSharedItems: (n: number) => `${n} artículo${n === 1 ? "" : "s"} compartido${n === 1 ? "" : "s"}`,
     cartSharedShort: (n: number) => `${n} compartido${n === 1 ? "" : "s"}`,
@@ -425,6 +430,7 @@ const R = {
     nothingYet: "Non hai ancora selezionato nulla.",
     paid: "Pagato",
     markPaid: "Segna come pagato",
+    alreadyPaid: "Già pagato",
     cartPickedItems: (n: number) => `${n} articolo${n === 1 ? "" : "i"} selezionato${n === 1 ? "" : "i"}`,
     cartSharedItems: (n: number) => `${n} articolo${n === 1 ? "" : "i"} condiviso${n === 1 ? "" : "i"}`,
     cartSharedShort: (n: number) => `${n} condiviso${n === 1 ? "" : "i"}`,
@@ -495,6 +501,7 @@ const R = {
     nothingYet: "Je hebt nog niets geselecteerd.",
     paid: "Betaald",
     markPaid: "Markeer als betaald",
+    alreadyPaid: "Al betaald",
     cartPickedItems: (n: number) => `${n} geselecteerd artikel${n === 1 ? "" : "en"}`,
     cartSharedItems: (n: number) => `${n} gedeeld artikel${n === 1 ? "" : "en"}`,
     cartSharedShort: (n: number) => `${n} gedeeld`,
@@ -565,6 +572,7 @@ const R = {
     nothingYet: "Du har ikke valgt noget endnu.",
     paid: "Betalt",
     markPaid: "Markér som betalt",
+    alreadyPaid: "Allerede betalt",
     cartPickedItems: (n: number) => `${n} valgt vare${n === 1 ? "" : "r"}`,
     cartSharedItems: (n: number) => `${n} delt vare${n === 1 ? "" : "r"}`,
     cartSharedShort: (n: number) => `${n} delt`,
@@ -635,6 +643,7 @@ const R = {
     nothingYet: "Du har ikke valgt noe ennå.",
     paid: "Betalt",
     markPaid: "Merk som betalt",
+    alreadyPaid: "Allerede betalt",
     cartPickedItems: (n: number) => `${n} valgt vare${n === 1 ? "" : "r"}`,
     cartSharedItems: (n: number) => `${n} delt vare${n === 1 ? "" : "r"}`,
     cartSharedShort: (n: number) => `${n} delt`,
@@ -705,6 +714,7 @@ const R = {
     nothingYet: "Et ole vielä valinnut mitään.",
     paid: "Maksettu",
     markPaid: "Merkitse maksetuksi",
+    alreadyPaid: "Jo maksettu",
     cartPickedItems: (n: number) => `${n} valittu tuote${n === 1 ? "" : "tta"}`,
     cartSharedItems: (n: number) => `${n} yhteinen tuote${n === 1 ? "" : "tta"}`,
     cartSharedShort: (n: number) => `${n} yhteinen`,
@@ -775,6 +785,7 @@ const R = {
     nothingYet: "Nie wybrałeś jeszcze niczego.",
     paid: "Zapłacono",
     markPaid: "Oznacz jako zapłacone",
+    alreadyPaid: "Już zapłacone",
     cartPickedItems: (n: number) => `${n} wybrana pozycja${n === 1 ? "" : " wybrane pozycje"}`,
     cartSharedItems: (n: number) => `${n} wspólna pozycja${n === 1 ? "" : " wspólne pozycje"}`,
     cartSharedShort: (n: number) => `${n} wspólne`,
@@ -845,6 +856,7 @@ const R = {
     nothingYet: "Ainda não selecionaste nada.",
     paid: "Pago",
     markPaid: "Marcar como pago",
+    alreadyPaid: "Já pago",
     cartPickedItems: (n: number) => `${n} item${n === 1 ? "" : "s"} selecionado${n === 1 ? "" : "s"}`,
     cartSharedItems: (n: number) => `${n} item${n === 1 ? "" : "s"} partilhado${n === 1 ? "" : "s"}`,
     cartSharedShort: (n: number) => `${n} partilhado${n === 1 ? "" : "s"}`,
@@ -2941,6 +2953,7 @@ export default function RoomPage() {
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
+        const iAmPaid = !!personId && (state.paidBy ?? []).includes(personId);
         // Cart contents — what I'm on the hook for. Lines are
         // bucketed by category (starter / mains / drinks / dessert /
         // other) and rendered as a condensed mirror of the main
@@ -3173,6 +3186,26 @@ export default function RoomPage() {
                 }`}
               >
                 {iAmDone ? t.doneOn : t.imDone}
+              </button>
+            )}
+            {/* Secondary: "Already paid". For when the guest squared up
+                outside the app (cash on the table, bank transfer, an
+                existing tab). Toggles state.paidBy[me] via togglePaid,
+                same write path the host uses when ticking guests off
+                their list — so the host's "Remaining to collect" total
+                updates immediately. Muted styling on purpose: Swish
+                stays the obvious primary action. */}
+            {personId && (
+              <button
+                type="button"
+                onClick={() => togglePaid(personId)}
+                className={`mt-3 block w-full text-center text-sm transition ${
+                  iAmPaid
+                    ? "text-emerald-300"
+                    : "text-white/55 underline-offset-2 hover:underline active:text-white/80"
+                }`}
+              >
+                {iAmPaid ? `✓ ${t.paid}` : t.alreadyPaid}
               </button>
             )}
             </div>

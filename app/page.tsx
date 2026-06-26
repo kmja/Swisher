@@ -1890,6 +1890,43 @@ export default function Page() {
   };
   const addItem = () =>
     setItems((prev) => [...prev, { id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
+  /**
+   * Set the dricks row to a percentage of the food subtotal, rounded to the
+   * nearest krona. Useful when the tip was added at the card terminal so the
+   * receipt itself never printed a Dricks line — the host taps "10 %" instead
+   * of doing the maths. pct === 0 strips any tip row entirely. A new tip row
+   * is created if one isn't already there; otherwise we update the existing
+   * one in place so a hand-edited description is preserved.
+   */
+  const applyTipPercent = (pct: number) => {
+    setItems((prev) => {
+      const foodOre = prev
+        .filter((it) => !it.isTip)
+        .reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+      if (pct === 0) return prev.filter((it) => !it.isTip);
+      const targetOre = Math.max(0, Math.round((foodOre * pct) / 100 / 100) * 100);
+      if (targetOre === 0) return prev.filter((it) => !it.isTip);
+      const existing = prev.find((it) => it.isTip);
+      if (existing) {
+        return prev.map((it) =>
+          it.id === existing.id ? { ...it, priceInput: formatOre(targetOre) } : it,
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: uid(),
+          description: t.tip,
+          priceInput: formatOre(targetOre),
+          sharers: [],
+          shared: true,
+          category: "other",
+          imgIndex: -1,
+          isTip: true,
+        },
+      ];
+    });
+  };
   // When a row is shared we display the per-share price in its price
   // input (with the stepper sitting just below it), but priceInput
   // itself still stores the row TOTAL — every downstream calculation
@@ -2019,6 +2056,21 @@ export default function Page() {
     .filter((it) => it.isTip)
     .reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
   const itemsSumOre = foodItems.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
+  // Resolve which preset chip (0/5/10/15 %) matches the current tip
+  // amount, so we can highlight it. Returns -1 (no chip highlighted)
+  // when the host typed a custom number that lands between presets.
+  const currentTipPct = (() => {
+    if (tipOre === 0) return 0;
+    if (itemsSumOre <= 0) return -1;
+    const pct = (tipOre * 100) / itemsSumOre;
+    for (const preset of [5, 10, 15]) {
+      // We round the tip to whole kronor, so a 1-krona drift on either
+      // side of the exact percentage still counts as the same preset.
+      const presetOre = Math.round((itemsSumOre * preset) / 100 / 100) * 100;
+      if (Math.abs(presetOre - tipOre) < 100 && Math.abs(pct - preset) < 1) return preset;
+    }
+    return -1;
+  })();
   // The scanned items should add up to the printed bill total (the tip is added
   // on top via the card charge, not part of the bill). Allow up to 1 kr of slack
   // for Swedish öre rounding (öresavrundning).
@@ -3072,6 +3124,35 @@ export default function Page() {
                 <div className="mt-1 flex justify-between border-t border-gray-100 pt-1">
                   <span className="text-gray-600">{t.chargedLabel}</span>
                   <Money ore={receiptChargedOre} className="font-semibold" />
+                </div>
+              )}
+              {/* Quick-set chips for when the tip was added at the
+                  card terminal (no printed Dricks line for OCR to
+                  read). Tapping a percentage rounds to the nearest
+                  krona and rewrites the dricks row in place. The host
+                  can still edit the row directly in the list above for
+                  a custom value — the active-chip highlight just goes
+                  away in that case. */}
+              {itemsSumOre > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-gray-100 pt-2">
+                  <span className="mr-1 text-xs text-gray-500">{t.tip}</span>
+                  {[0, 5, 10, 15].map((pct) => {
+                    const active = currentTipPct === pct;
+                    return (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => applyTipPercent(pct)}
+                        className={`rounded-full px-2.5 py-1 text-xs ${
+                          active
+                            ? "bg-swish text-white"
+                            : "bg-gray-100 text-gray-700 active:bg-gray-200"
+                        }`}
+                      >
+                        {pct === 0 ? t.none : `${pct} %`}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
