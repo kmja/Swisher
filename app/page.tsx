@@ -1147,6 +1147,13 @@ export default function Page() {
   const [scanCardVisible, setScanCardVisible] = useState(false);
 
   const [items, setItems] = useState<UiItem[]>([]);
+  // True when the latest OCR pass found a tip on the receipt — either a
+  // printed Dricks line or an implied tip from charged > total. Gates
+  // the percentage chip strip in the totals card: if the receipt
+  // already settled the tip, the host edits it directly in the row
+  // above instead of being offered chips. Manual entry / fresh scans
+  // start at false → chips show.
+  const [ocrFoundTip, setOcrFoundTip] = useState(false);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
   const [undoItem, setUndoItem] = useState<UiItem | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1737,6 +1744,7 @@ export default function Page() {
       const billOre = totalOre ?? mapped.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
       const impliedTipOre = chargedOre - billOre >= 100 ? chargedOre - billOre : 0;
       const tipOre = dricksOre > 0 ? dricksOre : impliedTipOre;
+      setOcrFoundTip(tipOre > 0);
       // Add the tip as a shared row so it shows in the list and splits evenly.
       if (tipOre > 0) {
         mapped.push({
@@ -1857,6 +1865,7 @@ export default function Page() {
     if (items.length === 0) {
       setItems([{ id: uid(), description: "", priceInput: "", sharers: [], shared: false, category: "", imgIndex: -1 }]);
     }
+    setOcrFoundTip(false);
     setStep("items");
   }
 
@@ -3129,11 +3138,12 @@ export default function Page() {
               {/* Quick-set chips for when the tip was added at the
                   card terminal (no printed Dricks line for OCR to
                   read). Tapping a percentage rounds to the nearest
-                  krona and rewrites the dricks row in place. The host
-                  can still edit the row directly in the list above for
-                  a custom value — the active-chip highlight just goes
-                  away in that case. */}
-              {itemsSumOre > 0 && (
+                  krona and rewrites the dricks row in place. Hidden
+                  when the OCR already pulled a tip off the receipt
+                  (printed Dricks line or implied tip from charged >
+                  total) — the host edits the row directly in the list
+                  above in that case. */}
+              {itemsSumOre > 0 && !ocrFoundTip && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-gray-100 pt-2">
                   <span className="mr-1 text-xs text-gray-500">{t.tip}</span>
                   {[0, 5, 10, 15].map((pct) => {
