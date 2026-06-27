@@ -1005,30 +1005,33 @@ function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
 /** Downscale a photo to keep the OCR upload small and fast. */
 function fileToCompressedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read the file."));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("Could not read the image."));
-      img.onload = () => {
-        // Keep receipts detailed: faint thermal digits (e.g. 1180 vs 118) need
-        // pixels, so cap the long side generously rather than at 1280.
-        const maxDim = 2200;
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return resolve(reader.result as string);
-        ctx.drawImage(img, 0, 0, w, h);
-        enhanceForScan(ctx, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.src = reader.result as string;
+    // URL.createObjectURL sidesteps the FileReader permission quirks that
+    // trigger "unknown filereader" errors on Android gallery picks and on
+    // iOS Safari when the file is served as a content URI or HEIC.
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not decode the image."));
     };
-    reader.readAsDataURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      // Keep receipts detailed: faint thermal digits (e.g. 1180 vs 118) need
+      // pixels, so cap the long side generously rather than at 1280.
+      const maxDim = 2200;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas not available.")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      enhanceForScan(ctx, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.src = objectUrl;
   });
 }
 
