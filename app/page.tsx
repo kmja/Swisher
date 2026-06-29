@@ -1768,9 +1768,6 @@ export default function Page() {
       setItems(mapped);
       setRemovedItems([]);
       setUndoItem(null);
-      // Reset to the default of 4 for the new receipt — same baseline as the
-      // initial state.
-      setGroupSize(6);
       setReceiptTotal(totalOre);
       setReceiptChargedOre(chargedOre);
       if (typeof data.place === "string" && data.place.trim()) setMealLabel(data.place.trim().slice(0, 40));
