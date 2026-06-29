@@ -1039,7 +1039,19 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>("sv");
   const t = translations[lang];
 
-  const [step, setStep] = useState<Step>("capture");
+  const draftRef = useRef<Record<string, unknown> | null>(null);
+  const [step, setStep] = useState<Step>(() => {
+    if (typeof window === "undefined") return "capture";
+    try {
+      const raw = sessionStorage.getItem("kvitt-draft");
+      const d = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      if (d && (d.step === "items" || d.step === "assign")) {
+        draftRef.current = d;
+        return d.step as Step;
+      }
+    } catch {}
+    return "capture";
+  });
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -1149,14 +1161,18 @@ export default function Page() {
   // form in front of the host before they've even seen the scan animation.
   const [scanCardVisible, setScanCardVisible] = useState(false);
 
-  const [items, setItems] = useState<UiItem[]>([]);
+  const [items, setItems] = useState<UiItem[]>(() => {
+    const d = draftRef.current;
+    if (!d?.items) return [];
+    try { return d.items as UiItem[]; } catch { return []; }
+  });
   // True when the latest OCR pass found a tip on the receipt — either a
   // printed Dricks line or an implied tip from charged > total. Gates
   // the percentage chip strip in the totals card: if the receipt
   // already settled the tip, the host edits it directly in the row
   // above instead of being offered chips. Manual entry / fresh scans
   // start at false → chips show.
-  const [ocrFoundTip, setOcrFoundTip] = useState(false);
+  const [ocrFoundTip, setOcrFoundTip] = useState(() => draftRef.current?.ocrFoundTip === true);
   const [removedItems, setRemovedItems] = useState<UiItem[]>([]);
   const [undoItem, setUndoItem] = useState<UiItem | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1192,13 +1208,13 @@ export default function Page() {
   const [images, setImages] = useState<string[]>([]);
   // Foreign-currency context: amounts are always stored in SEK öre; these drive
   // the dual-currency display. null currency / rate=1 means a plain SEK receipt.
-  const [currency, setCurrency] = useState<string>("SEK");
-  const [fxRate, setFxRate] = useState<number | null>(1);
-  const [rateApprox, setRateApprox] = useState(false);
-  const [rateDate, setRateDate] = useState<string | null>(null);
-  const [country, setCountry] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string>(() => (draftRef.current?.currency as string | undefined) ?? "SEK");
+  const [fxRate, setFxRate] = useState<number | null>(() => typeof draftRef.current?.fxRate === "number" ? draftRef.current.fxRate as number : 1);
+  const [rateApprox, setRateApprox] = useState(() => draftRef.current?.rateApprox === true);
+  const [rateDate, setRateDate] = useState<string | null>(() => (draftRef.current?.rateDate as string | null | undefined) ?? null);
+  const [country, setCountry] = useState<string | null>(() => (draftRef.current?.country as string | null | undefined) ?? null);
   const [fxChanging, setFxChanging] = useState(false);
-  const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // öre
+  const [receiptTotal, setReceiptTotal] = useState<number | null>(() => typeof draftRef.current?.receiptTotal === "number" ? draftRef.current.receiptTotal as number : null); // öre
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
   // Ring buffer of the last few language switches. When the trail ends
@@ -1213,23 +1229,31 @@ export default function Page() {
   const [debugShareOpen, setDebugShareOpen] = useState(false);
   const addMoreRef = useRef<HTMLInputElement>(null);
 
-  const [diners, setDiners] = useState<Diner[]>([{ id: uid(), name: "" }]);
-  const [payerPhone, setPayerPhone] = useState("");
+  const [diners, setDiners] = useState<Diner[]>(() => {
+    const d = draftRef.current;
+    if (Array.isArray(d?.diners) && (d.diners as unknown[]).length > 0) return d.diners as Diner[];
+    return [{ id: uid(), name: "" }];
+  });
+  const [payerPhone, setPayerPhone] = useState<string>(() => (draftRef.current?.payerPhone as string | undefined) ?? "");
   // Payout rail: defaults to Swish for Swedish users and SEPA / EPC for
   // everyone else (detected from navigator.language's region tag, with
   // a timezone fallback). The OCR currency-based override below still
   // wins once a receipt is parsed — this just keeps the setup card
   // showing the right input from the moment it pops up, since the host
   // starts typing their Swish number / IBAN before OCR finishes.
-  const [payMethod, setPayMethod] = useState<"swish" | "sepa">(() => detectDefaultMethod());
-  const [payeeIban, setPayeeIban] = useState("");
+  const [payMethod, setPayMethod] = useState<"swish" | "sepa">(() => {
+    const m = draftRef.current?.payMethod;
+    if (m === "swish" || m === "sepa") return m;
+    return detectDefaultMethod();
+  });
+  const [payeeIban, setPayeeIban] = useState<string>(() => (draftRef.current?.payeeIban as string | undefined) ?? "");
   const [splitId, setSplitId] = useState<string | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
-  const [mealLabel, setMealLabel] = useState(translations.sv.mealDefault);
-  const [eventDate, setEventDate] = useState(today);
+  const [mealLabel, setMealLabel] = useState<string>(() => (draftRef.current?.mealLabel as string | undefined) ?? translations.sv.mealDefault);
+  const [eventDate, setEventDate] = useState<string>(() => (draftRef.current?.eventDate as string | undefined) ?? today);
 
-  const [receiptChargedOre, setReceiptChargedOre] = useState(0);
+  const [receiptChargedOre, setReceiptChargedOre] = useState<number>(() => typeof draftRef.current?.receiptChargedOre === "number" ? draftRef.current.receiptChargedOre as number : 0);
 
   // Default to 6 — gives the round-table chip widget enough seats to
   // actually read as a circle from the first tap (4 chips form a
@@ -1237,7 +1261,7 @@ export default function Page() {
   // dinner" size for most host cases. The +/− stepper is right
   // there, and the auto-estimate effect only fires when the value
   // is 0, so this default doesn't trigger any rebalancing.
-  const [groupSize, setGroupSize] = useState(6);
+  const [groupSize, setGroupSize] = useState<number>(() => typeof draftRef.current?.groupSize === "number" ? draftRef.current.groupSize as number : 6);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -1955,6 +1979,28 @@ export default function Page() {
     }
     setPriceDraft(null);
   }
+  // Persist the current draft to sessionStorage so an accidental page
+  // refresh on the items or assign step doesn't lose all work. Cleared
+  // when the host moves back to capture or creates a room.
+  useEffect(() => {
+    if (step !== "items" && step !== "assign") {
+      try { sessionStorage.removeItem("kvitt-draft"); } catch {}
+      return;
+    }
+    try {
+      sessionStorage.setItem(
+        "kvitt-draft",
+        JSON.stringify({
+          step, items, groupSize, diners, payerPhone, payeeIban, payMethod,
+          mealLabel, eventDate, currency, fxRate, rateApprox, rateDate,
+          country, receiptTotal, receiptChargedOre, ocrFoundTip,
+        }),
+      );
+    } catch {}
+  }, [step, items, groupSize, diners, payerPhone, payeeIban, payMethod,
+    mealLabel, eventDate, currency, fxRate, rateApprox, rateDate,
+    country, receiptTotal, receiptChargedOre, ocrFoundTip]);
+
   // Soft-delete: move to the removed list (kept out of the totals/shares), with
   // a transient undo and a persistent collapsed list to restore from.
   // Remember each removed row's original index in items[] so undo can
@@ -1995,6 +2041,80 @@ export default function Page() {
       );
     }
   }, [items]);
+
+  // Swipe-to-delete for the items step. Left-swipe reveals the red delete
+  // zone; crossing 110px commits the deletion.
+  const itemSwipeRef = useRef<{
+    el: HTMLElement;
+    startX: number;
+    startY: number;
+    armed: boolean;
+    item: UiItem;
+    origIdx: number;
+  } | null>(null);
+  function onItemSwipeStart(e: React.PointerEvent<HTMLElement>, rep: UiItem) {
+    itemSwipeRef.current = {
+      el: e.currentTarget,
+      startX: e.clientX,
+      startY: e.clientY,
+      armed: false,
+      item: rep,
+      origIdx: items.findIndex((x) => x.id === rep.id),
+    };
+  }
+  function onItemSwipeMove(e: React.PointerEvent<HTMLElement>) {
+    const s = itemSwipeRef.current;
+    if (!s) return;
+    const dx = e.clientX - s.startX;
+    const dy = e.clientY - s.startY;
+    if (!s.armed) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (dx > 0 || Math.abs(dy) > Math.abs(dx) * 0.8) { itemSwipeRef.current = null; return; }
+      s.armed = true;
+      try { s.el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    }
+    s.el.style.transform = `translateX(${Math.min(0, dx)}px)`;
+    s.el.style.transition = "";
+    const del = s.el.parentElement?.querySelector<HTMLElement>('[data-reveal="delete"]');
+    if (del) del.style.opacity = String(Math.min(1, (-dx) / 110));
+  }
+  function onItemSwipeEnd(e: React.PointerEvent<HTMLElement>) {
+    const s = itemSwipeRef.current;
+    if (!s || !s.armed) { itemSwipeRef.current = null; return; }
+    const dx = e.clientX - s.startX;
+    const el = s.el;
+    const { item, origIdx } = s;
+    itemSwipeRef.current = null;
+    if (dx < -110) {
+      el.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
+      el.style.transform = "translateX(-120%)";
+      el.style.opacity = "0";
+      window.setTimeout(() => {
+        if (origIdx >= 0) removedIndicesRef.current.set(item.id, origIdx);
+        rememberRowPositions(item.id);
+        setItems((prev) => prev.filter((x) => x.id !== item.id));
+        setRemovedItems((r) => [item, ...r.filter((x) => x.id !== item.id)]);
+        setUndoItem(item);
+        if (undoTimer.current) clearTimeout(undoTimer.current);
+        undoTimer.current = setTimeout(() => setUndoItem(null), 6000);
+      }, 180);
+    } else {
+      el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+      el.style.transform = "translateX(0)";
+      const del = el.parentElement?.querySelector<HTMLElement>('[data-reveal="delete"]');
+      if (del) del.style.opacity = "0";
+    }
+  }
+  function onItemSwipeCancel() {
+    const s = itemSwipeRef.current;
+    if (s?.armed) {
+      s.el.style.transition = "transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+      s.el.style.transform = "translateX(0)";
+      const del = s.el.parentElement?.querySelector<HTMLElement>('[data-reveal="delete"]');
+      if (del) del.style.opacity = "0";
+    }
+    itemSwipeRef.current = null;
+  }
 
   const removeItem = async (id: string) => {
     const it = items.find((x) => x.id === id);
@@ -2226,6 +2346,7 @@ export default function Page() {
       // via the back button once a room exists. ?invite=1 pops the
       // QR/share dialog straight away; ?prewarmed=1 tells the room
       // page to skip its slide-in.
+      try { sessionStorage.removeItem("kvitt-draft"); } catch {}
       router.replace(`/room/${id}?invite=1&prewarmed=1`);
     } catch (err) {
       setRoomError(err instanceof Error ? err.message : "Could not create the room.");
@@ -2943,9 +3064,23 @@ export default function Page() {
                   categoryFor(rep.description, rep.category) === "other" || letters < 2
                 );
                 return (
-                <div key={rep.id} data-row-id={rep.id} className="flex items-start gap-2">
+                <div key={rep.id} data-row-id={rep.id} className="relative">
+                  <div className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-xl">
+                    <div data-reveal="delete" className="flex flex-1 items-center justify-end bg-red-600 pr-4 text-white opacity-0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    </div>
+                  </div>
                   <div
-                    className={`min-w-0 flex-1 rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out ${lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                    className={`rounded-xl p-2 shadow-sm ring-1 transition-colors duration-220 ease-out touch-pan-y will-change-transform ${lowConfidence ? "bg-amber-50/70 ring-amber-200" : "bg-white ring-black/5"}`}
+                    onPointerDown={(e) => {
+                      const tgt = e.target as Element;
+                      if (!tgt.closest("input,textarea,select,button")) onItemSwipeStart(e, rep);
+                    }}
+                    onPointerMove={onItemSwipeMove}
+                    onPointerUp={onItemSwipeEnd}
+                    onPointerCancel={onItemSwipeCancel}
                   >
                     {/* Top row uses items-start (not items-center) so a
                         multi-line description, the emoji and the price
@@ -3085,24 +3220,6 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  {/* Trash button sits outside the card on the right.
-                      Keeps the destructive action visually separate
-                      from the row's editable content — same pattern
-                      Files-/Notes-style list rows use. */}
-                  <button
-                    type="button"
-                    onClick={() => removeItem(rep.id)}
-                    aria-label={t.removeRow}
-                    className="mt-1.5 flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 active:text-red-500"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                  </button>
                 </div>
                 );
               })}
@@ -3175,6 +3292,28 @@ export default function Page() {
                   })}
                 </div>
               )}
+              <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+                <span className="text-xs text-gray-500">{t.groupSizeLabel}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="−"
+                    onClick={() => setGroupSize((g) => Math.max(2, g - 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center text-sm font-semibold tabular-nums text-ink">{groupSize}</span>
+                  <button
+                    type="button"
+                    aria-label="+"
+                    onClick={() => setGroupSize((g) => Math.min(50, g + 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
             {!totalReconciles && (
               <p className="mt-1 text-xs text-amber-600">{t.totalDiff(formatOre(Math.abs(totalDiffOre)))}</p>

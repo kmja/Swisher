@@ -341,8 +341,8 @@ const sv: Strings = {
 
   liveRoomTitle: "Live-rum",
   liveRoomHint: "Skapa ett rum – så petar var och en in sina egna rätter på sin egen telefon.",
-  createRoom: "Bjud in att dela",
-  creatingRoom: "Bjuder in…",
+  createRoom: "Ser bra ut",
+  creatingRoom: "Skapar rum…",
 
   groupSizeLabel: "Hur många delar?",
   sharedGroupPrompt: "Det ser ut som ni har delade rätter – hur många är ni?",
@@ -508,8 +508,8 @@ const en: Strings = {
 
   liveRoomTitle: "Live room",
   liveRoomHint: "Create a room — everyone taps their own items on their own phone.",
-  createRoom: "Invite people to split",
-  creatingRoom: "Inviting…",
+  createRoom: "Looks good",
+  creatingRoom: "Creating room…",
 
   groupSizeLabel: "How many are sharing?",
   sharedGroupPrompt: "Looks like you have shared items — how many are you?",
