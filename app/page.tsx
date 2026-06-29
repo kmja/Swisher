@@ -2483,11 +2483,10 @@ export default function Page() {
             {ocrFailed && (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
                 <div className="w-full max-w-xs rounded-2xl bg-white p-5 text-center shadow-2xl">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-                      <line x1="12" y1="9" x2="12" y2="13" />
-                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
                     </svg>
                   </div>
                   <h2 className="mt-3 text-base font-bold text-ink">{ocrFailReason === "noPrices" ? t.ocrNoPricesTitle : t.ocrFailedTitle}</h2>
