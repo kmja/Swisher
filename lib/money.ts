@@ -110,8 +110,12 @@ export function computeShares(
   let unassignedOre = 0;
   for (const item of items) {
     if (item.shared) {
-      const divisor =
+      const rawDivisor =
         item.shareCount && item.shareCount > 0 ? item.shareCount : groupSize > 0 ? groupSize : diners.length;
+      // Cap to groupSize only when the host has declared one — a per-item
+      // shareCount larger than diners.length is legitimate (people haven't
+      // joined yet), but shareCount > declared groupSize is always a bug.
+      const divisor = groupSize > 0 ? Math.min(rawDivisor, groupSize) : rawDivisor;
       if (divisor <= 0) {
         unassignedOre += item.priceOre;
         continue;
@@ -197,7 +201,8 @@ export function computeRoomShares(
   for (const item of items) {
     const claimers = item.claimedBy.filter((id) => subtotals.has(id));
     if (item.shared) {
-      const divisor = item.shareCount && item.shareCount > 0 ? item.shareCount : fallbackDivisor;
+      const rawDivisor = item.shareCount && item.shareCount > 0 ? item.shareCount : fallbackDivisor;
+      const divisor = groupSize > 0 ? Math.min(rawDivisor, fallbackDivisor) : rawDivisor;
       const parts = splitOre(item.priceOre, divisor);
       claimers.forEach((id, i) => {
         if (i < parts.length) subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);

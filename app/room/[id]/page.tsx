@@ -2086,7 +2086,7 @@ export default function RoomPage() {
                       aria-label="+"
                       tabIndex={editDraft.shared ? 0 : -1}
                       disabled={dv >= groupSize}
-                      onClick={() => setEditDraft({ ...editDraft, shareCount: Math.min(groupSize, dv + 1) })}
+                      onClick={() => setEditDraft({ ...editDraft, shareCount: dv + 1 >= groupSize ? undefined : dv + 1 })}
                       className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                     >
                       +
@@ -2979,7 +2979,7 @@ export default function RoomPage() {
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
           const denom = it.shared
-            ? (it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize)
+            ? (it.shareCount && it.shareCount > 0 ? Math.min(it.shareCount, groupSize) : groupSize)
             : Math.max(1, it.claimedBy.length);
           const oreEach = Math.floor(it.priceOre / denom);
           const isShared = isFullyShared(it, groupSize);

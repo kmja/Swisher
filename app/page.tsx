@@ -2126,12 +2126,22 @@ export default function Page() {
       prev.map((it) => (it.id === itemId ? { ...it, shared: !it.shared, sharers: [], shareCount: undefined } : it)),
     );
   }
-  // Ways a shared item splits: its own count, else the group size, else the
-  // number of diners — never below 2 (sharing one way makes no sense).
-  const itemDivisorFor = (it: UiItem) =>
-    Math.max(2, it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize > 0 ? groupSize : namedDiners.length);
-  const setShareCount = (id: string, n: number) =>
-    updateItem(id, { shareCount: Math.max(2, Math.min(Math.max(2, groupSize || 50), n)) });
+  // Ways a shared item splits: its own count (capped to groupSize when the
+  // host has declared one), else the group size, else the number of diners —
+  // never below 2. The cap prevents a stale shareCount (frozen when groupSize
+  // was larger) from exceeding the current group size.
+  const itemDivisorFor = (it: UiItem) => {
+    const fallback = groupSize > 0 ? groupSize : namedDiners.length;
+    const raw = it.shareCount && it.shareCount > 0 ? it.shareCount : fallback;
+    return Math.max(2, groupSize > 0 ? Math.min(raw, groupSize) : raw);
+  };
+  const setShareCount = (id: string, n: number) => {
+    const clamped = Math.max(2, Math.min(Math.max(2, groupSize || 50), n));
+    // Save undefined (= "same as group, follow it") rather than freezing the
+    // current groupSize as an explicit value — otherwise a later groupSize
+    // change would leave the item stuck at the old count.
+    updateItem(id, { shareCount: groupSize > 0 && clamped >= groupSize ? undefined : clamped });
+  };
 
   // --- live room -------------------------------------------------------------
   // Empty name is fine — we fall back to the playful t.genericHostName
@@ -3044,7 +3054,7 @@ export default function Page() {
                                 aria-label="+"
                                 tabIndex={rep.shared ? 0 : -1}
                                 disabled={d >= groupSize}
-                                onClick={() => updateGroup(rep, { shareCount: Math.min(groupSize, d + 1) })}
+                                onClick={() => updateGroup(rep, { shareCount: d + 1 >= groupSize ? undefined : d + 1 })}
                                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                               >
                                 +
