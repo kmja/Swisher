@@ -1,36 +1,37 @@
-export type Category = "starter" | "food" | "drink" | "dessert" | "other";
+export type Category = "starter" | "food" | "drink" | "dessert" | "tip" | "other";
 
-export const CATEGORY_ORDER: Category[] = ["starter", "food", "drink", "dessert", "other"];
+export const CATEGORY_ORDER: Category[] = ["starter", "food", "drink", "dessert", "tip", "other"];
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
   starter: "🥗",
   food: "🍽️",
   drink: "🍺",
   dessert: "🍰",
+  tip: "💝",
   other: "🧾",
 };
 
 import type { Lang } from "./i18n";
 
-const svLabels: Record<Category, string> = { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", other: "Övrigt" };
-const enLabels: Record<Category, string> = { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", other: "Other" };
-const deLabels: Record<Category, string> = { starter: "Vorspeisen", food: "Hauptgerichte", drink: "Getränke", dessert: "Dessert", other: "Sonstiges" };
-const frLabels: Record<Category, string> = { starter: "Entrées", food: "Plats", drink: "Boissons", dessert: "Dessert", other: "Autre" };
-const esLabels: Record<Category, string> = { starter: "Entrantes", food: "Principales", drink: "Bebidas", dessert: "Postre", other: "Otros" };
-const itLabels: Record<Category, string> = { starter: "Antipasti", food: "Secondi", drink: "Bevande", dessert: "Dolci", other: "Altro" };
-const nlLabels: Record<Category, string> = { starter: "Voorgerechten", food: "Hoofdgerechten", drink: "Drank", dessert: "Dessert", other: "Overig" };
-const daLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", other: "Øvrigt" };
-const noLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", other: "Annet" };
-const fiLabels: Record<Category, string> = { starter: "Alkuruoat", food: "Pääruoat", drink: "Juomat", dessert: "Jälkiruoka", other: "Muut" };
-const plLabels: Record<Category, string> = { starter: "Przystawki", food: "Dania główne", drink: "Napoje", dessert: "Desery", other: "Inne" };
-const ptLabels: Record<Category, string> = { starter: "Entradas", food: "Pratos principais", drink: "Bebidas", dessert: "Sobremesa", other: "Outros" };
+const svLabels: Record<Category, string> = { starter: "Förrätt", food: "Varmrätt", drink: "Dryck", dessert: "Efterrätt", tip: "Dricks", other: "Övrigt" };
+const enLabels: Record<Category, string> = { starter: "Starters", food: "Mains", drink: "Drinks", dessert: "Dessert", tip: "Tip", other: "Other" };
+const deLabels: Record<Category, string> = { starter: "Vorspeisen", food: "Hauptgerichte", drink: "Getränke", dessert: "Dessert", tip: "Trinkgeld", other: "Sonstiges" };
+const frLabels: Record<Category, string> = { starter: "Entrées", food: "Plats", drink: "Boissons", dessert: "Dessert", tip: "Pourboire", other: "Autre" };
+const esLabels: Record<Category, string> = { starter: "Entrantes", food: "Principales", drink: "Bebidas", dessert: "Postre", tip: "Propina", other: "Otros" };
+const itLabels: Record<Category, string> = { starter: "Antipasti", food: "Secondi", drink: "Bevande", dessert: "Dolci", tip: "Mancia", other: "Altro" };
+const nlLabels: Record<Category, string> = { starter: "Voorgerechten", food: "Hoofdgerechten", drink: "Drank", dessert: "Dessert", tip: "Fooi", other: "Overig" };
+const daLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", tip: "Drikkepenge", other: "Øvrigt" };
+const noLabels: Record<Category, string> = { starter: "Forretter", food: "Hovedretter", drink: "Drikke", dessert: "Dessert", tip: "Drikkepenger", other: "Annet" };
+const fiLabels: Record<Category, string> = { starter: "Alkuruoat", food: "Pääruoat", drink: "Juomat", dessert: "Jälkiruoka", tip: "Tippi", other: "Muut" };
+const plLabels: Record<Category, string> = { starter: "Przystawki", food: "Dania główne", drink: "Napoje", dessert: "Desery", tip: "Napiwek", other: "Inne" };
+const ptLabels: Record<Category, string> = { starter: "Entradas", food: "Pratos principais", drink: "Bebidas", dessert: "Sobremesa", tip: "Gorjeta", other: "Outros" };
 export const CATEGORY_LABEL: Record<Lang, Record<Category, string>> = {
   sv: svLabels, en: enLabels, de: deLabels, fr: frLabels, es: esLabels, it: itLabels,
   nl: nlLabels, da: daLabels, no: noLabels, fi: fiLabels, pl: plLabels, pt: ptLabels,
 };
 
 export function normalizeCategory(v: unknown): Category {
-  return v === "starter" || v === "food" || v === "drink" || v === "dessert" || v === "other" ? v : "other";
+  return v === "starter" || v === "food" || v === "drink" || v === "dessert" || v === "tip" || v === "other" ? v : "other";
 }
 
 // Strip diacritics so "läsk"/"lask", "smörgås"/"smorgas", "entrecôte"/"entrecote"
@@ -136,8 +137,15 @@ const isStarter = makeMatcher([
   "delningsbricka",
 ]);
 
+const isTip = makeMatcher([
+  "dricks", "gratuitet", "tip", "gratuity", "service charge", "service fee",
+  "trinkgeld", "pourboire", "propina", "mancia", "fooi", "drikkepenge", "drikkepenger",
+  "tippi", "juomaraha", "napiwek", "gorjeta",
+]);
+
 /** Keyword fallback (Swedish + English) when the model gives no category. */
 function guessCategory(description: string): Category {
+  if (isTip(description)) return "tip";
   if (isDrink(description)) return "drink";
   if (isDessert(description)) return "dessert";
   if (isStarter(description)) return "starter";

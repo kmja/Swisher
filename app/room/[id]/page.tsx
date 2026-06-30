@@ -2427,7 +2427,7 @@ export default function RoomPage() {
 
   return (
     <FxProvider value={roomFx}>
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-32">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-56">
       {/* Sticky nav. Three-column grid (matches the home page) keeps
           the wordmark dead-centre. Left column carries the room
           actions (new receipt + history) so they sit together; the
@@ -2983,7 +2983,7 @@ export default function RoomPage() {
                           {isPaid ? `✓ ${t.paid}` : t.markPaid}
                         </button>
                       ) : null}
-                      <Money ore={s.totalOre} className={`text-sm font-semibold ${isPaid ? "text-gray-400 line-through" : ""}`} />
+                      <Money ore={s.totalOre} className={`text-sm font-semibold ${isPaid ? "text-gray-400 line-through" : ""}`} nativeClassName="hidden" />
                     </div>
                     {claimedItems.length > 0 && (
                       <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
@@ -3029,6 +3029,13 @@ export default function RoomPage() {
                                 </div>
                               ));
                             })()}
+                            {roomFx && (
+                              <Money
+                                ore={s.totalOre}
+                                className="mt-2 block text-right text-xs font-semibold text-gray-500"
+                                nativeClassName="ml-1 text-xs font-normal text-gray-400"
+                              />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -3212,6 +3219,15 @@ export default function RoomPage() {
                     );
                   })}
                 </div>
+                {roomFx && (
+                  <div className="border-t border-white/10 pt-2">
+                    <Money
+                      ore={myShare.totalOre}
+                      className="block text-right text-sm font-semibold text-white/80"
+                      nativeClassName="ml-1 text-xs font-normal text-white/55"
+                    />
+                  </div>
+                )}
               </div>
             </div>
             {/* Cart toggle bar — shows the share total + a quick
@@ -3237,7 +3253,7 @@ export default function RoomPage() {
               <span className="flex shrink-0 flex-col items-end leading-tight">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{t.yourTotal}</span>
                 <span className="flex items-center gap-1">
-                  <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="ml-1 text-[11px] font-normal text-white/60" />
+                  <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="hidden" />
                   <span className={`text-xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
                 </span>
               </span>
@@ -3447,7 +3463,7 @@ export default function RoomPage() {
               <Money
                 ore={ei.shared ? Math.round(ei.priceOre / shareCap) : ei.priceOre}
                 className="shrink-0 text-base font-semibold"
-                nativeClassName="text-xs text-gray-500"
+                nativeClassName="text-gray-400"
                 stack
               />
             </div>
