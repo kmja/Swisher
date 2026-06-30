@@ -97,6 +97,8 @@ const R = {
     cancel: "Avbryt",
     coverFor: "Betalar även för",
     donate: "Bjud Kvitt på en kaffe",
+    swipeRemove: "ta bort",
+    swipeEdit: "ändra",
   },
   en: {
     loading: "Loading the room…",
@@ -169,6 +171,8 @@ const R = {
     cancel: "Cancel",
     coverFor: "Also paying for",
     donate: "Buy Kvitt a coffee",
+    swipeRemove: "remove",
+    swipeEdit: "edit",
   },
   de: {
     loading: "Raum wird geladen…",
@@ -241,6 +245,8 @@ const R = {
     cancel: "Abbrechen",
     coverFor: "Zahlt auch für",
     donate: "Kvitt einen Kaffee spendieren",
+    swipeRemove: "löschen",
+    swipeEdit: "ändern",
   },
   fr: {
     loading: "Chargement de la salle…",
@@ -313,6 +319,8 @@ const R = {
     cancel: "Annuler",
     coverFor: "Paie aussi pour",
     donate: "Offrir un café à Kvitt",
+    swipeRemove: "supprimer",
+    swipeEdit: "modifier",
   },
   es: {
     loading: "Cargando la sala…",
@@ -385,6 +393,8 @@ const R = {
     cancel: "Cancelar",
     coverFor: "También paga por",
     donate: "Invitar a Kvitt a un café",
+    swipeRemove: "borrar",
+    swipeEdit: "editar",
   },
   it: {
     loading: "Caricamento della stanza…",
@@ -457,6 +467,8 @@ const R = {
     cancel: "Annulla",
     coverFor: "Paga anche per",
     donate: "Offri un caffè a Kvitt",
+    swipeRemove: "rimuovi",
+    swipeEdit: "modifica",
   },
   nl: {
     loading: "Kamer laden…",
@@ -529,6 +541,8 @@ const R = {
     cancel: "Annuleren",
     coverFor: "Betaalt ook voor",
     donate: "Trakteer Kvitt op een koffie",
+    swipeRemove: "verwijder",
+    swipeEdit: "bewerk",
   },
   da: {
     loading: "Indlæser rummet…",
@@ -601,6 +615,8 @@ const R = {
     cancel: "Annuller",
     coverFor: "Betaler også for",
     donate: "Køb Kvitt en kaffe",
+    swipeRemove: "slet",
+    swipeEdit: "rediger",
   },
   no: {
     loading: "Laster rommet…",
@@ -673,6 +689,8 @@ const R = {
     cancel: "Avbryt",
     coverFor: "Betaler også for",
     donate: "Kjøp Kvitt en kaffe",
+    swipeRemove: "poista",
+    swipeEdit: "muokkaa",
   },
   fi: {
     loading: "Ladataan huonetta…",
@@ -745,6 +763,8 @@ const R = {
     cancel: "Peruuta",
     coverFor: "Maksaa myös puolesta",
     donate: "Osta Kvitille kahvi",
+    swipeRemove: "poista",
+    swipeEdit: "muokkaa",
   },
   pl: {
     loading: "Ładowanie pokoju…",
@@ -817,6 +837,8 @@ const R = {
     cancel: "Anuluj",
     coverFor: "Płaci również za",
     donate: "Postaw Kvitt kawę",
+    swipeRemove: "usuń",
+    swipeEdit: "edytuj",
   },
   pt: {
     loading: "A carregar a sala…",
@@ -889,6 +911,8 @@ const R = {
     cancel: "Cancelar",
     coverFor: "Paga também por",
     donate: "Pagar um café ao Kvitt",
+    swipeRemove: "remover",
+    swipeEdit: "editar",
   },
 };
 
@@ -1076,10 +1100,11 @@ export default function RoomPage() {
   type ExpandedItemState = {
     item: RoomState["items"][number];
     sourceRect: { top: number; left: number; width: number; height: number; bottom: number };
-    showBelow: boolean;
   };
   const [expandedItem, setExpandedItem] = useState<ExpandedItemState | null>(null);
   const lpSourceElement = useRef<HTMLElement | null>(null);
+  const peekItemIdRef = useRef<string | null>(null);
+  const stateRef = useRef(state);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
@@ -1396,6 +1421,36 @@ export default function RoomPage() {
     if (nameToastTimer.current) clearTimeout(nameToastTimer.current);
     nameToastTimer.current = setTimeout(() => setNameToast(null), 2500);
   }, []);
+  // Keep stateRef current so showPeek's move handler can read fresh state
+  // without a stale closure.
+  stateRef.current = state;
+  const showPeek = useCallback((it: RoomState["items"][number], sourceEl: HTMLElement) => {
+    const r = sourceEl.getBoundingClientRect();
+    peekItemIdRef.current = it.id;
+    setExpandedItem({ item: it, sourceRect: { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } });
+    const moveHandler = (ev: PointerEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const rowEl = el?.closest<HTMLElement>("[data-item-id]");
+      if (!rowEl) return;
+      const itemId = rowEl.dataset.itemId;
+      if (!itemId || itemId === peekItemIdRef.current) return;
+      const found = stateRef.current?.items.find((i) => i.id === itemId);
+      if (!found) return;
+      peekItemIdRef.current = itemId;
+      const rect = rowEl.getBoundingClientRect();
+      setExpandedItem({ item: found, sourceRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height, bottom: rect.bottom } });
+    };
+    const endHandler = () => {
+      document.removeEventListener("pointermove", moveHandler);
+      document.removeEventListener("pointerup", endHandler);
+      document.removeEventListener("pointercancel", endHandler);
+      peekItemIdRef.current = null;
+      setExpandedItem(null);
+    };
+    document.addEventListener("pointermove", moveHandler);
+    document.addEventListener("pointerup", endHandler);
+    document.addEventListener("pointercancel", endHandler);
+  }, []); // refs + stable setters only
 
   const t = Rx[lang];
   const tx = translations[lang];
@@ -2177,11 +2232,7 @@ export default function RoomPage() {
             onSwipeStart(e, it.id);
             startLongPress(() => {
               const el = lpSourceElement.current;
-              if (!el) return;
-              const r = el.getBoundingClientRect();
-              const vh = window.innerHeight;
-              const showBelow = vh - r.bottom >= 180 || r.top < 180;
-              setExpandedItem({ item: it, sourceRect: { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom }, showBelow });
+              if (el) showPeek(it, el);
             })(e);
           }}
           onPointerMove={(e) => { onSwipeMove(e); moveLongPress(e); }}
@@ -2273,7 +2324,6 @@ export default function RoomPage() {
 
     const mineCount = g.mine.length;
     const availableCount = g.available.length;
-    const totalCount = g.copies.length;
     const taken = mineCount > 0;
     const myTotalOre = mineCount * rep.priceOre;
 
@@ -2287,12 +2337,39 @@ export default function RoomPage() {
     return (
       <div key={rep.id} className="flex flex-col gap-1">
         <div className="relative">
-          <button
-            type="button"
-            onClick={tapRow}
-            disabled={availableCount === 0 && mineCount === 0}
-            className={`relative flex min-w-0 w-full items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition ${
-              taken ? "bg-[#f4e6ee] ring-swish" : "bg-white ring-black/5"
+          <div className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-2xl">
+            <div data-reveal="edit" className="flex flex-1 items-center bg-gray-600 pl-5 text-white opacity-0">
+              <PencilIcon size={22} />
+            </div>
+            <div data-reveal="delete" className="flex flex-1 items-center justify-end bg-red-600 pr-5 text-white opacity-0">
+              <TrashIcon size={22} />
+            </div>
+          </div>
+          <div
+            data-item-id={rep.id}
+            role="button"
+            tabIndex={availableCount === 0 && mineCount === 0 ? -1 : 0}
+            aria-pressed={taken}
+            onPointerDown={(e) => {
+              if (e.target instanceof Element && e.target.closest("button,input")) return;
+              lpSourceElement.current = e.currentTarget as HTMLElement;
+              onSwipeStart(e, rep.id);
+              startLongPress(() => {
+                const el = lpSourceElement.current;
+                if (el) showPeek(rep, el);
+              })(e);
+            }}
+            onPointerMove={(e) => { onSwipeMove(e); moveLongPress(e); }}
+            onPointerUp={(e) => { onSwipeEnd(e); cancelLongPress(); }}
+            onPointerCancel={() => { onSwipeCancel(); cancelLongPress(); }}
+            onClick={(e) => {
+              if (lpFired.current) { lpFired.current = false; return; }
+              if (e.target instanceof Element && e.target.closest("button")) return;
+              tapRow();
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`relative flex min-w-0 w-full cursor-pointer touch-pan-y select-none items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition will-change-transform [-webkit-touch-callout:none] ${
+              taken ? "bg-[#f4e6ee] ring-swish" : availableCount === 0 && mineCount === 0 ? "bg-gray-100 text-gray-400 ring-black/5" : "bg-white ring-black/5"
             }`}
           >
             <span
@@ -2312,18 +2389,9 @@ export default function RoomPage() {
             <Money
               ore={taken ? myTotalOre : rep.priceOre}
               className="shrink-0 text-right text-base font-semibold"
+              nativeClassName="hidden"
             />
-          </button>
-          {/* Floating pencil on the card's top-right corner — matches the
-              single-copy claim row. */}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); openEdit(rep); }}
-            aria-label={t.editRow}
-            className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-black/10 active:bg-gray-100 active:text-swish-dark"
-          >
-            <PencilIcon />
-          </button>
+          </div>
         </div>
         {taken && (
           <div className="flex items-center justify-center gap-3 py-1">
@@ -2907,13 +2975,47 @@ export default function RoomPage() {
                     {claimedItems.length > 0 && (
                       <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                         <div className="min-h-0 overflow-hidden">
-                          <div className="flex flex-wrap gap-1.5 border-t border-gray-50 px-3 pb-3 pt-2">
-                            {claimedItems.map((item) => (
-                              <span key={item.id} className="flex items-center gap-0.5 text-[11px] text-gray-400">
-                                <span aria-hidden className="text-sm leading-none"><ItemEmoji description={item.description} hint={item.category} modelEmoji={item.emoji} /></span>
-                                <span className="max-w-[80px] truncate">{item.description}</span>
-                              </span>
-                            ))}
+                          <div className="border-t border-gray-50 px-3 pb-3 pt-2">
+                            {(() => {
+                              // Group by category, aggregate identical copies
+                              type DinerLine = { item: typeof claimedItems[0]; count: number; oreEach: number };
+                              const catMap = new Map<Category, DinerLine[]>();
+                              for (const item of claimedItems) {
+                                const cat = categoryFor(item.description, item.category);
+                                const denom = item.shared
+                                  ? (item.shareCount && item.shareCount > 0 ? item.shareCount : groupSize)
+                                  : Math.max(1, item.claimedBy.length);
+                                const oreEach = Math.floor(item.priceOre / denom);
+                                const lines = catMap.get(cat) ?? [];
+                                const existing = lines.find(
+                                  (l) => l.item.description === item.description && l.oreEach === oreEach,
+                                );
+                                if (existing) existing.count++;
+                                else lines.push({ item, count: 1, oreEach });
+                                catMap.set(cat, lines);
+                              }
+                              return CATEGORY_ORDER.filter((cat) => catMap.has(cat)).map((cat) => (
+                                <div key={cat} className="mt-2 space-y-1 first:mt-0">
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                                    {CATEGORY_LABEL[lang][cat]}
+                                  </div>
+                                  {catMap.get(cat)!.map((line, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <span aria-hidden className="inline-flex w-6 shrink-0 items-center justify-center text-base leading-none">
+                                        <ItemEmoji description={line.item.description} hint={line.item.category} modelEmoji={line.item.emoji} />
+                                      </span>
+                                      <span className="min-w-0 flex-1 truncate text-sm text-gray-600">
+                                        {line.count > 1 && <span className="text-gray-400 tabular-nums">{line.count}× </span>}
+                                        {line.item.description}
+                                      </span>
+                                      <span className="shrink-0 text-xs tabular-nums text-gray-500">
+                                        {formatOre(line.count * line.oreEach)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ));
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -3303,62 +3405,58 @@ export default function RoomPage() {
         </div>
       )}
       {expandedItem && (() => {
-        const { item: ei, sourceRect: sr, showBelow } = expandedItem;
-        const vw = typeof window !== "undefined" ? window.innerWidth : 400;
+        const { item: ei, sourceRect: sr } = expandedItem;
         const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-        const CARD_W = 288;
-        const cardLeft = Math.max(16, Math.min(vw - CARD_W - 16, sr.left + sr.width / 2 - CARD_W / 2));
-        const cardStyle: React.CSSProperties = showBelow
-          ? { top: Math.min(sr.bottom + 10, vh - 200), left: cardLeft, width: CARD_W, transformOrigin: "top center" }
-          : { bottom: vh - sr.top + 10, left: cardLeft, width: CARD_W, transformOrigin: "bottom center" };
-        const claimers = ei.claimedBy.map((id) => id === personId ? (lang === "sv" ? "du" : "you") : (nameById.get(id) ?? "?"));
         const shareCap = ei.shareCount && ei.shareCount > 0 ? ei.shareCount : groupSize;
+        const isClaimed = !!personId && ei.claimedBy.includes(personId);
+        const claimers = ei.claimedBy.map((id) =>
+          id === personId ? (lang === "sv" ? "du" : "you") : (nameById.get(id) ?? "?")
+        );
         return (
-          <>
-            <div
-              className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-[2px]"
-              onClick={() => setExpandedItem(null)}
-            />
-            <div
-              className="item-card-expand fixed z-[71] rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-black/10"
-              style={cardStyle}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start gap-4">
-                <span className="text-5xl leading-none">
-                  <ItemEmoji description={ei.description} hint={ei.category} modelEmoji={ei.emoji} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-bold leading-snug text-gray-900">{ei.description}</p>
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <Money ore={ei.priceOre} className="text-base font-semibold text-swish-dark" nativeClassName="ml-2 text-sm font-medium text-gray-500" />
-                    {ei.shared && (
-                      <span className="text-xs text-gray-400">🤝 {tx.sharedToggle}</span>
-                    )}
-                  </div>
-                  {ei.shared && (
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      {ei.claimedBy.length}/{shareCap} {lang === "sv" ? "andelar tagna" : "shares taken"}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {claimers.length > 0 && (
-                <div className="mt-3 border-t border-gray-100 pt-3">
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                    {lang === "sv" ? "Taget av" : "Claimed by"}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {claimers.map((name, i) => (
-                      <span key={i} className="rounded-full bg-swish/10 px-2.5 py-0.5 text-xs font-semibold text-swish-dark">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+          <div
+            className="item-card-expand pointer-events-none fixed z-[71] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10"
+            style={{
+              left: sr.left,
+              width: sr.width,
+              bottom: vh - sr.top + 8,
+              transformOrigin: "bottom center",
+            }}
+          >
+            {/* Row mirrors the claim row layout exactly */}
+            <div className="flex items-center gap-2.5 p-3">
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${isClaimed ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"}`}>
+                ✓
+              </span>
+              <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none">
+                <ItemEmoji description={ei.description} hint={ei.category} modelEmoji={ei.emoji} />
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{ei.description}</span>
+              <Money
+                ore={ei.shared ? Math.round(ei.priceOre / shareCap) : ei.priceOre}
+                className="shrink-0 text-base font-semibold"
+                nativeClassName="text-xs text-gray-500"
+                stack
+              />
             </div>
-          </>
+            {(ei.shared || claimers.length > 0) && (
+              <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-50 px-3 pb-2.5 pt-1.5">
+                {ei.shared && (
+                  <span className="text-[11px] text-swish-dark">
+                    🤝 {ei.claimedBy.length}/{shareCap}
+                  </span>
+                )}
+                {claimers.map((name, i) => (
+                  <span key={i} className="rounded-full bg-swish/10 px-2 py-0.5 text-[11px] font-semibold text-swish-dark">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-between border-t border-gray-50 px-3 pb-2 pt-1.5 text-[10px] font-medium text-gray-300">
+              <span>← {t.swipeRemove}</span>
+              <span>{t.swipeEdit} →</span>
+            </div>
+          </div>
         );
       })()}
       {receiptOpen && (
