@@ -164,7 +164,7 @@ const R = {
     addRow: "Add item",
     descPh: "Description",
     pricePh: "0.00",
-    removeRow: "Remove row",
+    removeRow: "Remove item",
     removedItem: (desc: string) => `Removed ${desc}`,
     undo: "Undo",
     save: "Save",
@@ -238,7 +238,7 @@ const R = {
     addRow: "Artikel hinzufügen",
     descPh: "Beschreibung",
     pricePh: "0,00",
-    removeRow: "Zeile entfernen",
+    removeRow: "Artikel entfernen",
     removedItem: (desc: string) => `${desc} entfernt`,
     undo: "Rückgängig",
     save: "Speichern",
@@ -312,7 +312,7 @@ const R = {
     addRow: "Ajouter un article",
     descPh: "Description",
     pricePh: "0,00",
-    removeRow: "Supprimer la ligne",
+    removeRow: "Supprimer l'article",
     removedItem: (desc: string) => `${desc} supprimé`,
     undo: "Annuler",
     save: "Enregistrer",
@@ -386,7 +386,7 @@ const R = {
     addRow: "Añadir artículo",
     descPh: "Descripción",
     pricePh: "0,00",
-    removeRow: "Eliminar fila",
+    removeRow: "Eliminar artículo",
     removedItem: (desc: string) => `${desc} eliminado`,
     undo: "Deshacer",
     save: "Guardar",
@@ -460,7 +460,7 @@ const R = {
     addRow: "Aggiungi articolo",
     descPh: "Descrizione",
     pricePh: "0,00",
-    removeRow: "Rimuovi riga",
+    removeRow: "Rimuovi articolo",
     removedItem: (desc: string) => `${desc} rimosso`,
     undo: "Annulla",
     save: "Salva",
@@ -534,7 +534,7 @@ const R = {
     addRow: "Artikel toevoegen",
     descPh: "Omschrijving",
     pricePh: "0,00",
-    removeRow: "Rij verwijderen",
+    removeRow: "Artikel verwijderen",
     removedItem: (desc: string) => `${desc} verwijderd`,
     undo: "Ongedaan maken",
     save: "Opslaan",
@@ -608,7 +608,7 @@ const R = {
     addRow: "Tilføj vare",
     descPh: "Beskrivelse",
     pricePh: "0,00",
-    removeRow: "Fjern række",
+    removeRow: "Fjern vare",
     removedItem: (desc: string) => `${desc} fjernet`,
     undo: "Fortryd",
     save: "Gem",
@@ -682,7 +682,7 @@ const R = {
     addRow: "Legg til vare",
     descPh: "Beskrivelse",
     pricePh: "0,00",
-    removeRow: "Fjern rad",
+    removeRow: "Fjern vare",
     removedItem: (desc: string) => `${desc} fjernet`,
     undo: "Angre",
     save: "Lagre",
@@ -756,7 +756,7 @@ const R = {
     addRow: "Lisää tuote",
     descPh: "Kuvaus",
     pricePh: "0,00",
-    removeRow: "Poista rivi",
+    removeRow: "Poista tuote",
     removedItem: (desc: string) => `${desc} poistettu`,
     undo: "Kumoa",
     save: "Tallenna",
@@ -830,7 +830,7 @@ const R = {
     addRow: "Dodaj pozycję",
     descPh: "Opis",
     pricePh: "0,00",
-    removeRow: "Usuń wiersz",
+    removeRow: "Usuń pozycję",
     removedItem: (desc: string) => `${desc} usunięto`,
     undo: "Cofnij",
     save: "Zapisz",
@@ -904,7 +904,7 @@ const R = {
     addRow: "Adicionar item",
     descPh: "Descrição",
     pricePh: "0,00",
-    removeRow: "Remover linha",
+    removeRow: "Remover item",
     removedItem: (desc: string) => `${desc} removido`,
     undo: "Desfazer",
     save: "Guardar",
@@ -1829,13 +1829,18 @@ export default function RoomPage() {
    *  reads as "this row is expanding" rather than just swapping in. */
   const playEditOpen = useCallback((el: HTMLElement | null) => {
     if (!el || typeof el.animate !== "function") return;
-    el.animate(
-      [
-        { opacity: 0, transform: "scale(0.94)" },
-        { opacity: 1, transform: "scale(1)" },
-      ],
-      { duration: 220, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
-    );
+    // Set opacity synchronously so there's no flash before the animation.
+    // Using fill:"backwards" can leave the element invisible if the
+    // animation is paused or cancelled, so we manage it manually instead.
+    el.style.opacity = "0";
+    requestAnimationFrame(() => {
+      if (!el.isConnected) return;
+      el.style.opacity = "";
+      el.animate(
+        [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "scale(1)" }],
+        { duration: 160, easing: "ease-out" },
+      );
+    });
   }, []);
 
   /** Origin rect captured the moment the host taps any of the share /
@@ -2767,8 +2772,16 @@ export default function RoomPage() {
                     </div>
                     {mainGroups.map(renderClaimGroup)}
                     {othersGroups.length > 0 && (
-                      <details className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
-                        <summary className="cursor-pointer text-xs font-medium text-gray-500">{t.claimedTitle(othersTotal)}</summary>
+                      <details className="group rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
+                        <summary className="flex cursor-pointer list-none items-center gap-2.5 [&::-webkit-details-marker]:hidden">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                            <ChevronRightIcon className="h-5 w-5 text-gray-400 transition-transform duration-200 group-open:rotate-90" />
+                          </span>
+                          <span className="flex min-w-0 flex-1 items-center gap-2">
+                            <span className="inline-flex w-8 shrink-0 items-center justify-center text-xs text-gray-400">✓</span>
+                            <span className="min-w-0 flex-1 text-xs font-medium text-gray-500">{t.claimedTitle(othersTotal)}</span>
+                          </span>
+                        </summary>
                         <div className="mt-2 space-y-1">
                           {othersGroups.map((g) => {
                             const rep = g.copies[0];
