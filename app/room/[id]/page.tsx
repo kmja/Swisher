@@ -1073,22 +1073,13 @@ export default function RoomPage() {
   // Long-press → inline edit for description or price. The pencil button is
   // still there for "full" edits (shared, split count, delete); this is the
   // shortcut for the most common fixes (the OCR's typo, the wrong digit).
-  const [quickEdit, setQuickEdit] = useState<{ itemId: string; field: "description" | "price" } | null>(null);
-  const quickEditInputRef = useRef<HTMLInputElement | null>(null);
-  // autoFocus alone doesn't bring up the mobile keyboard reliably — iOS needs
-  // a focus() call that's chained from a user activation. requestAnimationFrame
-  // keeps us in that window: state flips → React mounts the input → rAF fires
-  // before paint → we focus + select the input so the keyboard pops up.
-  useEffect(() => {
-    if (!quickEdit) return;
-    const id = requestAnimationFrame(() => {
-      const input = quickEditInputRef.current;
-      if (!input) return;
-      input.focus();
-      try { input.select(); } catch { /* select() can throw on some types */ }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [quickEdit]);
+  type ExpandedItemState = {
+    item: RoomState["items"][number];
+    sourceRect: { top: number; left: number; width: number; height: number; bottom: number };
+    showBelow: boolean;
+  };
+  const [expandedItem, setExpandedItem] = useState<ExpandedItemState | null>(null);
+  const lpSourceElement = useRef<HTMLElement | null>(null);
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
@@ -2161,18 +2152,11 @@ export default function RoomPage() {
     const shareCap = it.shareCount && it.shareCount > 0 ? it.shareCount : groupSize;
     const sharesTaken = it.claimedBy.length;
     const sharesFull = partialShare && !mine && sharesTaken >= shareCap;
-    const editingDesc = quickEdit?.itemId === it.id && quickEdit.field === "description";
-    const editingPrice = quickEdit?.itemId === it.id && quickEdit.field === "price";
-    const anyQuickEdit = editingDesc || editingPrice;
     return (
       <div key={it.id} className="relative">
         {/* Reveal layers behind the row, hidden until the user is
-            actively swiping. Edit reveal is grayscale so it doesn't
-            shout brand pink for a neutral action; delete stays red.
-            opacity-0 keeps them out of sight when at rest; the
-            swipe handlers flip each layer's opacity imperatively as
-            the gesture moves so a bounce-back spring doesn't leave
-            a flash of colour behind the row. */}
+            actively swiping. opacity-0 keeps them out of sight at rest;
+            swipe handlers flip opacity imperatively during the gesture. */}
         <div className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-2xl">
           <div data-reveal="edit" className="flex flex-1 items-center bg-gray-600 pl-5 text-white opacity-0">
             <PencilIcon size={22} />
@@ -2184,79 +2168,63 @@ export default function RoomPage() {
         <div
           data-item-id={it.id}
           role="button"
-          tabIndex={anyQuickEdit || sharesFull ? -1 : 0}
+          tabIndex={sharesFull ? -1 : 0}
           aria-pressed={mine}
-          aria-disabled={anyQuickEdit || sharesFull}
-          onPointerDown={(e) => { if (!anyQuickEdit) onSwipeStart(e, it.id); }}
-          onPointerMove={onSwipeMove}
-          onPointerUp={onSwipeEnd}
-          onPointerCancel={onSwipeCancel}
-          onClick={() => {
-            if (anyQuickEdit || sharesFull || busyItem === it.id) return;
+          aria-disabled={sharesFull}
+          onPointerDown={(e) => {
+            if (e.target instanceof Element && e.target.closest("button,input")) return;
+            lpSourceElement.current = e.currentTarget as HTMLElement;
+            onSwipeStart(e, it.id);
+            startLongPress(() => {
+              const el = lpSourceElement.current;
+              if (!el) return;
+              const r = el.getBoundingClientRect();
+              const vh = window.innerHeight;
+              const showBelow = vh - r.bottom >= 180 || r.top < 180;
+              setExpandedItem({ item: it, sourceRect: { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom }, showBelow });
+            })(e);
+          }}
+          onPointerMove={(e) => { onSwipeMove(e); moveLongPress(e); }}
+          onPointerUp={(e) => { onSwipeEnd(e); cancelLongPress(); }}
+          onPointerCancel={() => { onSwipeCancel(); cancelLongPress(); }}
+          onClick={(e) => {
+            if (lpFired.current) { lpFired.current = false; return; }
+            if (sharesFull || busyItem === it.id) return;
+            if (e.target instanceof Element && e.target.closest("button")) return;
             toggleClaim(it.id);
           }}
           onKeyDown={(e) => {
-            if (anyQuickEdit) return;
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               toggleClaim(it.id);
             }
           }}
-          className={`relative flex min-w-0 cursor-pointer touch-pan-y select-none items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform ${
+          onContextMenu={(e) => e.preventDefault()}
+          className={`relative flex min-w-0 cursor-pointer touch-pan-y select-none items-center gap-2.5 rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors will-change-transform [-webkit-touch-callout:none] ${
             mine
               ? "bg-[#f4e6ee] ring-swish"
               : sharesFull
               ? "bg-gray-100 text-gray-400 ring-black/5"
               : "bg-white ring-black/5"
-          } ${anyQuickEdit ? "ring-2 ring-swish/60" : ""}`}
-        >
-        <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-            mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
           }`}
         >
-          ✓
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="flex min-w-0 items-center gap-2 font-medium">
-            <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} /></span>
-              {editingDesc ? (
-                <input
-                  ref={quickEditInputRef}
-                  defaultValue={it.description}
-                  placeholder={t.descPh}
-                  onClick={(e) => e.stopPropagation()}
-                  onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") e.currentTarget.blur();
-                    else if (e.key === "Escape") setQuickEdit(null);
-                  }}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v && v !== it.description) editItem(it.id, { description: v });
-                    setQuickEdit(null);
-                  }}
-                  className="min-w-0 flex-1 rounded-lg bg-white px-2 py-1 outline-none ring-1 ring-swish/40"
-                />
-              ) : (
-                <>
-                  <span
-                    onPointerDown={startLongPress(() => { showNameToast(it.description); setQuickEdit({ itemId: it.id, field: "description" }); })}
-                    onPointerMove={moveLongPress}
-                    onPointerUp={cancelLongPress}
-                    onPointerCancel={cancelLongPress}
-                    onClick={swallowLongPressClick}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="min-w-0 flex-1 truncate select-none [-webkit-touch-callout:none]"
-                  >
-                    {it.description}
-                  </span>
-                  {it.shared && (
-                    <span className="shrink-0 text-xs font-normal tabular-nums text-gray-400">
-                      {sharesTaken}/{shareCap}
-                    </span>
-                  )}
-                </>
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
+              mine ? "border-swish bg-swish text-white" : "border-gray-300 text-transparent"
+            }`}
+          >
+            ✓
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="flex min-w-0 items-center gap-2 font-medium">
+              <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none">
+                <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+              </span>
+              <span className="min-w-0 flex-1 truncate">{it.description}</span>
+              {it.shared && (
+                <span className="shrink-0 text-xs font-normal tabular-nums text-gray-400">
+                  {sharesTaken}/{shareCap}
+                </span>
               )}
             </span>
             {it.shared && (
@@ -2265,52 +2233,15 @@ export default function RoomPage() {
               </span>
             )}
           </span>
-          {editingPrice ? (
-            <input
-              ref={quickEditInputRef}
-              defaultValue={formatOre(it.priceOre)}
-              inputMode="decimal"
-              placeholder={t.pricePh}
-              onClick={(e) => e.stopPropagation()}
-              onFocus={(e) => e.target.select()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                else if (e.key === "Escape") setQuickEdit(null);
-              }}
-              onBlur={(e) => {
-                const o = parseAmountToOre(e.target.value);
-                if (o != null && o !== it.priceOre) editItem(it.id, { priceOre: o });
-                setQuickEdit(null);
-              }}
-              className="w-24 shrink-0 rounded-lg bg-gray-50 px-2 py-1 text-right outline-none ring-1 ring-swish/40"
+          <span className="flex shrink-0 flex-col items-end leading-tight">
+            {it.shared && (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{t.yourTotal}</span>
+            )}
+            <Money
+              ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
+              className="text-right text-base font-semibold"
             />
-          ) : (
-            <span
-              onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "price" }))}
-              onPointerMove={moveLongPress}
-              onPointerUp={cancelLongPress}
-              onPointerCancel={cancelLongPress}
-              onClick={swallowLongPressClick}
-              onContextMenu={(e) => e.preventDefault()}
-              className="flex shrink-0 select-none flex-col items-end leading-tight [-webkit-touch-callout:none]"
-            >
-              {it.shared && (
-                <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{t.yourTotal}</span>
-              )}
-              <Money
-                ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
-                className="text-right text-base font-semibold"
-              />
-            </span>
-          )}
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); openEdit(it); }}
-          aria-label={t.editRow}
-          className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-black/10 active:bg-gray-100 active:text-swish-dark"
-        >
-          <PencilIcon />
-        </button>
+          </span>
         </div>
       </div>
     );
@@ -3370,6 +3301,65 @@ export default function RoomPage() {
           </div>
         </div>
       )}
+      {expandedItem && (() => {
+        const { item: ei, sourceRect: sr, showBelow } = expandedItem;
+        const vw = typeof window !== "undefined" ? window.innerWidth : 400;
+        const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+        const CARD_W = 288;
+        const cardLeft = Math.max(16, Math.min(vw - CARD_W - 16, sr.left + sr.width / 2 - CARD_W / 2));
+        const cardStyle: React.CSSProperties = showBelow
+          ? { top: Math.min(sr.bottom + 10, vh - 200), left: cardLeft, width: CARD_W, transformOrigin: "top center" }
+          : { bottom: vh - sr.top + 10, left: cardLeft, width: CARD_W, transformOrigin: "bottom center" };
+        const claimers = ei.claimedBy.map((id) => id === personId ? (lang === "sv" ? "du" : "you") : (nameById.get(id) ?? "?"));
+        const shareCap = ei.shareCount && ei.shareCount > 0 ? ei.shareCount : groupSize;
+        return (
+          <>
+            <div
+              className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-[2px]"
+              onClick={() => setExpandedItem(null)}
+            />
+            <div
+              className="item-card-expand fixed z-[71] rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-black/10"
+              style={cardStyle}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-4">
+                <span className="text-5xl leading-none">
+                  <ItemEmoji description={ei.description} hint={ei.category} modelEmoji={ei.emoji} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-bold leading-snug text-gray-900">{ei.description}</p>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <Money ore={ei.priceOre} className="text-base font-semibold text-swish-dark" />
+                    {ei.shared && (
+                      <span className="text-xs text-gray-400">🤝 {tx.sharedToggle}</span>
+                    )}
+                  </div>
+                  {ei.shared && (
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {ei.claimedBy.length}/{shareCap} {lang === "sv" ? "andelar tagna" : "shares taken"}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {claimers.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    {lang === "sv" ? "Taget av" : "Claimed by"}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {claimers.map((name, i) => (
+                      <span key={i} className="rounded-full bg-swish/10 px-2.5 py-0.5 text-xs font-semibold text-swish-dark">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
       {receiptOpen && (
         <div
           role="dialog"
