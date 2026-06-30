@@ -2229,7 +2229,7 @@ export default function RoomPage() {
             </span>
             {it.shared && (
               <span className="text-[11px] text-swish-dark">
-                {partialShare ? `${tx.splitWays} ${shareCap}` : tx.sharedToggle} · <Money ore={it.priceOre} />
+                {partialShare ? `${tx.splitWays} ${shareCap}` : tx.sharedToggle} · <Money ore={it.priceOre} nativeClassName="hidden" />
               </span>
             )}
           </span>
@@ -2240,6 +2240,7 @@ export default function RoomPage() {
             <Money
               ore={it.shared ? Math.round(it.priceOre / shareCap) : it.priceOre}
               className="text-right text-base font-semibold"
+              nativeClassName="hidden"
             />
           </span>
         </div>
@@ -3330,7 +3331,7 @@ export default function RoomPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-bold leading-snug text-gray-900">{ei.description}</p>
                   <div className="mt-1 flex items-baseline gap-2">
-                    <Money ore={ei.priceOre} className="text-base font-semibold text-swish-dark" />
+                    <Money ore={ei.priceOre} className="text-base font-semibold text-swish-dark" nativeClassName="ml-2 text-sm font-medium text-gray-500" />
                     {ei.shared && (
                       <span className="text-xs text-gray-400">🤝 {tx.sharedToggle}</span>
                     )}
