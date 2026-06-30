@@ -214,6 +214,8 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
     "öl kanna", "60cl öl", "70cl öl", "stop", "öl stop",
   ],
   sangria: ["sangria", "karaff sangria", "kanna sangria", "tillbringare sangria"],
+  bruschetta: ["bruschetta"],
+  carpaccio: ["carpaccio", "vitello tonnato"],
 };
 
 const CUSTOM_ICON_RULES: [(desc: string) => boolean, string][] = Object.entries(CUSTOM_ICON_NAMES).map(
@@ -288,7 +290,7 @@ const EMOJI_RULES: [(desc: string) => boolean, string][] = [
   [makeMatcher(["fläsk", "fläskfilé", "fläskkarré", "fläsklägg", "gris", "grisfilé", "griskind", "skinka", "prosciutto", "bacon"]), "🐖"],
   [makeMatcher(["anka", "ankbröst", "anklever", "anklår", "duck", "canard", "magret", "confit de canard"]), "🦆"],
   [makeMatcher(["kalkon", "kalkonbröst", "kalkonfilé", "turkey"]), "🦃"],
-  [makeMatcher(["biff", "entrecôte", "entrecote", "ryggbiff", "oxfilé", "oxrygg", "oxbringa", "oxkind", "oxsvans", "flankstek", "köttbullar", "wallenbergare", "kalv", "kalvkind", "kalvkött", "kalvfilé", "carpaccio"]), "🐄"],
+  [makeMatcher(["biff", "entrecôte", "entrecote", "ryggbiff", "oxfilé", "oxrygg", "oxbringa", "oxkind", "oxsvans", "flankstek", "köttbullar", "wallenbergare", "kalv", "kalvkind", "kalvkött", "kalvfilé"]), "🐄"],
   [makeMatcher(["plankstek", "stek", "kött", "schnitzel", "kotlett", "salami"]), "🥩"],
   [makeMatcher(["prosciutto", "salami", "skinka", "chark"]), "🥓"],
   [makeMatcher(["sallad", "salad", "nicoise", "niçoise"]), "🥗"],

@@ -774,6 +774,60 @@ function Mochi() {
   );
 }
 
+function Bruschetta() {
+  return (
+    <>
+      {/* plate */}
+      <ellipse cx="12" cy="20.2" rx="9.5" ry="2.2" fill="#EFEEE8" />
+      <path d="M2.5 20.2c0 1.4 4.3 2.2 9.5 2.2s9.5-.8 9.5-2.2c0 .4 0 1.6-9.5 1.6S2.5 20.6 2.5 20.2Z" fill="#D7D5CC" />
+      {/* bread — viewed from above, trapezoid */}
+      <path d="M5.5 19 L8 9.5 L16 9.5 L18.5 19 Z" fill="#D09C42" />
+      {/* bread crust shadow edge */}
+      <path d="M5.5 19 L8 9.5" stroke="#A97025" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M18.5 19 L16 9.5" stroke="#A97025" strokeWidth="0.9" strokeLinecap="round" />
+      {/* grill marks */}
+      <path d="M8.5 10.5 L7.5 18" stroke="#A97025" strokeWidth="1" strokeLinecap="round" opacity="0.5" />
+      <path d="M12 10 L12 19" stroke="#A97025" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
+      <path d="M15.5 10.5 L16.5 18" stroke="#A97025" strokeWidth="1" strokeLinecap="round" opacity="0.5" />
+      {/* tomato pieces */}
+      <circle cx="9.5" cy="13.5" r="2" fill="#D73B25" />
+      <circle cx="13.5" cy="13" r="1.8" fill="#C42D1A" />
+      <circle cx="11" cy="16" r="1.7" fill="#D73B25" />
+      <circle cx="15" cy="15.5" r="1.5" fill="#C42D1A" />
+      {/* tomato highlights */}
+      <circle cx="9" cy="13" r="0.6" fill="#F16050" opacity="0.7" />
+      <circle cx="13" cy="12.5" r="0.5" fill="#EE5040" opacity="0.7" />
+      {/* basil leaf */}
+      <path d="M15 11.5 q 1.8 -2.2 3.2 -1.2 q -1 2 -3.2 1.2z" fill="#3A8C36" />
+    </>
+  );
+}
+
+function Carpaccio() {
+  return (
+    <>
+      {/* plate */}
+      <ellipse cx="12" cy="12" rx="10.5" ry="10.5" fill="#F7F4EE" />
+      <ellipse cx="12" cy="12" rx="10.5" ry="10.5" fill="none" stroke="#E0DDD4" strokeWidth="0.7" />
+      {/* thin meat slices — overlapping ovals in fan pattern */}
+      <ellipse cx="8" cy="13" rx="4.8" ry="2.4" fill="#C44040" fillOpacity="0.85" transform="rotate(-30 8 13)" />
+      <ellipse cx="11" cy="10" rx="4.8" ry="2.4" fill="#D04444" fillOpacity="0.85" transform="rotate(-5 11 10)" />
+      <ellipse cx="14.5" cy="10.5" rx="4.8" ry="2.4" fill="#C44040" fillOpacity="0.85" transform="rotate(20 14.5 10.5)" />
+      <ellipse cx="16" cy="14" rx="4.8" ry="2.4" fill="#B83A3A" fillOpacity="0.85" transform="rotate(50 16 14)" />
+      {/* highlights on meat */}
+      <ellipse cx="8" cy="12.2" rx="1.8" ry="0.7" fill="#E06060" fillOpacity="0.6" transform="rotate(-30 8 12.2)" />
+      <ellipse cx="11" cy="9.3" rx="1.8" ry="0.7" fill="#E06060" fillOpacity="0.6" transform="rotate(-5 11 9.3)" />
+      {/* capers — small dark green dots */}
+      <circle cx="10" cy="15" r="0.7" fill="#4A6E3A" />
+      <circle cx="13" cy="13.5" r="0.65" fill="#4A6E3A" />
+      <circle cx="15.5" cy="11.5" r="0.65" fill="#4A6E3A" />
+      <circle cx="9" cy="11.5" r="0.6" fill="#4A6E3A" />
+      {/* olive oil drizzle */}
+      <path d="M8 16 q 4 -1 8 0" stroke="#D4A835" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.7" />
+    </>
+  );
+}
+
 /** id (matches the "ci:<id>" sentinel) → label + shape body. */
 const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   bun: { label: "Kanelbulle", Body: CinnamonBun },
@@ -813,6 +867,8 @@ const ICONS: Record<string, { label: string; Body: () => ReactElement }> = {
   cannoli: { label: "Cannoli", Body: Cannoli },
   mochi: { label: "Mochi", Body: Mochi },
   lasagne: { label: "Lasagne", Body: Lasagne },
+  bruschetta: { label: "Bruschetta", Body: Bruschetta },
+  carpaccio: { label: "Carpaccio", Body: Carpaccio },
   waterbottle: { label: "Vattenflaska", Body: WaterBottle },
   waterglass: { label: "Glas vatten", Body: WaterGlass },
   watercarafe: { label: "Karaff vatten", Body: WaterCarafe },

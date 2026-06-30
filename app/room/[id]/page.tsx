@@ -95,6 +95,7 @@ const R = {
     undo: "Ångra",
     save: "Spara",
     cancel: "Avbryt",
+    coverFor: "Betalar även för",
     donate: "Bjud Kvitt på en kaffe",
   },
   en: {
@@ -166,6 +167,7 @@ const R = {
     undo: "Undo",
     save: "Save",
     cancel: "Cancel",
+    coverFor: "Also paying for",
     donate: "Buy Kvitt a coffee",
   },
   de: {
@@ -237,6 +239,7 @@ const R = {
     undo: "Rückgängig",
     save: "Speichern",
     cancel: "Abbrechen",
+    coverFor: "Zahlt auch für",
     donate: "Kvitt einen Kaffee spendieren",
   },
   fr: {
@@ -308,6 +311,7 @@ const R = {
     undo: "Annuler",
     save: "Enregistrer",
     cancel: "Annuler",
+    coverFor: "Paie aussi pour",
     donate: "Offrir un café à Kvitt",
   },
   es: {
@@ -379,6 +383,7 @@ const R = {
     undo: "Deshacer",
     save: "Guardar",
     cancel: "Cancelar",
+    coverFor: "También paga por",
     donate: "Invitar a Kvitt a un café",
   },
   it: {
@@ -450,6 +455,7 @@ const R = {
     undo: "Annulla",
     save: "Salva",
     cancel: "Annulla",
+    coverFor: "Paga anche per",
     donate: "Offri un caffè a Kvitt",
   },
   nl: {
@@ -521,6 +527,7 @@ const R = {
     undo: "Ongedaan maken",
     save: "Opslaan",
     cancel: "Annuleren",
+    coverFor: "Betaalt ook voor",
     donate: "Trakteer Kvitt op een koffie",
   },
   da: {
@@ -592,6 +599,7 @@ const R = {
     undo: "Fortryd",
     save: "Gem",
     cancel: "Annuller",
+    coverFor: "Betaler også for",
     donate: "Køb Kvitt en kaffe",
   },
   no: {
@@ -663,6 +671,7 @@ const R = {
     undo: "Angre",
     save: "Lagre",
     cancel: "Avbryt",
+    coverFor: "Betaler også for",
     donate: "Kjøp Kvitt en kaffe",
   },
   fi: {
@@ -734,6 +743,7 @@ const R = {
     undo: "Kumoa",
     save: "Tallenna",
     cancel: "Peruuta",
+    coverFor: "Maksaa myös puolesta",
     donate: "Osta Kvitille kahvi",
   },
   pl: {
@@ -805,6 +815,7 @@ const R = {
     undo: "Cofnij",
     save: "Zapisz",
     cancel: "Anuluj",
+    coverFor: "Płaci również za",
     donate: "Postaw Kvitt kawę",
   },
   pt: {
@@ -876,6 +887,7 @@ const R = {
     undo: "Desfazer",
     save: "Guardar",
     cancel: "Cancelar",
+    coverFor: "Paga também por",
     donate: "Pagar um café ao Kvitt",
   },
 };
@@ -951,6 +963,9 @@ export default function RoomPage() {
   // intentional second tap rather than a side-effect of opening
   // the deep link.
   const [paymentInitiated, setPaymentInitiated] = useState(false);
+  const [nameToast, setNameToast] = useState<string | null>(null);
+  const [coveringPersonId, setCoveringPersonId] = useState<string | null>(null);
+  const nameToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sharedOpen, setSharedOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   // Buffered edits while the pencil-driven editor is open. Save flushes the
@@ -1384,6 +1399,11 @@ export default function RoomPage() {
     }
   }, []);
   useEffect(() => () => cancelLongPress(), [cancelLongPress]);
+  const showNameToast = useCallback((desc: string) => {
+    setNameToast(desc);
+    if (nameToastTimer.current) clearTimeout(nameToastTimer.current);
+    nameToastTimer.current = setTimeout(() => setNameToast(null), 2500);
+  }, []);
 
   const t = Rx[lang];
   const tx = translations[lang];
@@ -2220,7 +2240,7 @@ export default function RoomPage() {
               ) : (
                 <>
                   <span
-                    onPointerDown={startLongPress(() => setQuickEdit({ itemId: it.id, field: "description" }))}
+                    onPointerDown={startLongPress(() => { showNameToast(it.description); setQuickEdit({ itemId: it.id, field: "description" }); })}
                     onPointerMove={moveLongPress}
                     onPointerUp={cancelLongPress}
                     onPointerCancel={cancelLongPress}
@@ -2753,23 +2773,28 @@ export default function RoomPage() {
                             const rep = g.copies[0];
                             const totalCount = g.copies.length;
                             return (
-                              <button
+                              <div
                                 key={rep.id}
-                                type="button"
-                                onClick={() => toggleClaim(rep.id)}
-                                disabled={busyItem === rep.id}
-                                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-gray-100"
+                                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-sm"
+                                onPointerDown={startLongPress(() => showNameToast(rep.description))}
+                                onPointerMove={moveLongPress}
+                                onPointerUp={cancelLongPress}
+                                onPointerCancel={cancelLongPress}
+                                onClick={swallowLongPressClick}
+                                onContextMenu={(e) => e.preventDefault()}
                               >
-                                <span className="text-emerald-500">✓</span>
-                                <span className="min-w-0 flex-1 truncate text-gray-400 line-through">
+                                <span aria-hidden className="inline-flex w-5 shrink-0 items-center justify-center text-base leading-none">
+                                  <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />
+                                </span>
+                                <span className="min-w-0 flex-1 truncate text-gray-400">
                                   {rep.description}
                                 </span>
                                 {totalCount > 1 && (
-                                  <span className="shrink-0 text-gray-400 line-through">×{totalCount}</span>
+                                  <span className="shrink-0 text-gray-400">×{totalCount}</span>
                                 )}
                                 <span className="shrink-0 text-xs text-gray-400">{othersClaimerNames(g)}</span>
-                                <span className="shrink-0 text-gray-400 line-through">{formatOre(rep.priceOre)}</span>
-                              </button>
+                                <span className="shrink-0 text-gray-400">{formatOre(rep.priceOre)}</span>
+                              </div>
                             );
                           })}
                         </div>
@@ -2875,28 +2900,6 @@ export default function RoomPage() {
             </div>
           )}
 
-          {/* Guest's own share + pay QR. Hosts get the collection summary
-              + diner list at the top of the page instead. */}
-          {!isPayee && myShare && (
-            myShare.totalOre > 0 ? (
-              <div id="pay-qr">
-                <QrCard
-                  name={t.yourTotal}
-                  method={state.method === "sepa" ? "sepa" : "swish"}
-                  amountOre={myShare.totalOre}
-                  swishPayee={state.payeeNumber || undefined}
-                  iban={state.method === "sepa" ? state.payeeIban : undefined}
-                  payeeName={state.payeeName}
-                  eurCents={state.method === "sepa" && state.rate > 0 ? Math.round(myShare.totalOre / state.rate) : undefined}
-                  message={`${myShare.name} - ${state.message}`.slice(0, 50)}
-                  t={tx}
-                  primaryPay
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">{t.nothingYet}</p>
-            )
-          )}
 
           {/* Everyone — guest view only. Hosts have a dedicated diner list
               at the top of the page. */}
@@ -2909,7 +2912,7 @@ export default function RoomPage() {
                 const isPaid = (state.paidBy ?? []).includes(s.dinerId);
                 // The host (collector) or the person themselves can settle a share.
                 const canToggle = !isHostRow && s.totalOre > 0 && (isPayee || s.dinerId === personId);
-                const claimed = claimedNamesFor(s.dinerId);
+                const claimedItems = state.items.filter((i) => i.claimedBy.includes(s.dinerId));
                 const isDone = !isHostRow && (state.doneBy ?? []).includes(s.dinerId);
                 return (
                   <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
@@ -2923,7 +2926,16 @@ export default function RoomPage() {
                         {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
                         {isDone && <span className="ml-1.5 text-xs text-emerald-600">{t.doneOn}</span>}
                       </span>
-                      {claimed.length > 0 && <span className="truncate text-[11px] text-gray-400">{claimed.join(", ")}</span>}
+                      {claimedItems.length > 0 && (
+                        <span className="mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0.5">
+                          {claimedItems.map((item) => (
+                            <span key={item.id} className="flex items-center gap-0.5 text-[11px] text-gray-400">
+                              <span aria-hidden className="text-sm leading-none"><ItemEmoji description={item.description} hint={item.category} modelEmoji={item.emoji} /></span>
+                              <span className="max-w-[72px] truncate">{item.description}</span>
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </span>
                     {!isHostRow && s.totalOre > 0 ? (
                       <button
@@ -3025,13 +3037,18 @@ export default function RoomPage() {
           (it) => it.shared && personId !== null && it.claimedBy.includes(personId),
         ).length;
         const canSwish = !!state.payeeNumber;
+        const coverShare = coveringPersonId ? shares.find((s) => s.dinerId === coveringPersonId) : null;
+        const coverOre = coverShare?.totalOre ?? 0;
         const swishUri = canSwish
           ? buildSwishUri({
               payee: state.payeeNumber!,
-              amountOre: myShare.totalOre,
-              message: `${myShare.name} - ${state.message ?? ""}`.slice(0, 50),
+              amountOre: myShare.totalOre + coverOre,
+              message: `${myShare.name}${coverShare ? ` + ${coverShare.name}` : ""} - ${state.message ?? ""}`.slice(0, 50),
             })
           : null;
+        const coverableShares = shares.filter(
+          (s) => s.dinerId !== personId && s.dinerId !== state.payeePersonId && s.totalOre > 0,
+        );
         // Explicit "mark me done" — fires when the guest taps the
         // I'm-done half of the split button (no longer wired to
         // the Swish deep-link tap, so opening Swish doesn't silently
@@ -3040,8 +3057,10 @@ export default function RoomPage() {
         // to the Swish app right after.
         const markDone = () => {
           if (iAmDone || !personId) return;
+          const newDoneBy = [...(state.doneBy ?? []), personId];
+          if (coveringPersonId && !newDoneBy.includes(coveringPersonId)) newDoneBy.push(coveringPersonId);
           setState((prev) =>
-            prev ? { ...prev, doneBy: [...(prev.doneBy ?? []), personId] } : prev,
+            prev ? { ...prev, doneBy: newDoneBy } : prev,
           );
           try {
             fetch(`/api/room/${code}`, {
@@ -3050,6 +3069,14 @@ export default function RoomPage() {
               body: JSON.stringify({ action: "done", personId }),
               keepalive: true,
             });
+            if (coveringPersonId) {
+              fetch(`/api/room/${code}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "done", personId: coveringPersonId }),
+                keepalive: true,
+              });
+            }
           } catch {
             /* navigation continues; next refresh reconciles */
           }
@@ -3134,6 +3161,27 @@ export default function RoomPage() {
                 </span>
               </span>
             </button>
+            {coverableShares.length > 0 && (
+              <div className="flex items-center gap-2 border-t border-white/10 px-4 py-2">
+                <span className="shrink-0 text-[11px] text-white/55">{t.coverFor}:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {coverableShares.map((cs) => (
+                    <button
+                      key={cs.dinerId}
+                      type="button"
+                      onClick={() => setCoveringPersonId((prev) => prev === cs.dinerId ? null : cs.dinerId)}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 transition ${
+                        coveringPersonId === cs.dinerId
+                          ? "bg-swish text-white ring-swish-dark"
+                          : "bg-white/10 text-white/70 ring-white/20 active:bg-white/20"
+                      }`}
+                    >
+                      {cs.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Primary action. The first tap of "Betala" only OPENS
                 the Swish deep link and sets paymentInitiated, which
                 splits the button into a Pay (re-tap to retry) +
@@ -3275,6 +3323,16 @@ export default function RoomPage() {
               className="undo-countdown absolute inset-x-0 bottom-0 h-0.5 bg-white/80"
               style={{ animationDuration: "4.2s" }}
             />
+          </div>
+        </div>
+      )}
+      {nameToast && (
+        <div
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 top-16 z-[70] mx-auto max-w-sm px-6"
+        >
+          <div className="rounded-2xl bg-gray-900/90 px-4 py-3 text-center text-sm font-medium text-white shadow-xl backdrop-blur">
+            {nameToast}
           </div>
         </div>
       )}
