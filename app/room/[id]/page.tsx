@@ -965,6 +965,7 @@ export default function RoomPage() {
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const [nameToast, setNameToast] = useState<string | null>(null);
   const [coveringPersonId, setCoveringPersonId] = useState<string | null>(null);
+  const [expandedDiners, setExpandedDiners] = useState<Set<string>>(new Set());
   const nameToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sharedOpen, setSharedOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -2914,44 +2915,77 @@ export default function RoomPage() {
                 const canToggle = !isHostRow && s.totalOre > 0 && (isPayee || s.dinerId === personId);
                 const claimedItems = state.items.filter((i) => i.claimedBy.includes(s.dinerId));
                 const isDone = !isHostRow && (state.doneBy ?? []).includes(s.dinerId);
+                const isExpanded = expandedDiners.has(s.dinerId);
+                const toggleExpanded = () => {
+                  if (claimedItems.length === 0) return;
+                  setExpandedDiners((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(s.dinerId)) next.delete(s.dinerId); else next.add(s.dinerId);
+                    return next;
+                  });
+                };
                 return (
-                  <div key={s.dinerId} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-black/5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
-                      {initials(nameById.get(s.dinerId) ?? "?")}
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium">
-                        {nameById.get(s.dinerId)}
-                        {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
-                        {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
-                        {isDone && <span className="ml-1.5 text-xs text-emerald-600">{t.doneOn}</span>}
+                  <div key={s.dinerId} className="rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-swish/15 text-xs font-bold text-swish-dark">
+                        {initials(nameById.get(s.dinerId) ?? "?")}
                       </span>
-                      {claimedItems.length > 0 && (
-                        <span className="mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0.5">
-                          {claimedItems.map((item) => (
-                            <span key={item.id} className="flex items-center gap-0.5 text-[11px] text-gray-400">
-                              <span aria-hidden className="text-sm leading-none"><ItemEmoji description={item.description} hint={item.category} modelEmoji={item.emoji} /></span>
-                              <span className="max-w-[72px] truncate">{item.description}</span>
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </span>
-                    {!isHostRow && s.totalOre > 0 ? (
                       <button
                         type="button"
-                        onClick={() => canToggle && togglePaid(s.dinerId)}
-                        disabled={!canToggle}
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 disabled:opacity-100 ${
-                          isPaid
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                            : "bg-white text-gray-500 ring-gray-200"
-                        }`}
+                        onClick={toggleExpanded}
+                        disabled={claimedItems.length === 0}
+                        className="flex min-w-0 flex-1 flex-col text-left disabled:pointer-events-none"
                       >
-                        {isPaid ? `✓ ${t.paid}` : t.markPaid}
+                        <span className="truncate text-sm font-medium">
+                          {nameById.get(s.dinerId)}
+                          {isHostRow && <span className="ml-1 text-xs text-gray-400">★</span>}
+                          {s.dinerId === personId && <span className="ml-1 text-xs text-gray-400">({lang === "sv" ? "du" : "you"})</span>}
+                          {isDone && <span className="ml-1.5 text-xs text-emerald-600">{t.doneOn}</span>}
+                        </span>
+                        {claimedItems.length > 0 && (
+                          <span className="mt-0.5 flex items-center gap-0.5">
+                            <ChevronRightIcon className={`mr-0.5 shrink-0 text-gray-300 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
+                            {claimedItems.slice(0, 6).map((item) => (
+                              <span key={item.id} aria-hidden className="text-sm leading-none">
+                                <ItemEmoji description={item.description} hint={item.category} modelEmoji={item.emoji} />
+                              </span>
+                            ))}
+                            {claimedItems.length > 6 && (
+                              <span className="ml-0.5 text-[10px] text-gray-400">+{claimedItems.length - 6}</span>
+                            )}
+                          </span>
+                        )}
                       </button>
-                    ) : null}
-                    <Money ore={s.totalOre} className={`text-sm font-semibold ${isPaid ? "text-gray-400 line-through" : ""}`} />
+                      {!isHostRow && s.totalOre > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => canToggle && togglePaid(s.dinerId)}
+                          disabled={!canToggle}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 disabled:opacity-100 ${
+                            isPaid
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                              : "bg-white text-gray-500 ring-gray-200"
+                          }`}
+                        >
+                          {isPaid ? `✓ ${t.paid}` : t.markPaid}
+                        </button>
+                      ) : null}
+                      <Money ore={s.totalOre} className={`text-sm font-semibold ${isPaid ? "text-gray-400 line-through" : ""}`} />
+                    </div>
+                    {claimedItems.length > 0 && (
+                      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="flex flex-wrap gap-1.5 border-t border-gray-50 px-3 pb-3 pt-2">
+                            {claimedItems.map((item) => (
+                              <span key={item.id} className="flex items-center gap-0.5 text-[11px] text-gray-400">
+                                <span aria-hidden className="text-sm leading-none"><ItemEmoji description={item.description} hint={item.category} modelEmoji={item.emoji} /></span>
+                                <span className="max-w-[80px] truncate">{item.description}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
