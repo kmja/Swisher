@@ -16,7 +16,7 @@ import KvittLogo from "@/components/KvittLogo";
 import RoomSkeleton from "@/components/RoomSkeleton";
 import StepHeader from "@/components/StepHeader";
 import { Money, FxProvider } from "@/components/Money";
-import { flagEmoji, regionName, type Fx } from "@/lib/currency";
+import { flagEmoji, regionName, formatNative, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
 import { buildSwishUri } from "@/lib/swish";
 import type { RoomState } from "@/lib/room-do";
@@ -3028,9 +3028,7 @@ export default function RoomPage() {
                                         {line.count > 1 && <span className="text-gray-400 tabular-nums">{line.count}× </span>}
                                         {line.item.description}
                                       </span>
-                                      <span className="shrink-0 text-xs tabular-nums text-gray-500">
-                                        {formatOre(line.count * line.oreEach)}
-                                      </span>
+                                      <Money ore={line.count * line.oreEach} className="shrink-0 text-xs tabular-nums text-gray-500" nativeClassName="hidden" />
                                     </div>
                                   ))}
                                 </div>
@@ -3218,7 +3216,7 @@ export default function RoomPage() {
                                   <span className="ml-1 text-xs tabular-nums text-white/45" aria-label={tx.sharedToggle}>/{line.shareCount}</span>
                                 )}
                               </span>
-                              <span className="shrink-0 tabular-nums text-white/85">{formatOre(line.count * line.oreEach)}</span>
+                              <Money ore={line.count * line.oreEach} className="shrink-0 tabular-nums text-white/85" nativeClassName="hidden" />
                             </li>
                           ))}
                         </ul>
@@ -3226,15 +3224,6 @@ export default function RoomPage() {
                     );
                   })}
                 </div>
-                {roomFx && (
-                  <div className="border-t border-white/10 pt-2">
-                    <Money
-                      ore={myShare.totalOre}
-                      className="block text-right text-sm font-semibold text-white/80"
-                      nativeClassName="ml-1 text-xs font-normal text-white/55"
-                    />
-                  </div>
-                )}
               </div>
             </div>
             {/* Cart toggle bar — shows the share total + a quick
@@ -3263,6 +3252,9 @@ export default function RoomPage() {
                   <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="hidden" />
                   <span className={`text-xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
                 </span>
+                {roomFx && (
+                  <span className="text-xs font-normal text-white/55">{formatNative(myShare.totalOre, roomFx)}</span>
+                )}
               </span>
             </button>
             {coverableShares.length > 0 && (
