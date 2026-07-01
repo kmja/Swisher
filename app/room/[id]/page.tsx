@@ -1108,6 +1108,7 @@ export default function RoomPage() {
   const lpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lpFired = useRef(false);
   const lpStart = useRef({ x: 0, y: 0 });
+  const lpPointerId = useRef(-1);
 
   // FLIP layout animation: when a row is removed and its neighbours shift up
   // (or down — if undo restores an item), animate the movement instead of
@@ -1428,6 +1429,10 @@ export default function RoomPage() {
     const r = sourceEl.getBoundingClientRect();
     peekItemIdRef.current = it.id;
     setExpandedItem({ item: it, sourceRect: { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom } });
+    // Capture the pointer so the browser can't reclaim it for scrolling and fire
+    // pointercancel (which would dismiss the peek immediately on finger move).
+    const pid = lpPointerId.current;
+    try { if (pid >= 0) sourceEl.setPointerCapture(pid); } catch {}
     const moveHandler = (ev: PointerEvent) => {
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const rowEl = el?.closest<HTMLElement>("[data-item-id]");
@@ -2234,6 +2239,7 @@ export default function RoomPage() {
           onPointerDown={(e) => {
             if (e.target instanceof Element && e.target.closest("button,input")) return;
             lpSourceElement.current = e.currentTarget as HTMLElement;
+            lpPointerId.current = e.pointerId;
             onSwipeStart(e, it.id);
             startLongPress(() => {
               const el = lpSourceElement.current;
@@ -2358,6 +2364,7 @@ export default function RoomPage() {
             onPointerDown={(e) => {
               if (e.target instanceof Element && e.target.closest("button,input")) return;
               lpSourceElement.current = e.currentTarget as HTMLElement;
+              lpPointerId.current = e.pointerId;
               onSwipeStart(e, rep.id);
               startLongPress(() => {
                 const el = lpSourceElement.current;
