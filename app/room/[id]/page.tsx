@@ -3289,6 +3289,7 @@ export default function RoomPage() {
             <div className="px-4 pb-4 pt-1">
             {canSwish && swishUri ? (
               paymentInitiated || iAmDone ? (
+                /* After tapping Swish: [Pay again] [I'm done / ✓ Klar] */
                 <div className="flex gap-2">
                   <a
                     href={swishUri}
@@ -3312,45 +3313,57 @@ export default function RoomPage() {
                   </button>
                 </div>
               ) : (
-                <a
-                  href={swishUri}
-                  onClick={() => setPaymentInitiated(true)}
-                  className="flex items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-white active:bg-swish-dark"
-                >
-                  <span>{t.payWithSwish}</span>
-                  <SwishLogo height={22} className="shrink-0" />
-                </a>
+                /* Before initiating: [Already paid] [Pay with Swish] */
+                <div className="flex gap-2">
+                  {personId && (
+                    <button
+                      type="button"
+                      onClick={() => togglePaid(personId)}
+                      className={`shrink-0 rounded-2xl px-4 py-4 text-sm font-semibold ${
+                        iAmPaid
+                          ? "bg-emerald-500/20 text-emerald-200"
+                          : "bg-white/10 text-white/80 active:bg-white/15"
+                      }`}
+                    >
+                      {iAmPaid ? `✓ ${t.paid}` : t.alreadyPaid}
+                    </button>
+                  )}
+                  <a
+                    href={swishUri}
+                    onClick={() => setPaymentInitiated(true)}
+                    className="flex flex-1 items-center justify-center gap-3 rounded-2xl bg-swish px-5 py-4 text-base font-semibold text-white active:bg-swish-dark"
+                  >
+                    <span>{t.payWithSwish}</span>
+                    <SwishLogo height={22} className="shrink-0" />
+                  </a>
+                </div>
               )
             ) : (
-              <button
-                type="button"
-                onClick={toggleDone}
-                className={`w-full rounded-2xl px-5 py-4 text-base font-semibold ${
-                  iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/90 active:bg-white/15"
-                }`}
-              >
-                {iAmDone ? t.doneOn : t.imDone}
-              </button>
-            )}
-            {/* Secondary: "Already paid". For when the guest squared up
-                outside the app (cash on the table, bank transfer, an
-                existing tab). Toggles state.paidBy[me] via togglePaid,
-                same write path the host uses when ticking guests off
-                their list — so the host's "Remaining to collect" total
-                updates immediately. Muted styling on purpose: Swish
-                stays the obvious primary action. */}
-            {personId && (
-              <button
-                type="button"
-                onClick={() => togglePaid(personId)}
-                className={`mt-3 block w-full text-center text-sm transition ${
-                  iAmPaid
-                    ? "text-emerald-300"
-                    : "text-white/55 underline-offset-2 hover:underline active:text-white/80"
-                }`}
-              >
-                {iAmPaid ? `✓ ${t.paid}` : t.alreadyPaid}
-              </button>
+              /* No Swish: [Already paid] [I'm done / ✓ Klar] */
+              <div className="flex gap-2">
+                {personId && (
+                  <button
+                    type="button"
+                    onClick={() => togglePaid(personId)}
+                    className={`shrink-0 rounded-2xl px-4 py-4 text-sm font-semibold ${
+                      iAmPaid
+                        ? "bg-emerald-500/20 text-emerald-200"
+                        : "bg-white/10 text-white/80 active:bg-white/15"
+                    }`}
+                  >
+                    {iAmPaid ? `✓ ${t.paid}` : t.alreadyPaid}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleDone}
+                  className={`flex-1 rounded-2xl px-5 py-4 text-base font-semibold ${
+                    iAmDone ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/90 active:bg-white/15"
+                  }`}
+                >
+                  {iAmDone ? t.doneOn : t.imDone}
+                </button>
+              </div>
             )}
             </div>
           </div>
