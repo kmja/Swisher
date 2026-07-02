@@ -953,6 +953,9 @@ export default function RoomPage() {
   const [status, setStatus] = useState<"loading" | "ok" | "notfound" | "unavailable">(
     () => (state ? "ok" : "loading"),
   );
+  // True once a successful room load has ever happened (including bootstrap).
+  // Prevents a transient 404 during the DO-init window from wiping valid state.
+  const everLoadedRef = useRef(state != null);
   // Set when the room page replays a pending create-room POST and it
   // comes back non-2xx — surfaces as a top banner with a retry
   // button. Cleared when retry succeeds.
@@ -1625,10 +1628,17 @@ export default function RoomPage() {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch(`/api/room/${code}`, { cache: "no-store" });
-      if (res.status === 404) return setStatus("notfound");
+      if (res.status === 404) {
+        // Only surface "not found" if we've never had a valid state.
+        // During the brief window after optimistic navigation the DO
+        // may not have persisted yet — the pending-create effect handles that.
+        if (!everLoadedRef.current) setStatus("notfound");
+        return;
+      }
       if (res.status === 503) return setStatus("unavailable");
       if (!res.ok) return;
       setState((await res.json()) as RoomState);
+      everLoadedRef.current = true;
       setStatus("ok");
     } catch {
       /* transient network error — keep last state */
