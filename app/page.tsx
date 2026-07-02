@@ -3096,12 +3096,17 @@ export default function Page() {
                       <span aria-hidden className="pl-1 pt-1.5 text-3xl leading-none">
                         {rep.isTip ? "💝" : <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />}
                       </span>
-                      <input
-                        value={rep.description}
-                        onChange={(e) => updateGroup(rep, { description: e.target.value })}
-                        placeholder={t.descPlaceholder}
-                        className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none"
-                      />
+                      <div className="min-w-0 flex-1 flex flex-col">
+                        <input
+                          value={rep.description}
+                          onChange={(e) => updateGroup(rep, { description: e.target.value })}
+                          placeholder={t.descPlaceholder}
+                          className="w-full bg-transparent px-2 py-2 outline-none"
+                        />
+                        {rep.translation && (
+                          <span className="px-2 pb-1 text-[11px] text-gray-400 leading-snug">{rep.translation}</span>
+                        )}
+                      </div>
                       {copies.length > 1 && (
                         <span className="shrink-0 pt-2 text-sm font-semibold text-gray-400">×{copies.length}</span>
                       )}
