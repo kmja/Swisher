@@ -162,6 +162,7 @@ function extractJson(text: string): OcrResult {
       emoji?: unknown;
       quantity?: unknown;
       y?: unknown;
+      translation?: unknown;
     }[]) {
       const description = String(it?.description ?? "").trim();
       const price = Number(it?.price);
@@ -174,11 +175,12 @@ function extractJson(text: string): OcrResult {
       const category = typeof it?.category === "string" ? it.category : undefined;
       const emoji = typeof it?.emoji === "string" ? it.emoji : undefined;
       const y = Number.isFinite(Number(it?.y)) ? Number(it?.y) : undefined;
+      const translation = typeof it?.translation === "string" && it.translation.trim() ? it.translation.trim() : undefined;
       const qty = Math.max(1, Math.min(20, Math.round(Number(it?.quantity)) || 1));
       // price is the line total; split it into one row per unit so each can be
       // claimed separately, while the rows still sum back to the line total.
       for (const partOre of splitOre(Math.round(price * 100), qty)) {
-        items.push({ description, price: partOre / 100, shared, category, emoji, y });
+        items.push({ description, price: partOre / 100, shared, category, emoji, y, translation });
       }
     }
     return {
@@ -203,14 +205,16 @@ function extractJson(text: string): OcrResult {
     const em = obj.match(/"emoji"\s*:\s*"([^"]*)"/);
     const q = obj.match(/"quantity"\s*:\s*(\d+)/);
     const ym = obj.match(/"y"\s*:\s*(\d+(?:\.\d+)?)/);
+    const tr = obj.match(/"translation"\s*:\s*"([^"]*)"/);
     if (d && p) {
       const priceNum = Number(p[1]);
       if (priceNum === 0) continue;
       const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
       const shared = /"shared"\s*:\s*true/.test(obj);
       const y = ym ? Number(ym[1]) : undefined;
+      const translation = tr && tr[1].trim() ? tr[1].trim() : undefined;
       for (const partOre of splitOre(Math.round(priceNum * 100), qty)) {
-        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], emoji: em?.[1], y });
+        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], emoji: em?.[1], y, translation });
       }
     }
   }
