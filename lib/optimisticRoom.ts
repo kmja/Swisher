@@ -48,6 +48,9 @@ export type OptimisticRoomInput = {
     emoji?: string;
     shared?: boolean;
     shareCount?: number;
+    y?: number;
+    imgIndex?: number;
+    translation?: string;
   }>;
 };
 
@@ -88,6 +91,9 @@ export function buildOptimisticRoomState(input: OptimisticRoomInput): RoomState 
         shared: it.shared === true,
         shareCount,
         claimedBy: fully ? [input.hostId] : [],
+        y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y)) : undefined,
+        imgIndex: typeof it.imgIndex === "number" && it.imgIndex >= 0 ? it.imgIndex : undefined,
+        translation: typeof it.translation === "string" && it.translation ? it.translation.slice(0, 120) : undefined,
       };
     }),
     people: [{ id: input.hostId, name: hostName }],
@@ -126,5 +132,8 @@ export type PendingCreatePayload = {
     emoji?: string;
     shared?: boolean;
     shareCount?: number;
+    y?: number;
+    imgIndex?: number;
+    translation?: string;
   }>;
 };
