@@ -1667,6 +1667,17 @@ export default function RoomPage() {
     }
   }, [state, personId, storageKey]);
 
+  // Pre-fetch receipt images as soon as we know there are some, so the
+  // peek card can show a cropped strip without waiting for the user to
+  // open the receipt viewer. The endpoint is cache-busted by the DO key.
+  useEffect(() => {
+    if (!state?.imageCount || receiptImages !== null) return;
+    fetch(`/api/room/${code}/images`, { cache: "force-cache" })
+      .then((r) => r.ok ? r.json() : { images: [] })
+      .then((d: { images: string[] }) => setReceiptImages(d.images ?? []))
+      .catch(() => setReceiptImages([]));
+  }, [state?.imageCount, code, receiptImages]);
+
   async function join() {
     if (!name.trim() || joining) return;
     setJoining(true);
@@ -3471,7 +3482,12 @@ export default function RoomPage() {
               <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none">
                 <ItemEmoji description={ei.description} hint={ei.category} modelEmoji={ei.emoji} />
               </span>
-              <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{ei.description}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-snug">{ei.description}</span>
+                {ei.translation && (
+                  <span className="block text-[11px] text-gray-400 leading-snug mt-0.5">{ei.translation}</span>
+                )}
+              </span>
               <Money
                 ore={ei.shared ? Math.round(ei.priceOre / shareCap) : ei.priceOre}
                 className="shrink-0 text-base font-semibold"
@@ -3479,6 +3495,33 @@ export default function RoomPage() {
                 stack
               />
             </div>
+            {/* Cropped receipt photo — shows the physical line on the receipt */}
+            {receiptImages && receiptImages.length > 0 && ei.y != null && (() => {
+              const src = receiptImages[ei.imgIndex ?? 0] ?? receiptImages[0];
+              if (!src) return null;
+              const cropH = 56;
+              const yPct = ei.y * 100;
+              return (
+                <div className="relative overflow-hidden border-t border-gray-50" style={{ height: cropH }}>
+                  <img
+                    src={src}
+                    alt=""
+                    aria-hidden
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      transform: `translateY(calc(-${yPct}% + ${cropH / 2}px))`,
+                      transformOrigin: "top left",
+                      filter: "grayscale(30%)",
+                    }}
+                  />
+                  {/* Fade edges so the crop blends into the card */}
+                  <div className="pointer-events-none absolute inset-0" style={{
+                    background: "linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.7) 100%)",
+                  }} />
+                </div>
+              );
+            })()}
             {(ei.shared || claimers.length > 0) && (
               <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-50 px-3 pb-2.5 pt-1.5">
                 {ei.shared && (

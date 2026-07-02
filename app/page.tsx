@@ -42,6 +42,8 @@ type UiItem = {
   isTip?: boolean;
   /** Fixed number of ways a shared item splits; falls back to the group size. */
   shareCount?: number;
+  /** English translation when the receipt is in a foreign language. */
+  translation?: string;
 };
 
 const uid = () =>
@@ -1713,7 +1715,7 @@ export default function Page() {
       if (!res.ok) throw new Error(data.error || "OCR failed.");
       setOcrModel(res.headers.get("X-Ocr-Model"));
       const mapped: UiItem[] = (
-        data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number }[]
+        data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number; translation?: string | null }[]
       ).map((it) => ({
         id: uid(),
         description: it.description,
@@ -1727,6 +1729,7 @@ export default function Page() {
         emoji: it.emoji,
         imgIndex,
         y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y / 100)) : undefined,
+        translation: typeof it.translation === "string" && it.translation ? it.translation : undefined,
       }));
       // For the multi-frame path keep every captured frame so the receipt
       // viewer can show all of them; the single-frame paths behave as before.
@@ -2297,6 +2300,9 @@ export default function Page() {
           it.shareCount && it.shareCount > 0
             ? it.shareCount
             : it.shared && groupSize > 0 ? groupSize : undefined,
+        y: it.y,
+        imgIndex: it.imgIndex >= 0 ? it.imgIndex : undefined,
+        translation: it.translation,
       }));
       const optimistic = buildOptimisticRoomState({
         id,

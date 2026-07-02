@@ -14,6 +14,12 @@ export type RoomItem = {
   shareCount?: number;
   /** Person ids who claimed this item. Multiple claimers = split equally. */
   claimedBy: string[];
+  /** Vertical position on the source photo as a 0–1 fraction from the top. */
+  y?: number;
+  /** Index into the room's stored receipt images array. */
+  imgIndex?: number;
+  /** English translation of the description when the receipt is in a foreign language. */
+  translation?: string;
 };
 
 export type RoomPerson = { id: string; name: string };
@@ -78,7 +84,7 @@ export type RoomInit = {
    *  per-claim state writes stay small; fetched via the /images endpoint. */
   images?: string[];
   groupSize?: number;
-  items: { id?: string; description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number }[];
+  items: { id?: string; description: string; priceOre: number; category?: string; emoji?: string; shared?: boolean; shareCount?: number; y?: number; imgIndex?: number; translation?: string }[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -144,6 +150,9 @@ export class RoomDO extends DurableObject {
           shared: it.shared === true,
           shareCount,
           claimedBy: fully ? [host.id] : [],
+          y: typeof it.y === "number" && Number.isFinite(it.y) ? Math.max(0, Math.min(1, it.y)) : undefined,
+          imgIndex: typeof it.imgIndex === "number" && it.imgIndex >= 0 ? it.imgIndex : undefined,
+          translation: typeof it.translation === "string" && it.translation ? it.translation.slice(0, 120) : undefined,
         };
       }),
       people: [host],

@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     payeeIban?: string;
     images?: string[];
     groupSize?: number;
-    items?: { id?: unknown; description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown }[];
+    items?: { id?: unknown; description?: unknown; priceOre?: unknown; category?: unknown; emoji?: unknown; shared?: unknown; shareCount?: unknown; y?: unknown; imgIndex?: unknown; translation?: unknown }[];
   };
   try {
     body = await req.json();
@@ -80,6 +80,9 @@ export async function POST(req: Request) {
       emoji: typeof it?.emoji === "string" ? it.emoji : undefined,
       shared: it?.shared === true,
       shareCount: Number.isFinite(Number(it?.shareCount)) && Number(it?.shareCount) > 0 ? Math.round(Number(it?.shareCount)) : undefined,
+      y: Number.isFinite(Number(it?.y)) ? Math.max(0, Math.min(1, Number(it.y))) : undefined,
+      imgIndex: Number.isFinite(Number(it?.imgIndex)) && Number(it?.imgIndex) >= 0 ? Math.round(Number(it.imgIndex)) : undefined,
+      translation: typeof it?.translation === "string" ? it.translation : undefined,
     }))
     .filter((it) => it.description && Number.isFinite(it.priceOre) && it.priceOre > 0)
     .slice(0, 100);
