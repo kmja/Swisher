@@ -1682,10 +1682,41 @@ export default function RoomPage() {
   // open the receipt viewer. The endpoint is cache-busted by the DO key.
   useEffect(() => {
     if (!state?.imageCount || receiptImages !== null) return;
-    fetch(`/api/room/${code}/images`, { cache: "force-cache" })
-      .then((r) => r.ok ? r.json() : { images: [] })
-      .then((d: { images: string[] }) => setReceiptImages(d.images ?? []))
-      .catch(() => setReceiptImages([]));
+    // The host lands here on optimistic state (imageCount already set)
+    // BEFORE the create-POST has persisted the photos, so the first fetch
+    // often comes back empty. Keep retrying until the images show up rather
+    // than latching onto that empty result — and use no-store so a cached
+    // empty response can't stick. Only commit to [] once we've given the
+    // server ample time (a room with imageCount > 0 really does have them).
+    let cancelled = false;
+    let attempt = 0;
+    const load = () => {
+      fetch(`/api/room/${code}/images`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : { images: [] }))
+        .then((d: { images: string[] }) => {
+          if (cancelled) return;
+          const imgs = d.images ?? [];
+          if (imgs.length > 0) {
+            setReceiptImages(imgs);
+          } else if (attempt < 10) {
+            attempt += 1;
+            setTimeout(load, 1200 * attempt);
+          } else {
+            setReceiptImages([]);
+          }
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt < 10) {
+            attempt += 1;
+            setTimeout(load, 1200 * attempt);
+          } else {
+            setReceiptImages([]);
+          }
+        });
+    };
+    load();
+    return () => { cancelled = true; };
   }, [state?.imageCount, code, receiptImages]);
 
   async function join() {

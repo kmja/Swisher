@@ -161,7 +161,17 @@ export class RoomDO extends DurableObject {
     };
     await this.save(state);
     if (Array.isArray(data.images) && data.images.length > 0) {
-      await this.ctx.storage.put("images", data.images.slice(0, 5));
+      // Store each image under its own key so no single storage value has
+      // to hold all of them at once (an array of several base64 photos can
+      // exceed the per-value limit and throw). Guard so a storage hiccup
+      // never fails room creation — the receipt photos are a nice-to-have,
+      // not core state.
+      try {
+        const imgs = data.images.slice(0, 5);
+        await Promise.all(imgs.map((img, i) => this.ctx.storage.put(`image:${i}`, img)));
+      } catch {
+        /* images are non-critical; the room still works without them */
+      }
     }
     return state;
   }
@@ -172,8 +182,17 @@ export class RoomDO extends DurableObject {
 
   /** Receipt photos, served via the /images endpoint (kept out of state for speed). */
   async getImages(): Promise<string[]> {
-    const v = await this.ctx.storage.get<string[]>("images");
-    return Array.isArray(v) ? v : [];
+    // Per-image keys (image:0 … image:4), read in index order. We store at
+    // most 5, so a fixed-range read avoids needing storage.list().
+    const out: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const v = await this.ctx.storage.get<string>(`image:${i}`);
+      if (typeof v === "string" && v) out.push(v);
+    }
+    if (out.length > 0) return out;
+    // Fall back to the legacy single-array key for rooms created before the split.
+    const legacy = await this.ctx.storage.get<string[]>("images");
+    return Array.isArray(legacy) ? legacy : [];
   }
 
   async join(name: string): Promise<{ personId: string; state: RoomState } | null> {
