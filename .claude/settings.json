@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push *)",
+            "command": "jq -r '\"v\" + .version' /home/user/Swisher/package.json | jq -R '{systemMessage: .}'"
+          }
+        ]
+      }
+    ]
+  }
+}
