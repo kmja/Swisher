@@ -1096,6 +1096,7 @@ export default function Page() {
   // effect handles the handoff to the verify step.
   const [hostDoneFlash, setHostDoneFlash] = useState(false);
   const [hostCardDismissed, setHostCardDismissed] = useState(false);
+  const [scanCardDismissing, setScanCardDismissing] = useState(false);
 
   // Contact Picker shortcut — Chromium on Android exposes
   // navigator.contacts.select() which pops a native sheet for the
@@ -1469,6 +1470,7 @@ export default function Page() {
     // scan would silently skip showing the card because the host
     // dismissed it on the previous run.
     setHostCardDismissed(false);
+    setScanCardDismissing(false);
     const id = setTimeout(() => setScanCardVisible(true), 1000);
     return () => clearTimeout(id);
   }, [ocrLoading]);
@@ -2684,7 +2686,7 @@ export default function Page() {
                 rest of the app on tablet-width viewports. */}
             {((scanCardVisible && ocrLoading) || scanCount !== null || scanReady) && !hostCardDismissed && (
             <div className="pointer-events-none fixed inset-x-0 bottom-3 z-20 flex justify-center px-3">
-              <div className="scan-card-rise pointer-events-auto w-full max-w-md space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur">
+              <div className={`${scanCardDismissing ? "scan-card-drop" : "scan-card-rise"} pointer-events-auto w-full max-w-md space-y-3 rounded-2xl bg-white/95 p-4 shadow-xl ring-1 ring-black/10 backdrop-blur`}>
                 {/* Section header. "Under tiden…" is the loud bold
                     headline; "Vem la ut för notan?" returns as the
                     subhead under it (was removed last pass — turns
@@ -2830,14 +2832,15 @@ export default function Page() {
                         if (hostReady) return;
                         setHostReady(true);
                         setHostDoneFlash(true);
-                        // Hold the checkmark for ~450 ms, then dismiss
-                        // the whole setup card — even if the scan is
-                        // still in flight. Scan continues in the
-                        // background; scanReady + hostReady advances
-                        // to the verify step when it completes.
+                        // Hold the checkmark for ~450 ms, play the
+                        // slide-down exit, then unmount the card.
                         window.setTimeout(() => {
                           setHostDoneFlash(false);
-                          setHostCardDismissed(true);
+                          setScanCardDismissing(true);
+                          window.setTimeout(() => {
+                            setHostCardDismissed(true);
+                            setScanCardDismissing(false);
+                          }, 380);
                         }, 450);
                       }}
                       disabled={!canCommit || hostReady}
