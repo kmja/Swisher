@@ -3651,14 +3651,15 @@ export default function RoomPage() {
           }`}
         >
           <div
-            className={`w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
+            className={`relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
               joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
             }`}
           >
-            {/* A scatter of distinct item emojis from the receipt for a
-                bit of flavour — deduped by resolved icon so the same dish
-                doesn't repeat. Positions are fixed per slot (not random)
-                so they don't jump around on each poll. */}
+            {/* Distinct item emojis from the receipt, spilling around the
+                card edges and gently bobbing. Deduped by resolved icon so
+                the same dish doesn't repeat; positions are fixed per slot
+                (not random) so they don't jump around on each poll. The
+                layer is pointer-events-none and overflows the card. */}
             {(() => {
               const seen = new Set<string>();
               const picks: RoomState["items"] = [];
@@ -3669,27 +3670,32 @@ export default function RoomPage() {
                 picks.push(it);
                 if (picks.length >= 6) break;
               }
-              // left anchor (centred via translateX), vertical offset,
-              // rotation and size — hand-tuned to read as a loose sprinkle.
-              const SCATTER = [
-                { left: "9%", top: "18px", rot: -16, cls: "text-4xl" },
-                { left: "27%", top: "44px", rot: 11, cls: "text-3xl" },
-                { left: "44%", top: "6px", rot: -6, cls: "text-5xl" },
-                { left: "60%", top: "42px", rot: 15, cls: "text-3xl" },
-                { left: "76%", top: "16px", rot: -12, cls: "text-4xl" },
-                { left: "91%", top: "40px", rot: 9, cls: "text-3xl" },
+              // Anchored to the card's edges with negative offsets so they
+              // poke out past the corners/sides. rot = tilt, dur = bob speed.
+              const SCATTER: Array<Record<string, string | number>> = [
+                { top: "-22px", left: "5%", rot: -18, cls: "text-5xl", dur: 3.4 },
+                { top: "-14px", right: "10%", rot: 14, cls: "text-4xl", dur: 2.9 },
+                { top: "32%", left: "-20px", rot: -12, cls: "text-4xl", dur: 3.8 },
+                { top: "44%", right: "-18px", rot: 16, cls: "text-5xl", dur: 3.1 },
+                { bottom: "-20px", left: "14%", rot: 10, cls: "text-4xl", dur: 3.6 },
+                { bottom: "-12px", right: "20%", rot: -15, cls: "text-4xl", dur: 2.7 },
               ];
               return picks.length > 0 ? (
-                <div aria-hidden className="relative mb-2 h-24 overflow-visible">
+                <div aria-hidden className="pointer-events-none absolute inset-0">
                   {picks.map((it, i) => {
                     const s = SCATTER[i % SCATTER.length];
                     return (
                       <span
                         key={it.id}
                         className={`absolute leading-none ${s.cls}`}
-                        style={{ left: s.left, top: s.top, transform: `translateX(-50%) rotate(${s.rot}deg)` }}
+                        style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rot}deg)` }}
                       >
-                        <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                        <span
+                          className="emoji-float block"
+                          style={{ animationDuration: `${s.dur}s`, animationDelay: `${i * 0.3}s` }}
+                        >
+                          <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                        </span>
                       </span>
                     );
                   })}

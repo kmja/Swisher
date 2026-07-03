@@ -281,6 +281,22 @@ textarea {
   animation: scan-card-drop 0.38s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }
 
+/* Gentle bob for the scattered item emojis on the join dialog. Duration
+   and delay are set per-emoji inline so they don't drift in unison. */
+@keyframes emoji-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.emoji-float {
+  animation-name: emoji-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-duration: 3.2s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .emoji-float { animation: none; }
+}
+
 /* Undo-toast countdown bar: scales from full width to zero over 6 seconds so
    the user can see how much time they have left to tap Ångra. */
 @keyframes undo-countdown {
