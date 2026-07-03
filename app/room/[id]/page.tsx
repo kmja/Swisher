@@ -3655,9 +3655,10 @@ export default function RoomPage() {
               joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
             }`}
           >
-            {/* A sprinkle of distinct item emojis from the receipt for a
-                bit of flavour — deduped by their resolved icon so the
-                same dish doesn't repeat. */}
+            {/* A scatter of distinct item emojis from the receipt for a
+                bit of flavour — deduped by resolved icon so the same dish
+                doesn't repeat. Positions are fixed per slot (not random)
+                so they don't jump around on each poll. */}
             {(() => {
               const seen = new Set<string>();
               const picks: RoomState["items"] = [];
@@ -3668,13 +3669,30 @@ export default function RoomPage() {
                 picks.push(it);
                 if (picks.length >= 6) break;
               }
+              // left anchor (centred via translateX), vertical offset,
+              // rotation and size — hand-tuned to read as a loose sprinkle.
+              const SCATTER = [
+                { left: "9%", top: "18px", rot: -16, cls: "text-4xl" },
+                { left: "27%", top: "44px", rot: 11, cls: "text-3xl" },
+                { left: "44%", top: "6px", rot: -6, cls: "text-5xl" },
+                { left: "60%", top: "42px", rot: 15, cls: "text-3xl" },
+                { left: "76%", top: "16px", rot: -12, cls: "text-4xl" },
+                { left: "91%", top: "40px", rot: 9, cls: "text-3xl" },
+              ];
               return picks.length > 0 ? (
-                <div aria-hidden className="mb-3 flex flex-wrap justify-center gap-2">
-                  {picks.map((it) => (
-                    <span key={it.id} className="text-xl leading-none">
-                      <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
-                    </span>
-                  ))}
+                <div aria-hidden className="relative mb-2 h-24 overflow-visible">
+                  {picks.map((it, i) => {
+                    const s = SCATTER[i % SCATTER.length];
+                    return (
+                      <span
+                        key={it.id}
+                        className={`absolute leading-none ${s.cls}`}
+                        style={{ left: s.left, top: s.top, transform: `translateX(-50%) rotate(${s.rot}deg)` }}
+                      >
+                        <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                      </span>
+                    );
+                  })}
                 </div>
               ) : null;
             })()}
