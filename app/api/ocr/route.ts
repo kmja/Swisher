@@ -20,7 +20,7 @@ const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const PROMPT = `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other","emoji":string,"y":number,"translation":string|null}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other","emoji":string,"translation":string|null}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -28,7 +28,6 @@ Rules:
 - "currency" is the ISO 4217 code of the printed prices: "SEK" for Swedish kronor ("kr", ":-", "moms"), "EUR" (€), "USD"/"$", "GBP"/"£", "NOK"/"DKK" (also "kr" but Norwegian/Danish text and place), "CHF", "THB" (฿), "JPY" (¥), "PLN", "CZK", etc. Infer it from the currency symbol, the language, the VAT label (moms=Sweden, MwSt=Germany/Austria, TVA=France/Belgium, IVA=Italy/Spain, BTW=Netherlands), and the address. Default "SEK" when it is clearly a Swedish receipt.
 - "country" is the ISO 3166-1 alpha-2 country code where the receipt was issued ("SE","NO","DK","FI","DE","FR","IT","ES","GB","US","CH","NL","TH","JP"…), inferred from the address, phone prefix, language and currency. null if unclear.
 - Always report every price EXACTLY as printed in the receipt's own currency. NEVER convert amounts to SEK or any other currency yourself — just read the numbers shown.
-- "y" is the vertical position of this item's line on the receipt image as a percent from the top (0 = very top edge, 100 = very bottom edge). Estimate it as accurately as you can.
 - "items" are the ordered dishes/drinks: a short description and the price.
 - The description is the item NAME only. Strip the leading quantity (it goes in "quantity"): "2 glas Sybille Kuntz" → description "Glas Sybille Kuntz", quantity 2; "3 Kaffe" → "Kaffe", quantity 3.
 - Spell each item the correct Swedish way: restore å/ä/ö and fix OCR letter slips so a recognisable dish/drink reads properly — e.g. "lansorts lage" → "Landsorts Lager", "rakor" → "räkor", "rört majonäs" → "Rökt majonnäs", "fläskkar" → "Fläskkarré", "marängsvisst" → "Marängsviss", "kalvkinn" → "Kalvkind", "fårslök" → "Färsklök", "gstron" → "Ostron", "entrecote" → "Entrecôte" — and use normal capitalisation, not ALL CAPS.
