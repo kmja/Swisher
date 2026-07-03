@@ -13,7 +13,6 @@ import QrDialog from "@/components/QrDialog";
 import LangToggle, { saveLang } from "@/components/LangToggle";
 import { detectDefaultLang, detectCountry } from "@/lib/locales";
 import KvittLogo from "@/components/KvittLogo";
-import RoomSkeleton from "@/components/RoomSkeleton";
 import StepHeader from "@/components/StepHeader";
 import { Money, FxProvider } from "@/components/Money";
 import { flagEmoji, regionName, formatNative, type Fx } from "@/lib/currency";
@@ -1038,7 +1037,16 @@ export default function RoomPage() {
   // Guards the create-room replay from firing twice if React strict-
   // mode mounts the effect twice in dev; cleared on retry.
   const createInFlightRef = useRef(false);
-  const [personId, setPersonId] = useState<string | null>(null);
+  // Seed from localStorage synchronously so a host / returning guest is
+  // known on the very first render and never flashes the join dialog.
+  const [personId, setPersonId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  });
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
   // Mount/visibility split so the join dialog can fade its backdrop +
@@ -1799,38 +1807,41 @@ export default function RoomPage() {
     return () => { cancelled = true; };
   }, [state?.imageCount, code, receiptImages]);
 
-  // Drive the join dialog's enter/exit. Not joined → mount, then flip
-  // `shown` on the next frame so the backdrop + card fade IN. Joined →
-  // flip `shown` off (fade OUT), then unmount once the 300ms transition
-  // has run.
+  // Drive the join dialog's enter/exit. We only mount it once room state
+  // is fully loaded AND the visitor hasn't joined — so a guest sees a
+  // plain gray page during the fetch, then the complete dialog fades in
+  // (no skeleton, no half-populated state). Joining flips it to fly-out.
   useEffect(() => {
-    if (!personId) {
+    if (state && !personId) {
       setJoinMounted(true);
       setJoinFlyOut(false);
       const r = requestAnimationFrame(() => setJoinShown(true));
       return () => cancelAnimationFrame(r);
     }
-    setJoinShown(false);
-    setJoinFlyOut(true);
-    // Hold the mount long enough for the emojis to fly clear (500ms) —
-    // longer than the 300ms card/backdrop fade.
-    const timer = setTimeout(() => {
-      setJoinMounted(false);
-      setJoining(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [personId]);
+    if (personId) {
+      setJoinShown(false);
+      setJoinFlyOut(true);
+      // Hold the mount long enough for the emojis to fly clear (500ms) —
+      // longer than the 300ms card/backdrop fade.
+      const timer = setTimeout(() => {
+        setJoinMounted(false);
+        setJoining(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [state, personId]);
 
   // Lock body scroll while the join dialog is up so the room behind it
-  // stays put and non-interactive until the guest has joined.
+  // stays put and non-interactive until the guest has joined. Mirrors the
+  // dialog's render condition so it engages in the same frame.
   useEffect(() => {
-    if (!joinMounted) return;
+    if (!(joinMounted || (!!state && !personId))) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [joinMounted]);
+  }, [joinMounted, state, personId]);
 
   async function join() {
     if (!name.trim() || joining) return;
@@ -2194,15 +2205,19 @@ export default function RoomPage() {
   // instead of flashing the bare items skeleton first. The meal/host
   // context and emojis fill in once state arrives; the name field is
   // there from the first frame.
-  const joinDialog = joinMounted ? (
+  // Render the moment state is ready & the visitor hasn't joined (so the
+  // blurred backdrop is up in the same frame the room appears — no sharp
+  // items flash), and keep it mounted through the fly-out via joinMounted.
+  const joinDialog = joinMounted || (!!state && !personId) ? (
     <div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-24"
     >
-      {/* Backdrop: blur is on instantly (mounts at full opacity, no
-          fade-in) so the guest lands on a blurred page; it only fades out
-          on join. Separate from the card so the flying emojis stay crisp. */}
+      {/* Backdrop: blur is on from the first frame so the room behind is
+          never shown sharp (no items flash); it only fades out on join.
+          The card + emojis fade in over it. Separate from the card so the
+          flying emojis stay crisp. */}
       <div
         className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-out ${
           joinFlyOut ? "opacity-0" : "opacity-100"
@@ -2313,10 +2328,12 @@ export default function RoomPage() {
     </div>
   ) : null;
 
-  if (status === "loading") return <><RoomSkeleton />{joinDialog}</>;
+  // Plain gray page until room state is ready — then the fully-populated
+  // join dialog (or the room itself) fades in. No skeleton flash.
+  if (status === "loading") return <div className="min-h-dvh" style={{ background: "var(--color-page)" }} />;
   if (status === "notfound") return <Centered><p>{t.notFound}</p><HomeLink label={t.toStart} /></Centered>;
   if (status === "unavailable") return <Centered><p>{t.unavailable}</p><HomeLink label={t.toStart} /></Centered>;
-  if (!state) return <><RoomSkeleton />{joinDialog}</>;
+  if (!state) return <div className="min-h-dvh" style={{ background: "var(--color-page)" }} />;
 
   const roomFx: Fx =
     state.currency && state.currency !== "SEK" && state.rate > 0
