@@ -61,7 +61,7 @@ const R = {
     ownShare: "Din egen del",
     dontPaySelf: "du betalar inte dig själv",
     itemsTitle: "Vad åt du?",
-    claimHint: "Tryck på det du åt. Delade rätter ligger högst upp och är redan fördelade.",
+    claimHint: "Tryck på det du åt. Delade rätter är redan fördelade för bordet.",
     sharedSection: "Delas av alla",
     markedShared: (desc: string) =>
       `🤝 ”${desc || "Raden"}” delas nu av alla — flyttad till listan längst ner.`,
@@ -140,7 +140,7 @@ const R = {
     ownShare: "Your own share",
     dontPaySelf: "you don't pay yourself",
     itemsTitle: "What did you have?",
-    claimHint: "Tap what you had. Shared dishes sit at the top — already split for the table.",
+    claimHint: "Tap what you had. Shared dishes are already split for the table.",
     sharedSection: "Shared by everyone",
     markedShared: (desc: string) =>
       `🤝 “${desc || "Item"}” is now shared by everyone — moved to the bottom.`,
@@ -219,7 +219,7 @@ const R = {
     ownShare: "Dein eigener Anteil",
     dontPaySelf: "du zahlst nicht an dich selbst",
     itemsTitle: "Was hattest du?",
-    claimHint: "Tippe an, was du hattest. Geteilte Gerichte stehen oben – bereits für den Tisch aufgeteilt.",
+    claimHint: "Tippe an, was du hattest. Geteilte Gerichte sind bereits für den Tisch aufgeteilt.",
     sharedSection: "Von allen geteilt",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Artikel"}" wird jetzt von allen geteilt – nach unten verschoben.`,
@@ -298,7 +298,7 @@ const R = {
     ownShare: "Ta propre part",
     dontPaySelf: "tu ne te paies pas toi-même",
     itemsTitle: "Qu'est-ce que tu as pris ?",
-    claimHint: "Appuie sur ce que tu as pris. Les plats partagés sont en haut — déjà divisés pour la table.",
+    claimHint: "Appuie sur ce que tu as pris. Les plats partagés sont déjà divisés pour la table.",
     sharedSection: "Partagé par tous",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Article"}" est maintenant partagé par tous — déplacé en bas.`,
@@ -377,7 +377,7 @@ const R = {
     ownShare: "Tu propia parte",
     dontPaySelf: "no te pagas a ti mismo",
     itemsTitle: "¿Qué pediste?",
-    claimHint: "Toca lo que pediste. Los platos compartidos están arriba — ya divididos para la mesa.",
+    claimHint: "Toca lo que pediste. Los platos compartidos ya están divididos para la mesa.",
     sharedSection: "Compartido por todos",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Artículo"}" ahora es compartido por todos — movido abajo.`,
@@ -456,7 +456,7 @@ const R = {
     ownShare: "La tua parte",
     dontPaySelf: "non paghi te stesso",
     itemsTitle: "Cosa hai ordinato?",
-    claimHint: "Tocca quello che hai ordinato. I piatti condivisi sono in cima — già divisi per il tavolo.",
+    claimHint: "Tocca quello che hai ordinato. I piatti condivisi sono già divisi per il tavolo.",
     sharedSection: "Condiviso da tutti",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Articolo"}" è ora condiviso da tutti — spostato in fondo.`,
@@ -535,7 +535,7 @@ const R = {
     ownShare: "Je eigen deel",
     dontPaySelf: "je betaalt niet aan jezelf",
     itemsTitle: "Wat had je?",
-    claimHint: "Tik aan wat je had. Gedeelde gerechten staan bovenaan — al verdeeld voor de tafel.",
+    claimHint: "Tik aan wat je had. Gedeelde gerechten zijn al verdeeld voor de tafel.",
     sharedSection: "Gedeeld door iedereen",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Artikel"}" wordt nu door iedereen gedeeld — naar beneden verplaatst.`,
@@ -614,7 +614,7 @@ const R = {
     ownShare: "Din egen del",
     dontPaySelf: "du betaler ikke dig selv",
     itemsTitle: "Hvad havde du?",
-    claimHint: "Tryk på det, du havde. Delte retter er øverst — allerede fordelt til bordet.",
+    claimHint: "Tryk på det, du havde. Delte retter er allerede fordelt til bordet.",
     sharedSection: "Delt af alle",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Vare"}" deles nu af alle — flyttet til bunden.`,
@@ -693,7 +693,7 @@ const R = {
     ownShare: "Din egen del",
     dontPaySelf: "du betaler ikke deg selv",
     itemsTitle: "Hva hadde du?",
-    claimHint: "Trykk på det du hadde. Delte retter er øverst — allerede fordelt til bordet.",
+    claimHint: "Trykk på det du hadde. Delte retter er allerede fordelt til bordet.",
     sharedSection: "Delt av alle",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Vare"}" deles nå av alle — flyttet til bunnen.`,
@@ -772,7 +772,7 @@ const R = {
     ownShare: "Oma osasi",
     dontPaySelf: "et maksa itsellesi",
     itemsTitle: "Mitä sinulla oli?",
-    claimHint: "Napauta mitä sinulla oli. Yhteiset annokset ovat ylhäällä — jo jaettu pöydälle.",
+    claimHint: "Napauta mitä sinulla oli. Yhteiset annokset on jo jaettu pöydälle.",
     sharedSection: "Kaikkien jakama",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Tuote"}" on nyt kaikkien jakama — siirretty alhaalle.`,
@@ -851,7 +851,7 @@ const R = {
     ownShare: "Twoja własna część",
     dontPaySelf: "nie płacisz sobie",
     itemsTitle: "Co zamawiałeś?",
-    claimHint: "Dotknij co zamawiałeś. Wspólne dania są na górze — już podzielone dla stołu.",
+    claimHint: "Dotknij co zamawiałeś. Wspólne dania są już podzielone dla stołu.",
     sharedSection: "Wspólne dla wszystkich",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Pozycja"}" jest teraz wspólna dla wszystkich — przeniesiono na dół.`,
@@ -930,7 +930,7 @@ const R = {
     ownShare: "A tua própria parte",
     dontPaySelf: "não pagas a ti mesmo",
     itemsTitle: "O que pediste?",
-    claimHint: "Toca no que pediste. Os pratos partilhados estão no topo — já divididos para a mesa.",
+    claimHint: "Toca no que pediste. Os pratos partilhados já estão divididos para a mesa.",
     sharedSection: "Partilhado por todos",
     markedShared: (desc: string) =>
       `🤝 "${desc || "Item"}" é agora partilhado por todos — movido para baixo.`,
@@ -2582,10 +2582,10 @@ export default function RoomPage() {
       </header>
 
       {/* Wizard progress strip — the room is the "Share" step, the
-          last pill in the Scan → Verify → Share flow. Same component
-          the items page renders so the host's mental model of "where
-          am I in the flow" carries over. */}
-      <StepHeader step="share" t={tx} />
+          last pill in the Scan → Verify → Share flow. Only the host
+          walked that flow, so guests (who arrived via a link) don't see
+          it — the steps are meaningless to them. */}
+      {isPayee && <StepHeader step="share" t={tx} />}
 
       {/* Wizard slide-in target. Only the body content slides in from
           the right; the sticky nav and step strip above stay anchored
@@ -2616,13 +2616,12 @@ export default function RoomPage() {
         </div>
       )}
 
-      {/* Share / invite — top of the room reads as a header / title now:
-          place name as the hero, date subtitle, a small live QR with the
-          share CTA underneath (tap either to open the full share
-          dialog), and host name / Swish number / group size as
-          always-visible inputs for the host. Guests see the host row
-          read-only. */}
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+      {/* Share / invite card — place name, live QR + share CTA, and the
+          host name / Swish number / group size (editable for the host,
+          read-only for guests). order-last drops it to the BOTTOM of the
+          page: claiming what you had is the priority, and the QR / host
+          details are reference material you reach for afterwards. */}
+      <section className="order-last rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start gap-3">
           {/* Title block. min-w-0 + truncate so a long restaurant name
               can shrink instead of pushing the QR off the card. */}
@@ -3613,13 +3612,9 @@ export default function RoomPage() {
         >
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10">
             <div className="mb-4 border-b border-gray-100 pb-4">
-              <h2 className="truncate text-lg font-bold text-ink">
-                {state.place || "Kvitt"}
-                {state.date && (
-                  <span className="text-sm font-normal text-gray-400">, {formatReceiptDate(state.date, lang)}</span>
-                )}
-              </h2>
-              <p className="mt-1 text-base font-medium text-ink">
+              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+              <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
+              <p className="mt-2 text-base font-medium text-ink">
                 {(() => {
                   const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
                   return v[joinBlurbSeed % v.length];
@@ -3687,7 +3682,7 @@ export default function RoomPage() {
         href={donateHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="mx-auto mt-6 inline-flex items-center gap-1.5 self-center rounded-full bg-white px-3.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200 active:bg-gray-50"
+        className="order-last mx-auto mt-6 inline-flex items-center gap-1.5 self-center rounded-full bg-white px-3.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200 active:bg-gray-50"
       >
         <span aria-hidden>☕</span>
         <span>{t.donate}</span>
