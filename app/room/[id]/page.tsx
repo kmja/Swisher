@@ -1032,6 +1032,11 @@ export default function RoomPage() {
   // Picked once per mount so the "host paid" blurb in the join dialog
   // stays put across re-renders instead of reshuffling on every poll.
   const [joinBlurbSeed] = useState(() => Math.floor(Math.random() * 1000));
+  // Mount/visibility split so the join dialog can fade its backdrop +
+  // card out (rather than vanishing) once the guest joins. `mounted`
+  // keeps it in the DOM through the exit; `shown` drives the opacity.
+  const [joinMounted, setJoinMounted] = useState(false);
+  const [joinShown, setJoinShown] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   // Host's name / Swish number / group-size are always-visible input
@@ -1781,6 +1786,21 @@ export default function RoomPage() {
     load();
     return () => { cancelled = true; };
   }, [state?.imageCount, code, receiptImages]);
+
+  // Drive the join dialog's enter/exit. Not joined → mount, then flip
+  // `shown` on the next frame so the backdrop + card fade IN. Joined →
+  // flip `shown` off (fade OUT), then unmount once the 300ms transition
+  // has run.
+  useEffect(() => {
+    if (!personId) {
+      setJoinMounted(true);
+      const r = requestAnimationFrame(() => setJoinShown(true));
+      return () => cancelAnimationFrame(r);
+    }
+    setJoinShown(false);
+    const timer = setTimeout(() => setJoinMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [personId]);
 
   async function join() {
     if (!name.trim() || joining) return;
@@ -3602,25 +3622,47 @@ export default function RoomPage() {
         );
       })()}
       {/* Join dialog — floats over the blurred room page for a guest who
-          hasn't entered a name yet. Shows the meal, date and host as
-          context for what they're joining, then the name field. */}
-      {!personId && (
+          hasn't entered a name yet. The context (meal, date, host) is
+          styled like a little receipt the host has signed off; the
+          backdrop + card fade in on arrival and back out on join. */}
+      {joinMounted && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/20 px-4 pt-24 backdrop-blur-sm"
+          className={`fixed inset-0 z-[80] flex items-start justify-center bg-black/20 px-4 pt-24 backdrop-blur-sm transition-opacity duration-300 ease-out ${
+            joinShown ? "opacity-100" : "opacity-0"
+          }`}
         >
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10">
-            <div className="mb-4 border-b border-gray-100 pb-4">
-              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
-              <p className="mt-0.5 text-sm text-gray-500">{formatReceiptDate(state.date, lang)}</p>
-              <p className="mt-2 text-base font-medium text-ink">
-                {(() => {
-                  const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
-                  return v[joinBlurbSeed % v.length];
-                })()}
-              </p>
+          <div
+            className={`w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
+              joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+            }`}
+          >
+            {/* Stylized receipt: meal + date up top, a dashed tear line,
+                then the host's name in a signature hand as if they
+                signed the bill. */}
+            <div className="mb-5 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-5 pb-3.5 pt-4">
+              <div className="text-center">
+                <h2 className="truncate text-base font-bold uppercase tracking-wide text-ink">{state.place || "Kvitt"}</h2>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-gray-400">{formatReceiptDate(state.date, lang)}</p>
+              </div>
+              <div className="my-3.5 border-t border-dashed border-gray-300" />
+              <div className="flex items-end gap-2">
+                <span aria-hidden className="pb-1 text-lg leading-none text-gray-300">✗</span>
+                <span
+                  className="min-w-0 flex-1 truncate border-b border-gray-300 pb-1 text-2xl leading-tight text-ink"
+                  style={{ fontFamily: '"Snell Roundhand", "Segoe Script", "Bradley Hand", "Brush Script MT", cursive' }}
+                >
+                  {state.payeeName || tx.genericHostName}
+                </span>
+              </div>
             </div>
+            <p className="mb-3 text-center text-sm text-gray-500">
+              {(() => {
+                const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
+                return v[joinBlurbSeed % v.length];
+              })()}
+            </p>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
