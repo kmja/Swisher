@@ -2200,10 +2200,12 @@ export default function RoomPage() {
       aria-modal="true"
       className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-24"
     >
-      {/* Backdrop fades on its own so the flying emojis stay crisp. */}
+      {/* Backdrop: blur is on instantly (mounts at full opacity, no
+          fade-in) so the guest lands on a blurred page; it only fades out
+          on join. Separate from the card so the flying emojis stay crisp. */}
       <div
         className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-out ${
-          joinShown ? "opacity-100" : "opacity-0"
+          joinFlyOut ? "opacity-0" : "opacity-100"
         }`}
       />
       <div className="relative w-full max-w-md">
