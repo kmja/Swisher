@@ -6,7 +6,7 @@ import QrCard from "@/components/QrCard";
 import SwishLogo from "@/components/SwishLogo";
 import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
 import { translations } from "@/lib/i18n";
-import { categoryFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from "@/lib/categories";
+import { categoryFor, emojiFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
 import ItemEmoji from "@/components/ItemEmoji";
 import QrDialog from "@/components/QrDialog";
@@ -3647,6 +3647,29 @@ export default function RoomPage() {
               joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
             }`}
           >
+            {/* A sprinkle of distinct item emojis from the receipt for a
+                bit of flavour — deduped by their resolved icon so the
+                same dish doesn't repeat. */}
+            {(() => {
+              const seen = new Set<string>();
+              const picks: RoomState["items"] = [];
+              for (const it of state.items) {
+                const key = emojiFor(it.description, it.category, it.emoji);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                picks.push(it);
+                if (picks.length >= 6) break;
+              }
+              return picks.length > 0 ? (
+                <div aria-hidden className="mb-3 flex flex-wrap justify-center gap-2">
+                  {picks.map((it) => (
+                    <span key={it.id} className="text-xl leading-none">
+                      <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                    </span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
             {/* Compact context: meal name, then the date and who paid. */}
             <div className="mb-4">
               <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
