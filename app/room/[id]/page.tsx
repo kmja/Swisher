@@ -1807,7 +1807,10 @@ export default function RoomPage() {
       return () => cancelAnimationFrame(r);
     }
     setJoinShown(false);
-    const timer = setTimeout(() => setJoinMounted(false), 300);
+    const timer = setTimeout(() => {
+      setJoinMounted(false);
+      setJoining(false);
+    }, 300);
     return () => clearTimeout(timer);
   }, [personId]);
 
@@ -1829,8 +1832,13 @@ export default function RoomPage() {
         } catch {
           /* ignore */
         }
+        // Leave `joining` on: the dialog now fades out and its exit
+        // effect clears the flag once unmounted, so the button keeps its
+        // spinner through the transition instead of flashing back to Join.
+        return;
       }
-    } finally {
+      setJoining(false);
+    } catch {
       setJoining(false);
     }
   }
@@ -3689,8 +3697,14 @@ export default function RoomPage() {
               type="button"
               onClick={join}
               disabled={!name.trim() || joining}
-              className="mt-3 w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
             >
+              {joining && (
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4z" />
+                </svg>
+              )}
               {joining ? t.joining : t.join}
             </button>
           </div>
