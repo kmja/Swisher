@@ -1057,6 +1057,9 @@ export default function RoomPage() {
   // True only during the exit (guest just joined): sends the scattered
   // emojis flying off-screen while the card + backdrop fade.
   const [joinFlyOut, setJoinFlyOut] = useState(false);
+  // Mirror of the dialog's render condition, updated in render so the
+  // room-enter ref callback (fires during commit) can read it.
+  const joinActiveRef = useRef(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   // Host's name / Swish number / group-size are always-visible input
@@ -2001,12 +2004,16 @@ export default function RoomPage() {
   const prewarmedRef = useRef(searchParams.get("prewarmed") === "1");
   const playRoomEnter = useCallback((el: HTMLElement | null) => {
     if (prewarmedRef.current || !el || typeof el.animate !== "function") return;
+    // A guest arriving to the join dialog: keep the room perfectly static.
+    // Animating it (transform/opacity) promotes it to its own compositor
+    // layer, which the dialog's backdrop-filter can't blur until the
+    // animation ends — so the guest would briefly read the sharp page.
+    if (joinActiveRef.current) return;
+    // Otherwise (returning guest / direct nav) a plain fade — no sideways
+    // slide, which only made sense for the host's items→room wizard step.
     el.animate(
-      [
-        { opacity: 0, transform: "translateX(100%)" },
-        { opacity: 1, transform: "translateX(0)" },
-      ],
-      { duration: 320, easing: "cubic-bezier(0.32, 0.72, 0.36, 1)", fill: "backwards" },
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 300, easing: "ease-out", fill: "backwards" },
     );
   }, []);
 
@@ -2208,7 +2215,9 @@ export default function RoomPage() {
   // Render the moment state is ready & the visitor hasn't joined (so the
   // blurred backdrop is up in the same frame the room appears — no sharp
   // items flash), and keep it mounted through the fly-out via joinMounted.
-  const joinDialog = joinMounted || (!!state && !personId) ? (
+  const joinActive = joinMounted || (!!state && !personId);
+  joinActiveRef.current = joinActive;
+  const joinDialog = joinActive ? (
     <div
       role="dialog"
       aria-modal="true"
@@ -2225,8 +2234,8 @@ export default function RoomPage() {
       />
       <div className="relative w-full max-w-md">
         <div
-          className={`relative rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
-            joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+          className={`relative rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-opacity duration-300 ease-out ${
+            joinShown ? "opacity-100" : "opacity-0"
           }`}
         >
           {/* Compact context: meal name, then the date and who paid. */}
