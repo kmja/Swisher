@@ -3553,13 +3553,14 @@ export default function RoomPage() {
         >
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10">
             <div className="mb-4 border-b border-gray-100 pb-4">
-              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+              <h2 className="truncate text-lg font-bold text-ink">
+                {state.place || "Kvitt"}
+                {state.date ? `, ${formatReceiptDate(state.date, lang)}` : ""}
+              </h2>
               <p className="mt-0.5 text-sm text-gray-500">
                 {(() => {
                   const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
-                  const blurb = v[joinBlurbSeed % v.length];
-                  const date = state.date ? formatReceiptDate(state.date, lang) : "";
-                  return date ? `${blurb}, ${date}` : blurb;
+                  return v[joinBlurbSeed % v.length];
                 })()}
               </p>
             </div>
