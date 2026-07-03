@@ -38,6 +38,7 @@ const R = {
       `Gör rätt för dig mot ${host}`,
       `${host} la ut – dags att betala tillbaka`,
     ],
+    paidBy: "Betald av",
     namePlaceholder: "Ditt namn",
     join: "Gå med",
     joining: "Går med…",
@@ -117,6 +118,7 @@ const R = {
       `Settle up with ${host}`,
       `${host} fronted it — pay them back`,
     ],
+    paidBy: "Paid by",
     namePlaceholder: "Your name",
     join: "Join",
     joining: "Joining…",
@@ -196,6 +198,7 @@ const R = {
       `Mach's mit ${host} aus`,
       `${host} hat ausgelegt – zahl zurück`,
     ],
+    paidBy: "Bezahlt von",
     namePlaceholder: "Dein Name",
     join: "Beitreten",
     joining: "Trete bei…",
@@ -275,6 +278,7 @@ const R = {
       `Fais les comptes avec ${host}`,
       `${host} a avancé – rembourse`,
     ],
+    paidBy: "Payé par",
     namePlaceholder: "Ton prénom",
     join: "Rejoindre",
     joining: "Connexion…",
@@ -354,6 +358,7 @@ const R = {
       `Ajusta cuentas con ${host}`,
       `${host} adelantó – devuélveselo`,
     ],
+    paidBy: "Pagado por",
     namePlaceholder: "Tu nombre",
     join: "Unirse",
     joining: "Uniéndose…",
@@ -433,6 +438,7 @@ const R = {
       `Salda con ${host}`,
       `${host} ha anticipato – ripaga`,
     ],
+    paidBy: "Pagato da",
     namePlaceholder: "Il tuo nome",
     join: "Unisciti",
     joining: "Partecipando…",
@@ -512,6 +518,7 @@ const R = {
       `Reken af met ${host}`,
       `${host} schoot voor – betaal terug`,
     ],
+    paidBy: "Betaald door",
     namePlaceholder: "Jouw naam",
     join: "Meedoen",
     joining: "Deelnemen…",
@@ -591,6 +598,7 @@ const R = {
       `Gør regnskabet op med ${host}`,
       `${host} lagde ud – betal tilbage`,
     ],
+    paidBy: "Betalt af",
     namePlaceholder: "Dit navn",
     join: "Deltag",
     joining: "Tilmelder…",
@@ -670,6 +678,7 @@ const R = {
       `Gjør opp med ${host}`,
       `${host} la ut – betal tilbake`,
     ],
+    paidBy: "Betalt av",
     namePlaceholder: "Ditt navn",
     join: "Bli med",
     joining: "Blir med…",
@@ -749,6 +758,7 @@ const R = {
       `Tasaa tilit ${host}n kanssa`,
       `${host} maksoi – maksa takaisin`,
     ],
+    paidBy: "Maksaja",
     namePlaceholder: "Nimesi",
     join: "Liity",
     joining: "Liitytään…",
@@ -828,6 +838,7 @@ const R = {
       `Wyrównaj rachunki z ${host}`,
       `${host} zapłacił(a) – oddaj`,
     ],
+    paidBy: "Zapłacone przez",
     namePlaceholder: "Twoje imię",
     join: "Dołącz",
     joining: "Dołączanie…",
@@ -907,6 +918,7 @@ const R = {
       `Acerta contas com ${host}`,
       `${host} adiantou – paga de volta`,
     ],
+    paidBy: "Pago por",
     namePlaceholder: "O teu nome",
     join: "Entrar",
     joining: "A entrar…",
@@ -1029,9 +1041,6 @@ export default function RoomPage() {
   const [personId, setPersonId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
-  // Picked once per mount so the "host paid" blurb in the join dialog
-  // stays put across re-renders instead of reshuffling on every poll.
-  const [joinBlurbSeed] = useState(() => Math.floor(Math.random() * 1000));
   // Mount/visibility split so the join dialog can fade its backdrop +
   // card out (rather than vanishing) once the guest joins. `mounted`
   // keeps it in the DOM through the exit; `shown` drives the opacity.
@@ -3638,31 +3647,49 @@ export default function RoomPage() {
               joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
             }`}
           >
-            {/* Stylized receipt: meal + date up top, a dashed tear line,
-                then the host's name in a signature hand as if they
-                signed the bill. */}
-            <div className="mb-5 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-5 pb-3.5 pt-4">
-              <div className="text-center">
-                <h2 className="truncate text-base font-bold uppercase tracking-wide text-ink">{state.place || "Kvitt"}</h2>
-                <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-gray-400">{formatReceiptDate(state.date, lang)}</p>
+            {/* Stylized receipt: a faux receipt number, the meal + date
+                as the "store" header, dashed tear lines, the host's name
+                in a signature hand over a "paid by" line, and a barcode
+                footer carrying the room code. Every colour flows through
+                theme-aware tokens so it reads in light and dark. */}
+            <div className="mb-5 overflow-hidden rounded-xl bg-gray-50 ring-1 ring-black/5">
+              <div className="px-6 pb-4 pt-5">
+                <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400">
+                  {t.showReceipt} · {code}
+                </p>
+                <h2 className="mt-2 truncate text-center text-lg font-bold uppercase tracking-wide text-ink">
+                  {state.place || "Kvitt"}
+                </h2>
+                <p className="mt-1 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-gray-500">
+                  {formatReceiptDate(state.date, lang)}
+                </p>
+                <div className="my-4 border-t border-dashed border-gray-300" />
+                {/* Signature line — ✗ mark, the host's name in a hand,
+                    then a small "paid by" caption beneath it. */}
+                <div className="flex items-end gap-2">
+                  <span aria-hidden className="pb-1 text-lg leading-none text-gray-400">✗</span>
+                  <span
+                    className="min-w-0 flex-1 truncate border-b border-gray-400 pb-1 text-2xl leading-tight text-ink"
+                    style={{ fontFamily: '"Snell Roundhand", "Segoe Script", "Bradley Hand", "Brush Script MT", cursive' }}
+                  >
+                    {state.payeeName || tx.genericHostName}
+                  </span>
+                </div>
+                <p className="mt-1.5 pl-7 font-mono text-[9px] uppercase tracking-[0.25em] text-gray-400">{t.paidBy}</p>
               </div>
-              <div className="my-3.5 border-t border-dashed border-gray-300" />
-              <div className="flex items-end gap-2">
-                <span aria-hidden className="pb-1 text-lg leading-none text-gray-300">✗</span>
-                <span
-                  className="min-w-0 flex-1 truncate border-b border-gray-300 pb-1 text-2xl leading-tight text-ink"
-                  style={{ fontFamily: '"Snell Roundhand", "Segoe Script", "Bradley Hand", "Brush Script MT", cursive' }}
-                >
-                  {state.payeeName || tx.genericHostName}
-                </span>
+              {/* Barcode footer */}
+              <div className="border-t border-dashed border-gray-300 px-6 py-3">
+                <div
+                  aria-hidden
+                  className="h-8 w-full"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(90deg, var(--color-ink) 0, var(--color-ink) 2px, transparent 2px, transparent 4px, var(--color-ink) 4px, var(--color-ink) 5px, transparent 5px, transparent 8px, var(--color-ink) 8px, var(--color-ink) 11px, transparent 11px, transparent 13px)",
+                  }}
+                />
+                <p className="mt-1.5 text-center font-mono text-[10px] tracking-[0.35em] text-gray-400">{code}</p>
               </div>
             </div>
-            <p className="mb-3 text-center text-sm text-gray-500">
-              {(() => {
-                const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
-                return v[joinBlurbSeed % v.length];
-              })()}
-            </p>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
