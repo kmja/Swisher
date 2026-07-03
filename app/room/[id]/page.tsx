@@ -3647,48 +3647,12 @@ export default function RoomPage() {
               joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
             }`}
           >
-            {/* Stylized receipt: a faux receipt number, the meal + date
-                as the "store" header, dashed tear lines, the host's name
-                in a signature hand over a "paid by" line, and a barcode
-                footer carrying the room code. Every colour flows through
-                theme-aware tokens so it reads in light and dark. */}
-            <div className="mb-5 overflow-hidden rounded-xl bg-gray-50 ring-1 ring-black/5">
-              <div className="px-6 pb-4 pt-5">
-                <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400">
-                  {t.showReceipt} · {code}
-                </p>
-                <h2 className="mt-2 truncate text-center text-lg font-bold uppercase tracking-wide text-ink">
-                  {state.place || "Kvitt"}
-                </h2>
-                <p className="mt-1 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-gray-500">
-                  {formatReceiptDate(state.date, lang)}
-                </p>
-                <div className="my-4 border-t border-dashed border-gray-300" />
-                {/* Signature line — ✗ mark, the host's name in a hand,
-                    then a small "paid by" caption beneath it. */}
-                <div className="flex items-end gap-2">
-                  <span aria-hidden className="pb-1 text-lg leading-none text-gray-400">✗</span>
-                  <span
-                    className="min-w-0 flex-1 truncate border-b border-gray-400 pb-1 text-2xl leading-tight text-ink"
-                    style={{ fontFamily: '"Snell Roundhand", "Segoe Script", "Bradley Hand", "Brush Script MT", cursive' }}
-                  >
-                    {state.payeeName || tx.genericHostName}
-                  </span>
-                </div>
-                <p className="mt-1.5 pl-7 font-mono text-[9px] uppercase tracking-[0.25em] text-gray-400">{t.paidBy}</p>
-              </div>
-              {/* Barcode footer */}
-              <div className="border-t border-dashed border-gray-300 px-6 py-3">
-                <div
-                  aria-hidden
-                  className="h-8 w-full"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(90deg, var(--color-ink) 0, var(--color-ink) 2px, transparent 2px, transparent 4px, var(--color-ink) 4px, var(--color-ink) 5px, transparent 5px, transparent 8px, var(--color-ink) 8px, var(--color-ink) 11px, transparent 11px, transparent 13px)",
-                  }}
-                />
-                <p className="mt-1.5 text-center font-mono text-[10px] tracking-[0.35em] text-gray-400">{code}</p>
-              </div>
+            {/* Compact context: meal name, then the date and who paid. */}
+            <div className="mb-4">
+              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+              <p className="mt-0.5 text-sm text-gray-500">
+                {formatReceiptDate(state.date, lang)} · {t.paidBy} {state.payeeName || tx.genericHostName}
+              </p>
             </div>
             <input
               value={name}
