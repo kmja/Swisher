@@ -1046,6 +1046,9 @@ export default function RoomPage() {
   // keeps it in the DOM through the exit; `shown` drives the opacity.
   const [joinMounted, setJoinMounted] = useState(false);
   const [joinShown, setJoinShown] = useState(false);
+  // True only during the exit (guest just joined): sends the scattered
+  // emojis flying off-screen while the card + backdrop fade.
+  const [joinFlyOut, setJoinFlyOut] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   // Host's name / Swish number / group-size are always-visible input
@@ -1803,14 +1806,18 @@ export default function RoomPage() {
   useEffect(() => {
     if (!personId) {
       setJoinMounted(true);
+      setJoinFlyOut(false);
       const r = requestAnimationFrame(() => setJoinShown(true));
       return () => cancelAnimationFrame(r);
     }
     setJoinShown(false);
+    setJoinFlyOut(true);
+    // Hold the mount long enough for the emojis to fly clear (500ms) —
+    // longer than the 300ms card/backdrop fade.
     const timer = setTimeout(() => {
       setJoinMounted(false);
       setJoining(false);
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
   }, [personId]);
 
@@ -3646,20 +3653,55 @@ export default function RoomPage() {
         <div
           role="dialog"
           aria-modal="true"
-          className={`fixed inset-0 z-[80] flex items-start justify-center bg-black/20 px-4 pt-24 backdrop-blur-sm transition-opacity duration-300 ease-out ${
-            joinShown ? "opacity-100" : "opacity-0"
-          }`}
+          className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-24"
         >
+          {/* Backdrop fades on its own so the flying emojis stay crisp. */}
           <div
-            className={`relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
-              joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+            className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-out ${
+              joinShown ? "opacity-100" : "opacity-0"
             }`}
-          >
+          />
+          <div className="relative w-full max-w-md">
+            <div
+              className={`relative rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out ${
+                joinShown ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+              }`}
+            >
+              {/* Compact context: meal name, then the date and who paid. */}
+              <div className="mb-4">
+                <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+                <p className="mt-0.5 text-sm text-gray-500">
+                  {formatReceiptDate(state.date, lang)} · {t.paidBy} {state.payeeName || tx.genericHostName}
+                </p>
+              </div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t.namePlaceholder}
+                onKeyDown={(e) => e.key === "Enter" && join()}
+                autoFocus
+                className="w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
+              />
+              <button
+                type="button"
+                onClick={join}
+                disabled={!name.trim() || joining}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
+              >
+                {joining && (
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4z" />
+                  </svg>
+                )}
+                {joining ? t.joining : t.join}
+              </button>
+            </div>
             {/* Distinct item emojis from the receipt, spilling around the
-                card edges and gently bobbing. Deduped by resolved icon so
-                the same dish doesn't repeat; positions are fixed per slot
-                (not random) so they don't jump around on each poll. The
-                layer is pointer-events-none and overflows the card. */}
+                card edges and gently bobbing. Sits OUTSIDE the fading card
+                so that on join it can fly off-screen (each toward its own
+                edge) while the card + backdrop fade. Deduped by resolved
+                icon; positions are fixed per slot (not random). */}
             {(() => {
               const seen = new Set<string>();
               const picks: RoomState["items"] = [];
@@ -3670,25 +3712,39 @@ export default function RoomPage() {
                 picks.push(it);
                 if (picks.length >= 6) break;
               }
-              // Anchored to the card's edges with negative offsets so they
-              // poke out past the corners/sides. rot = tilt, dur = bob speed.
+              // Resting position anchored to the card edge; fx/fy/spin is
+              // the outward launch it takes when flying off on join.
               const SCATTER: Array<Record<string, string | number>> = [
-                { top: "-22px", left: "5%", rot: -18, cls: "text-5xl", dur: 3.4 },
-                { top: "-14px", right: "10%", rot: 14, cls: "text-4xl", dur: 2.9 },
-                { top: "32%", left: "-20px", rot: -12, cls: "text-4xl", dur: 3.8 },
-                { top: "44%", right: "-18px", rot: 16, cls: "text-5xl", dur: 3.1 },
-                { bottom: "-20px", left: "14%", rot: 10, cls: "text-4xl", dur: 3.6 },
-                { bottom: "-12px", right: "20%", rot: -15, cls: "text-4xl", dur: 2.7 },
+                { top: "-22px", left: "5%", rot: -18, cls: "text-5xl", dur: 3.4, fx: -170, fy: -280, spin: -60 },
+                { top: "-14px", right: "10%", rot: 14, cls: "text-4xl", dur: 2.9, fx: 180, fy: -280, spin: 60 },
+                { top: "32%", left: "-20px", rot: -12, cls: "text-4xl", dur: 3.8, fx: -340, fy: -40, spin: -90 },
+                { top: "44%", right: "-18px", rot: 16, cls: "text-5xl", dur: 3.1, fx: 340, fy: 50, spin: 90 },
+                { bottom: "-20px", left: "14%", rot: 10, cls: "text-4xl", dur: 3.6, fx: -190, fy: 340, spin: -70 },
+                { bottom: "-12px", right: "20%", rot: -15, cls: "text-4xl", dur: 2.7, fx: 210, fy: 360, spin: 80 },
               ];
               return picks.length > 0 ? (
-                <div aria-hidden className="pointer-events-none absolute inset-0">
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${
+                    joinShown || joinFlyOut ? "opacity-100" : "opacity-0"
+                  }`}
+                >
                   {picks.map((it, i) => {
                     const s = SCATTER[i % SCATTER.length];
+                    const rest = `translate(0px, 0px) rotate(${s.rot}deg) scale(1)`;
+                    const flown = `translate(${s.fx}px, ${s.fy}px) rotate(${Number(s.rot) + Number(s.spin)}deg) scale(0.6)`;
                     return (
                       <span
                         key={it.id}
                         className={`absolute leading-none ${s.cls}`}
-                        style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rot}deg)` }}
+                        style={{
+                          top: s.top,
+                          bottom: s.bottom,
+                          left: s.left,
+                          right: s.right,
+                          transform: joinFlyOut ? flown : rest,
+                          transition: "transform 500ms cubic-bezier(0.4, 0, 0.7, 0.2)",
+                        }}
                       >
                         <span
                           className="emoji-float block"
@@ -3702,35 +3758,6 @@ export default function RoomPage() {
                 </div>
               ) : null;
             })()}
-            {/* Compact context: meal name, then the date and who paid. */}
-            <div className="mb-4">
-              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
-              <p className="mt-0.5 text-sm text-gray-500">
-                {formatReceiptDate(state.date, lang)} · {t.paidBy} {state.payeeName || tx.genericHostName}
-              </p>
-            </div>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t.namePlaceholder}
-              onKeyDown={(e) => e.key === "Enter" && join()}
-              autoFocus
-              className="w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
-            />
-            <button
-              type="button"
-              onClick={join}
-              disabled={!name.trim() || joining}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
-            >
-              {joining && (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4z" />
-                </svg>
-              )}
-              {joining ? t.joining : t.join}
-            </button>
           </div>
         </div>
       )}
