@@ -31,8 +31,13 @@ const R = {
     notFound: "Hittade inget rum med den koden.",
     unavailable: "Live-rum kräver den driftsatta versionen.",
     toStart: "Till start",
-    joinTitle: "Gå med i notan",
-    joinBlurbs: (host: string) => [`${host} la ut för notan`, `${host} betalade`, `${host} tog notan`],
+    joinBlurbs: (host: string) => [
+      `Du gör upp med ${host}`,
+      `Dags att betala ${host} din del`,
+      `Du är skyldig ${host} för det här`,
+      `Gör rätt för dig mot ${host}`,
+      `${host} la ut – dags att betala tillbaka`,
+    ],
     namePlaceholder: "Ditt namn",
     join: "Gå med",
     joining: "Går med…",
@@ -105,8 +110,13 @@ const R = {
     notFound: "No room found for that code.",
     unavailable: "Live rooms need the deployed version.",
     toStart: "To start",
-    joinTitle: "Join this bill",
-    joinBlurbs: (host: string) => [`${host} paid the bill`, `${host} covered it`, `${host} picked up the tab`],
+    joinBlurbs: (host: string) => [
+      `You're squaring up with ${host}`,
+      `Time to pay ${host} your dues`,
+      `You owe ${host} for this one`,
+      `Settle up with ${host}`,
+      `${host} fronted it — pay them back`,
+    ],
     namePlaceholder: "Your name",
     join: "Join",
     joining: "Joining…",
@@ -179,8 +189,13 @@ const R = {
     notFound: "Kein Raum mit diesem Code gefunden.",
     unavailable: "Live-Räume benötigen die bereitgestellte Version.",
     toStart: "Zum Start",
-    joinTitle: "Dieser Rechnung beitreten",
-    joinBlurbs: (host: string) => [`${host} hat die Rechnung bezahlt`, `${host} hat ausgelegt`, `${host} hat die Rechnung übernommen`],
+    joinBlurbs: (host: string) => [
+      `Du rechnest mit ${host} ab`,
+      `Zeit, ${host} deinen Teil zu zahlen`,
+      `Du schuldest ${host} noch was`,
+      `Mach's mit ${host} aus`,
+      `${host} hat ausgelegt – zahl zurück`,
+    ],
     namePlaceholder: "Dein Name",
     join: "Beitreten",
     joining: "Trete bei…",
@@ -253,8 +268,13 @@ const R = {
     notFound: "Aucune salle trouvée pour ce code.",
     unavailable: "Les salles en direct nécessitent la version déployée.",
     toStart: "Pour commencer",
-    joinTitle: "Rejoindre l'addition",
-    joinBlurbs: (host: string) => [`${host} a payé l'addition`, `${host} a réglé`, `${host} a avancé l'addition`],
+    joinBlurbs: (host: string) => [
+      `Tu règles tes comptes avec ${host}`,
+      `L'heure de payer ta part à ${host}`,
+      `Tu dois ta part à ${host}`,
+      `Fais les comptes avec ${host}`,
+      `${host} a avancé – rembourse`,
+    ],
     namePlaceholder: "Ton prénom",
     join: "Rejoindre",
     joining: "Connexion…",
@@ -327,8 +347,13 @@ const R = {
     notFound: "No se encontró ninguna sala con ese código.",
     unavailable: "Las salas en vivo necesitan la versión desplegada.",
     toStart: "Para empezar",
-    joinTitle: "Únete a esta cuenta",
-    joinBlurbs: (host: string) => [`${host} pagó la cuenta`, `${host} lo cubrió`, `${host} adelantó la cuenta`],
+    joinBlurbs: (host: string) => [
+      `Te pones a mano con ${host}`,
+      `Hora de pagarle a ${host} lo tuyo`,
+      `Le debes a ${host} esta`,
+      `Ajusta cuentas con ${host}`,
+      `${host} adelantó – devuélveselo`,
+    ],
     namePlaceholder: "Tu nombre",
     join: "Unirse",
     joining: "Uniéndose…",
@@ -401,8 +426,13 @@ const R = {
     notFound: "Nessuna stanza trovata con quel codice.",
     unavailable: "Le stanze live richiedono la versione distribuita.",
     toStart: "Per iniziare",
-    joinTitle: "Unisciti al conto",
-    joinBlurbs: (host: string) => [`${host} ha pagato il conto`, `${host} ha offerto`, `${host} ha anticipato il conto`],
+    joinBlurbs: (host: string) => [
+      `Fai i conti con ${host}`,
+      `Ora di dare a ${host} la tua parte`,
+      `Devi la tua parte a ${host}`,
+      `Salda con ${host}`,
+      `${host} ha anticipato – ripaga`,
+    ],
     namePlaceholder: "Il tuo nome",
     join: "Unisciti",
     joining: "Partecipando…",
@@ -475,8 +505,13 @@ const R = {
     notFound: "Geen kamer gevonden voor die code.",
     unavailable: "Live-kamers hebben de uitgerold versie nodig.",
     toStart: "Naar start",
-    joinTitle: "Doe mee met deze rekening",
-    joinBlurbs: (host: string) => [`${host} heeft de rekening betaald`, `${host} heeft het voorgeschoten`, `${host} heeft afgerekend`],
+    joinBlurbs: (host: string) => [
+      `Je rekent af met ${host}`,
+      `Tijd om ${host} je deel te betalen`,
+      `Je bent ${host} nog wat schuldig`,
+      `Reken af met ${host}`,
+      `${host} schoot voor – betaal terug`,
+    ],
     namePlaceholder: "Jouw naam",
     join: "Meedoen",
     joining: "Deelnemen…",
@@ -549,8 +584,13 @@ const R = {
     notFound: "Intet rum fundet for den kode.",
     unavailable: "Live-rum kræver den installerede version.",
     toStart: "Til start",
-    joinTitle: "Vær med på regningen",
-    joinBlurbs: (host: string) => [`${host} betalte regningen`, `${host} lagde ud`, `${host} tog regningen`],
+    joinBlurbs: (host: string) => [
+      `Du gør op med ${host}`,
+      `Tid til at betale ${host} din del`,
+      `Du skylder ${host} for den her`,
+      `Gør regnskabet op med ${host}`,
+      `${host} lagde ud – betal tilbage`,
+    ],
     namePlaceholder: "Dit navn",
     join: "Deltag",
     joining: "Tilmelder…",
@@ -623,8 +663,13 @@ const R = {
     notFound: "Ingen rom funnet for den koden.",
     unavailable: "Live-rom trenger den deployede versjonen.",
     toStart: "Til start",
-    joinTitle: "Bli med på regningen",
-    joinBlurbs: (host: string) => [`${host} betalte regningen`, `${host} la ut`, `${host} tok regningen`],
+    joinBlurbs: (host: string) => [
+      `Du gjør opp med ${host}`,
+      `På tide å betale ${host} din del`,
+      `Du skylder ${host} for denne`,
+      `Gjør opp med ${host}`,
+      `${host} la ut – betal tilbake`,
+    ],
     namePlaceholder: "Ditt navn",
     join: "Bli med",
     joining: "Blir med…",
@@ -697,8 +742,13 @@ const R = {
     notFound: "Huonetta ei löydy sillä koodilla.",
     unavailable: "Live-huoneet tarvitsevat käyttöönotetun version.",
     toStart: "Aloitukseen",
-    joinTitle: "Liity tähän laskuun",
-    joinBlurbs: (host: string) => [`${host} maksoi laskun`, `${host} hoiti laskun`, `${host} maksoi puolestasi`],
+    joinBlurbs: (host: string) => [
+      `Sinun ja ${host}n välit selviksi`,
+      `Aika maksaa osuutesi ${host}lle`,
+      `Olet ${host}lle velkaa tästä`,
+      `Tasaa tilit ${host}n kanssa`,
+      `${host} maksoi – maksa takaisin`,
+    ],
     namePlaceholder: "Nimesi",
     join: "Liity",
     joining: "Liitytään…",
@@ -771,8 +821,13 @@ const R = {
     notFound: "Nie znaleziono pokoju dla tego kodu.",
     unavailable: "Pokoje na żywo wymagają wdrożonej wersji.",
     toStart: "Do startu",
-    joinTitle: "Dołącz do rachunku",
-    joinBlurbs: (host: string) => [`${host} zapłacił(a) rachunek`, `${host} pokrył(a) rachunek`, `${host} zapłacił(a) za wszystkich`],
+    joinBlurbs: (host: string) => [
+      `Rozliczasz się z ${host}`,
+      `Czas oddać ${host} swoją część`,
+      `Jesteś ${host} winien za to`,
+      `Wyrównaj rachunki z ${host}`,
+      `${host} zapłacił(a) – oddaj`,
+    ],
     namePlaceholder: "Twoje imię",
     join: "Dołącz",
     joining: "Dołączanie…",
@@ -845,8 +900,13 @@ const R = {
     notFound: "Nenhuma sala encontrada para esse código.",
     unavailable: "As salas ao vivo precisam da versão implementada.",
     toStart: "Para começar",
-    joinTitle: "Junta-te a esta conta",
-    joinBlurbs: (host: string) => [`${host} pagou a conta`, `${host} adiantou a conta`, `${host} tratou da conta`],
+    joinBlurbs: (host: string) => [
+      `Vais acertar contas com ${host}`,
+      `Hora de pagar a tua parte a ${host}`,
+      `Deves a tua parte a ${host}`,
+      `Acerta contas com ${host}`,
+      `${host} adiantou – paga de volta`,
+    ],
     namePlaceholder: "O teu nome",
     join: "Entrar",
     joining: "A entrar…",
@@ -3555,23 +3615,24 @@ export default function RoomPage() {
             <div className="mb-4 border-b border-gray-100 pb-4">
               <h2 className="truncate text-lg font-bold text-ink">
                 {state.place || "Kvitt"}
-                {state.date ? `, ${formatReceiptDate(state.date, lang)}` : ""}
+                {state.date && (
+                  <span className="text-sm font-normal text-gray-400">, {formatReceiptDate(state.date, lang)}</span>
+                )}
               </h2>
-              <p className="mt-0.5 text-sm text-gray-500">
+              <p className="mt-1 text-base font-medium text-ink">
                 {(() => {
                   const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
                   return v[joinBlurbSeed % v.length];
                 })()}
               </p>
             </div>
-            <h1 className="text-xl font-bold">{t.joinTitle}</h1>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t.namePlaceholder}
               onKeyDown={(e) => e.key === "Enter" && join()}
               autoFocus
-              className="mt-3 w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
+              className="w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
             />
             <button
               type="button"
