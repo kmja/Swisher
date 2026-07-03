@@ -2753,28 +2753,10 @@ export default function RoomPage() {
         );
       })()}
 
-      {/* Join, or the claiming UI */}
-      {!personId ? (
-        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-          <h1 className="text-xl font-bold">{t.joinTitle}</h1>
-          <p className="mt-1 text-sm text-gray-600">{t.joinHint}</p>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t.namePlaceholder}
-            onKeyDown={(e) => e.key === "Enter" && join()}
-            className="mt-3 w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
-          />
-          <button
-            type="button"
-            onClick={join}
-            disabled={!name.trim() || joining}
-            className="mt-3 w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
-          >
-            {joining ? t.joining : t.join}
-          </button>
-        </section>
-      ) : (
+      {/* Claiming UI — always rendered. Until a guest has joined, the
+          join dialog (joinOverlay, below) floats on top of the blurred
+          page so they see the room they're about to join. */}
+      {(
         <>
           <section>
             <h2 className="text-xl font-bold">{t.itemsTitle}</h2>
@@ -3557,6 +3539,44 @@ export default function RoomPage() {
           </div>
         );
       })()}
+      {/* Join dialog — floats over the blurred room page for a guest who
+          hasn't entered a name yet. Shows the meal, date and host as
+          context for what they're joining, then the name field. */}
+      {!personId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/20 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 backdrop-blur-sm sm:items-center"
+        >
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10">
+            <div className="mb-4 border-b border-gray-100 pb-4">
+              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+              <p className="mt-0.5 text-sm text-gray-500">
+                {formatReceiptDate(state.date, lang)}
+                {state.payeeName ? ` · ${state.payeeName}` : ""}
+              </p>
+            </div>
+            <h1 className="text-xl font-bold">{t.joinTitle}</h1>
+            <p className="mt-1 text-sm text-gray-600">{t.joinHint}</p>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t.namePlaceholder}
+              onKeyDown={(e) => e.key === "Enter" && join()}
+              autoFocus
+              className="mt-3 w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
+            />
+            <button
+              type="button"
+              onClick={join}
+              disabled={!name.trim() || joining}
+              className="mt-3 w-full rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
+            >
+              {joining ? t.joining : t.join}
+            </button>
+          </div>
+        </div>
+      )}
       {receiptOpen && (
         <div
           role="dialog"
