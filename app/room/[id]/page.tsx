@@ -3557,7 +3557,9 @@ export default function RoomPage() {
               <p className="mt-0.5 text-sm text-gray-500">
                 {(() => {
                   const v = t.joinBlurbs(state.payeeName || tx.genericHostName);
-                  return v[joinBlurbSeed % v.length];
+                  const blurb = v[joinBlurbSeed % v.length];
+                  const date = state.date ? formatReceiptDate(state.date, lang) : "";
+                  return date ? `${blurb}, ${date}` : blurb;
                 })()}
               </p>
             </div>
