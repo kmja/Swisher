@@ -2648,19 +2648,32 @@ export default function Page() {
                     )}
                   </span>
                 </div>
-                {/* Tally of dishes read so far, growing down the right edge —
-                    each emoji pops in as its line completes. Capped to the
-                    latest 12 so a long receipt doesn't overflow the photo. */}
+                {/* Emoji sprites: each dish the model reads pops up at a
+                    semi-random spot on the photo, floats up and fades out —
+                    same motion family as the join-dialog scatter. Positions
+                    hop by golden-angle steps so consecutive pops land far
+                    apart but deterministically (no reshuffle on re-render).
+                    Spent sprites end at opacity 0, so no pruning needed
+                    within a single scan. */}
                 {scanEmojis.length > 0 && (
-                  <div className="pointer-events-none absolute right-2.5 top-[4.5rem] flex flex-col items-center gap-1.5">
-                    {scanEmojis.slice(-12).map((it, i) => {
-                      const idx = scanEmojis.length - Math.min(scanEmojis.length, 12) + i;
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                    {scanEmojis.map((it, idx) => {
+                      const left = 10 + ((idx * 61.8034) % 72);
+                      const top = 14 + ((idx * 38.1966) % 52);
+                      const rot = ((idx * 47) % 25) - 12;
+                      const size = ["text-4xl", "text-5xl", "text-3xl"][idx % 3];
                       return (
                         <span
                           key={idx}
-                          className="count-pop flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-lg leading-none shadow backdrop-blur"
+                          className={`absolute ${size} leading-none`}
+                          style={{ left: `${left}%`, top: `${top}%`, transform: `rotate(${rot}deg)` }}
                         >
-                          <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                          <span
+                            className="emoji-sprite block drop-shadow-lg"
+                            style={{ animationDelay: `${(idx % 3) * 90}ms` }}
+                          >
+                            <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                          </span>
                         </span>
                       );
                     })}

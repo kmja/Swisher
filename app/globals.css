@@ -255,6 +255,25 @@ textarea {
   animation: count-pop 0.25s ease-out;
 }
 
+/* OCR emoji sprite: each dish the model reads pops up on the photo with a
+   bright overshoot, floats upward a touch, then fades away — the same
+   playful family as the join-dialog emoji scatter. Runs once (forwards)
+   so spent sprites end invisible. */
+@keyframes emoji-sprite {
+  0% { transform: translateY(10px) scale(0); opacity: 0; }
+  14% { transform: translateY(0) scale(1.3); opacity: 1; }
+  26% { transform: translateY(-2px) scale(1); opacity: 1; }
+  72% { transform: translateY(-16px) scale(1.02); opacity: 0.9; }
+  100% { transform: translateY(-32px) scale(0.85); opacity: 0; }
+}
+.emoji-sprite {
+  animation: emoji-sprite 2.4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Purely decorative — skip it entirely rather than pinning sprites on. */
+  .emoji-sprite { animation: none; opacity: 0; }
+}
+
 /* Person icon pops in when added to the group. */
 @keyframes pop-in {
   from { transform: scale(0); opacity: 0; }
