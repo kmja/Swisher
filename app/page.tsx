@@ -1707,15 +1707,64 @@ export default function Page() {
     setOcrError(null);
     setOcrFailed(false);
     setScanCount(null);
+    // Real line count observed while the OCR response streams in — used
+    // both for the live ticker and as the start of the settle animation.
+    let liveCount = 0;
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // Opt into NDJSON streaming: the server sends a progress event as
+        // each receipt line is read, so the counter ticks in real time
+        // instead of the host staring at a static "reading…" for 10s.
+        headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
         body: JSON.stringify(frames.length > 1 ? { images: frames } : { image: primary }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "OCR failed.");
-      setOcrModel(res.headers.get("X-Ocr-Model"));
+      let data: Record<string, unknown>;
+      if (res.ok && res.body && (res.headers.get("Content-Type") ?? "").includes("x-ndjson")) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let result: Record<string, unknown> | null = null;
+        let model: string | null = null;
+        let errorMsg: string | null = null;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            if (!line) continue;
+            try {
+              const evt = JSON.parse(line) as {
+                progress?: { count?: number };
+                result?: Record<string, unknown>;
+                model?: string;
+                error?: string;
+              };
+              if (typeof evt.progress?.count === "number" && evt.progress.count > liveCount) {
+                liveCount = evt.progress.count;
+                setScanCount(liveCount);
+              }
+              if (evt.result) {
+                result = evt.result;
+                model = typeof evt.model === "string" ? evt.model : null;
+              }
+              if (typeof evt.error === "string") errorMsg = evt.error;
+            } catch {
+              /* partial frame */
+            }
+          }
+        }
+        if (!result) throw new Error(errorMsg || "OCR failed.");
+        data = result;
+        setOcrModel(model);
+      } else {
+        data = await res.json();
+        if (!res.ok) throw new Error((data.error as string) || "OCR failed.");
+        setOcrModel(res.headers.get("X-Ocr-Model"));
+      }
       const mapped: UiItem[] = (
         data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number; translation?: string | null }[]
       ).map((it) => ({
@@ -1837,7 +1886,12 @@ export default function Page() {
         setOcrFailed(true);
         return;
       }
-      setScanCount(0);
+      // With streaming OCR the counter already ticked up live to the raw
+      // line count; the settle animation just eases from there to the
+      // final item count (quantity-split copies can make it higher). The
+      // non-streamed fallback still counts up from 0 like before.
+      const startCount = Math.min(liveCount, n);
+      setScanCount(startCount);
       // Run the count-up off requestAnimationFrame instead of
       // setInterval. iOS Safari throttles setInterval aggressively
       // when the camera is live and the device is mildly busy —
@@ -1847,12 +1901,12 @@ export default function Page() {
       // and the eased progress lands exactly on n at the duration
       // boundary.
       const targetCount = n;
-      const duration = Math.max(450, Math.min(900, targetCount * 90));
+      const duration = Math.max(450, Math.min(900, (targetCount - startCount) * 90));
       const start = performance.now();
       const step = (now: number) => {
         const t = Math.min(1, (now - start) / duration);
         const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-        setScanCount(Math.round(eased * targetCount));
+        setScanCount(Math.round(startCount + eased * (targetCount - startCount)));
         if (t < 1) {
           requestAnimationFrame(step);
         } else {
@@ -2704,7 +2758,9 @@ export default function Page() {
                         nothing to report. */}
                     {(ocrLoading || scanCount !== null) && (
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-swish-dark">
-                        {ocrLoading ? t.readingReceipt : t.linesFound(scanCount ?? 0)}
+                        {/* A live (streamed) count trumps the static "reading…"
+                            caption — the ticker IS the progress indicator. */}
+                        {scanCount !== null ? t.linesFound(scanCount) : t.readingReceipt}
                       </p>
                     )}
                     <p className="text-xl font-bold leading-tight text-ink">{t.inTheMeantime}</p>

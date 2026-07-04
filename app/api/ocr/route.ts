@@ -112,6 +112,78 @@ async function runClaude(
   return (json.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
 }
 
+/**
+ * Streaming variant of runClaude: same request with `stream: true`, parsing
+ * the SSE frames and invoking `onText` with the accumulated text after each
+ * delta so the route can emit live progress. Resolves to the full text.
+ */
+async function runClaudeStream(
+  apiKey: string,
+  images: { mediaType: string; base64: string }[],
+  onText: (soFar: string) => void,
+): Promise<string> {
+  const multi = images.length > 1;
+  const userContent: Array<{ type: string; [k: string]: unknown }> = [];
+  for (const img of images) {
+    userContent.push({
+      type: "image",
+      source: { type: "base64", media_type: img.mediaType, data: img.base64 },
+    });
+  }
+  userContent.push({ type: "text", text: multi ? USER_TEXT_MULTI : USER_TEXT });
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2048,
+      stream: true,
+      system: [{ type: "text", text: PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: userContent }],
+    }),
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`anthropic ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload) continue;
+      try {
+        const evt = JSON.parse(payload) as { type?: string; delta?: { type?: string; text?: string } };
+        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta" && evt.delta.text) {
+          text += evt.delta.text;
+          onText(text);
+        }
+      } catch {
+        /* ping / unknown frame */
+      }
+    }
+  }
+  return text;
+}
+
+/** How many complete item objects the (partial) model output contains so
+ *  far — drives the live "N lines found" counter while the model reads. */
+function countStreamedItems(text: string): number {
+  return (text.match(/\{[^{}]*"description"[^{}]*\}/g) ?? []).length;
+}
+
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
 /**
@@ -339,6 +411,73 @@ export async function POST(req: Request) {
       { error: "OCR isn't available here. Enter items manually." },
       { status: 503 },
     );
+  }
+
+  // Streaming path: when the client opts in (Accept: application/x-ndjson)
+  // and Claude is available, stream the read live — a progress event per
+  // completed line item, then the final result. The Workers AI fallbacks
+  // still run (non-streaming) inside the same response if Claude fails, so
+  // the contract is: 0+ progress lines, then exactly one result or error.
+  const wantsStream = (req.headers.get("accept") ?? "").includes("application/x-ndjson");
+  if (wantsStream && anthropicKey) {
+    const key = anthropicKey;
+    const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
+    const fallbacks = attempts.filter((a) => a.name !== ANTHROPIC_MODEL);
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) => {
+          try {
+            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+          } catch {
+            /* client went away mid-stream */
+          }
+        };
+        const diag: string[] = [];
+        try {
+          let lastCount = 0;
+          const text = await runClaudeStream(key, images, (soFar) => {
+            const count = countStreamedItems(soFar);
+            if (count > lastCount) {
+              lastCount = count;
+              send({ progress: { count } });
+            }
+          });
+          const parsed = extractJson(text);
+          if (parsed.items.length > 0 || parsed.total !== null) {
+            send({ result: await withCurrency(parsed), model: ANTHROPIC_MODEL });
+            controller.close();
+            return;
+          }
+          diag.push(`${ANTHROPIC_MODEL}:no-items`);
+        } catch (err) {
+          diag.push(`${ANTHROPIC_MODEL}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+        }
+        for (const { name, run } of fallbacks) {
+          try {
+            const text = resultText(await run());
+            if (!text.trim()) {
+              diag.push(`${name}:empty`);
+              continue;
+            }
+            const parsed = extractJson(text);
+            if (parsed.items.length > 0 || parsed.total !== null) {
+              send({ result: await withCurrency(parsed), model: name });
+              controller.close();
+              return;
+            }
+            diag.push(`${name}:no-items`);
+          } catch (err) {
+            diag.push(`${name}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+          }
+        }
+        send({ error: `Couldn't read the receipt. ${diag.join(" | ")}` });
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" },
+    });
   }
 
   const diag: string[] = [];
