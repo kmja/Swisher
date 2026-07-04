@@ -30,17 +30,11 @@ const R = {
     notFound: "Hittade inget rum med den koden.",
     unavailable: "Live-rum kräver den driftsatta versionen.",
     toStart: "Till start",
-    joinBlurbs: (host: string) => [
-      `Du gör upp med ${host}`,
-      `Dags att betala ${host} din del`,
-      `Du är skyldig ${host} för det här`,
-      `Gör rätt för dig mot ${host}`,
-      `${host} la ut – dags att betala tillbaka`,
-    ],
     paidBy: "Betald av",
     namePlaceholder: "Ditt namn",
     join: "Gå med",
     joining: "Går med…",
+    joinFailed: "Det gick inte att gå med. Kontrollera anslutningen och försök igen.",
     scanToJoin: "Skanna för att gå med",
     share: "Dela länk",
     copied: "Kopierad!",
@@ -110,17 +104,11 @@ const R = {
     notFound: "No room found for that code.",
     unavailable: "Live rooms need the deployed version.",
     toStart: "To start",
-    joinBlurbs: (host: string) => [
-      `You're squaring up with ${host}`,
-      `Time to pay ${host} your dues`,
-      `You owe ${host} for this one`,
-      `Settle up with ${host}`,
-      `${host} fronted it — pay them back`,
-    ],
     paidBy: "Paid by",
     namePlaceholder: "Your name",
     join: "Join",
     joining: "Joining…",
+    joinFailed: "Couldn't join. Check your connection and try again.",
     scanToJoin: "Scan to join",
     share: "Share link",
     copied: "Copied!",
@@ -190,17 +178,11 @@ const R = {
     notFound: "Kein Raum mit diesem Code gefunden.",
     unavailable: "Live-Räume benötigen die bereitgestellte Version.",
     toStart: "Zum Start",
-    joinBlurbs: (host: string) => [
-      `Du rechnest mit ${host} ab`,
-      `Zeit, ${host} deinen Teil zu zahlen`,
-      `Du schuldest ${host} noch was`,
-      `Mach's mit ${host} aus`,
-      `${host} hat ausgelegt – zahl zurück`,
-    ],
     paidBy: "Bezahlt von",
     namePlaceholder: "Dein Name",
     join: "Beitreten",
     joining: "Trete bei…",
+    joinFailed: "Beitritt fehlgeschlagen. Prüfe deine Verbindung und versuch's nochmal.",
     scanToJoin: "Scannen zum Beitreten",
     share: "Link teilen",
     copied: "Kopiert!",
@@ -270,17 +252,11 @@ const R = {
     notFound: "Aucune salle trouvée pour ce code.",
     unavailable: "Les salles en direct nécessitent la version déployée.",
     toStart: "Pour commencer",
-    joinBlurbs: (host: string) => [
-      `Tu règles tes comptes avec ${host}`,
-      `L'heure de payer ta part à ${host}`,
-      `Tu dois ta part à ${host}`,
-      `Fais les comptes avec ${host}`,
-      `${host} a avancé – rembourse`,
-    ],
     paidBy: "Payé par",
     namePlaceholder: "Ton prénom",
     join: "Rejoindre",
     joining: "Connexion…",
+    joinFailed: "Impossible de rejoindre. Vérifie ta connexion et réessaie.",
     scanToJoin: "Scanner pour rejoindre",
     share: "Partager le lien",
     copied: "Copié !",
@@ -350,17 +326,11 @@ const R = {
     notFound: "No se encontró ninguna sala con ese código.",
     unavailable: "Las salas en vivo necesitan la versión desplegada.",
     toStart: "Para empezar",
-    joinBlurbs: (host: string) => [
-      `Te pones a mano con ${host}`,
-      `Hora de pagarle a ${host} lo tuyo`,
-      `Le debes a ${host} esta`,
-      `Ajusta cuentas con ${host}`,
-      `${host} adelantó – devuélveselo`,
-    ],
     paidBy: "Pagado por",
     namePlaceholder: "Tu nombre",
     join: "Unirse",
     joining: "Uniéndose…",
+    joinFailed: "No se pudo unir. Comprueba tu conexión e inténtalo de nuevo.",
     scanToJoin: "Escanear para unirse",
     share: "Compartir enlace",
     copied: "¡Copiado!",
@@ -430,17 +400,11 @@ const R = {
     notFound: "Nessuna stanza trovata con quel codice.",
     unavailable: "Le stanze live richiedono la versione distribuita.",
     toStart: "Per iniziare",
-    joinBlurbs: (host: string) => [
-      `Fai i conti con ${host}`,
-      `Ora di dare a ${host} la tua parte`,
-      `Devi la tua parte a ${host}`,
-      `Salda con ${host}`,
-      `${host} ha anticipato – ripaga`,
-    ],
     paidBy: "Pagato da",
     namePlaceholder: "Il tuo nome",
     join: "Unisciti",
     joining: "Partecipando…",
+    joinFailed: "Impossibile unirsi. Controlla la connessione e riprova.",
     scanToJoin: "Scansiona per partecipare",
     share: "Condividi link",
     copied: "Copiato!",
@@ -510,17 +474,11 @@ const R = {
     notFound: "Geen kamer gevonden voor die code.",
     unavailable: "Live-kamers hebben de uitgerold versie nodig.",
     toStart: "Naar start",
-    joinBlurbs: (host: string) => [
-      `Je rekent af met ${host}`,
-      `Tijd om ${host} je deel te betalen`,
-      `Je bent ${host} nog wat schuldig`,
-      `Reken af met ${host}`,
-      `${host} schoot voor – betaal terug`,
-    ],
     paidBy: "Betaald door",
     namePlaceholder: "Jouw naam",
     join: "Meedoen",
     joining: "Deelnemen…",
+    joinFailed: "Deelnemen mislukt. Controleer je verbinding en probeer opnieuw.",
     scanToJoin: "Scannen om mee te doen",
     share: "Link delen",
     copied: "Gekopieerd!",
@@ -590,17 +548,11 @@ const R = {
     notFound: "Intet rum fundet for den kode.",
     unavailable: "Live-rum kræver den installerede version.",
     toStart: "Til start",
-    joinBlurbs: (host: string) => [
-      `Du gør op med ${host}`,
-      `Tid til at betale ${host} din del`,
-      `Du skylder ${host} for den her`,
-      `Gør regnskabet op med ${host}`,
-      `${host} lagde ud – betal tilbage`,
-    ],
     paidBy: "Betalt af",
     namePlaceholder: "Dit navn",
     join: "Deltag",
     joining: "Tilmelder…",
+    joinFailed: "Kunne ikke deltage. Tjek din forbindelse og prøv igen.",
     scanToJoin: "Scan for at deltage",
     share: "Del link",
     copied: "Kopieret!",
@@ -670,17 +622,11 @@ const R = {
     notFound: "Ingen rom funnet for den koden.",
     unavailable: "Live-rom trenger den deployede versjonen.",
     toStart: "Til start",
-    joinBlurbs: (host: string) => [
-      `Du gjør opp med ${host}`,
-      `På tide å betale ${host} din del`,
-      `Du skylder ${host} for denne`,
-      `Gjør opp med ${host}`,
-      `${host} la ut – betal tilbake`,
-    ],
     paidBy: "Betalt av",
     namePlaceholder: "Ditt navn",
     join: "Bli med",
     joining: "Blir med…",
+    joinFailed: "Kunne ikke bli med. Sjekk tilkoblingen og prøv igjen.",
     scanToJoin: "Skann for å bli med",
     share: "Del lenke",
     copied: "Kopiert!",
@@ -742,25 +688,19 @@ const R = {
     cancel: "Avbryt",
     coverFor: "Betaler også for",
     donate: "Kjøp Kvitt en kaffe",
-    swipeRemove: "poista",
-    swipeEdit: "muokkaa",
+    swipeRemove: "fjern",
+    swipeEdit: "endre",
   },
   fi: {
     loading: "Ladataan huonetta…",
     notFound: "Huonetta ei löydy sillä koodilla.",
     unavailable: "Live-huoneet tarvitsevat käyttöönotetun version.",
     toStart: "Aloitukseen",
-    joinBlurbs: (host: string) => [
-      `Sinun ja ${host}n välit selviksi`,
-      `Aika maksaa osuutesi ${host}lle`,
-      `Olet ${host}lle velkaa tästä`,
-      `Tasaa tilit ${host}n kanssa`,
-      `${host} maksoi – maksa takaisin`,
-    ],
     paidBy: "Maksaja",
     namePlaceholder: "Nimesi",
     join: "Liity",
     joining: "Liitytään…",
+    joinFailed: "Liittyminen epäonnistui. Tarkista yhteys ja yritä uudelleen.",
     scanToJoin: "Skannaa liittyäksesi",
     share: "Jaa linkki",
     copied: "Kopioitu!",
@@ -830,17 +770,11 @@ const R = {
     notFound: "Nie znaleziono pokoju dla tego kodu.",
     unavailable: "Pokoje na żywo wymagają wdrożonej wersji.",
     toStart: "Do startu",
-    joinBlurbs: (host: string) => [
-      `Rozliczasz się z ${host}`,
-      `Czas oddać ${host} swoją część`,
-      `Jesteś ${host} winien za to`,
-      `Wyrównaj rachunki z ${host}`,
-      `${host} zapłacił(a) – oddaj`,
-    ],
     paidBy: "Zapłacone przez",
     namePlaceholder: "Twoje imię",
     join: "Dołącz",
     joining: "Dołączanie…",
+    joinFailed: "Nie udało się dołączyć. Sprawdź połączenie i spróbuj ponownie.",
     scanToJoin: "Zeskanuj, aby dołączyć",
     share: "Udostępnij link",
     copied: "Skopiowano!",
@@ -910,17 +844,11 @@ const R = {
     notFound: "Nenhuma sala encontrada para esse código.",
     unavailable: "As salas ao vivo precisam da versão implementada.",
     toStart: "Para começar",
-    joinBlurbs: (host: string) => [
-      `Vais acertar contas com ${host}`,
-      `Hora de pagar a tua parte a ${host}`,
-      `Deves a tua parte a ${host}`,
-      `Acerta contas com ${host}`,
-      `${host} adiantou – paga de volta`,
-    ],
     paidBy: "Pago por",
     namePlaceholder: "O teu nome",
     join: "Entrar",
     joining: "A entrar…",
+    joinFailed: "Não foi possível entrar. Verifica a ligação e tenta novamente.",
     scanToJoin: "Digitalizar para entrar",
     share: "Partilhar link",
     copied: "Copiado!",
@@ -1061,6 +989,9 @@ export default function RoomPage() {
   // room-enter ref callback (fires during commit) can read it.
   const joinActiveRef = useRef(false);
   const joinNameRef = useRef<HTMLInputElement>(null);
+  // Inline error under the name field when a join attempt fails —
+  // without this a failed POST just stopped the spinner silently.
+  const [joinError, setJoinError] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   // Host's name / Swish number / group-size are always-visible input
@@ -1709,13 +1640,9 @@ export default function RoomPage() {
       });
       setDonateHref(`swish://payment?data=${encodeURIComponent(payload)}`);
     }
-    try {
-      const pid = localStorage.getItem(storageKey);
-      if (pid) setPersonId(pid);
-    } catch {
-      /* storage unavailable */
-    }
-  }, [storageKey]);
+    // (personId is seeded synchronously from localStorage in its useState
+    // initializer — no async read needed here anymore.)
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -1861,6 +1788,7 @@ export default function RoomPage() {
   async function join() {
     if (!name.trim() || joining) return;
     setJoining(true);
+    setJoinError(false);
     try {
       const res = await fetch(`/api/room/${code}`, {
         method: "POST",
@@ -1881,8 +1809,10 @@ export default function RoomPage() {
         // spinner through the transition instead of flashing back to Join.
         return;
       }
+      setJoinError(true);
       setJoining(false);
     } catch {
+      setJoinError(true);
       setJoining(false);
     }
   }
@@ -2269,6 +2199,11 @@ export default function RoomPage() {
             autoCapitalize="sentences"
             className="w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
           />
+          {joinError && (
+            <p role="alert" className="mt-2 text-sm text-red-600">
+              {t.joinFailed}
+            </p>
+          )}
           <button
             type="button"
             onClick={(e) => {

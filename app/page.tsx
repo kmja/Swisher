@@ -1269,8 +1269,8 @@ export default function Page() {
   const [roomError, setRoomError] = useState<string | null>(null);
 
   // Wizard exit animation: when createRoom flips creatingRoom true,
-  // slide the items section out to the left while the RoomSkeleton
-  // overlay slides in from the right. If the POST fails (creatingRoom
+  // slide the items section out to the left as the room page takes
+  // over from the right. If the POST fails (creatingRoom
   // goes back to false), play the inverse so the section returns to
   // its resting position. The "have we ever fired" ref guards the
   // initial-mount run from playing a phantom reverse animation.
