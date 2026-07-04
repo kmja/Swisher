@@ -12,6 +12,10 @@ declare module "cloudflare:workers" {
   interface DurableObjectState {
     storage: DurableObjectStorage;
     blockConcurrencyWhile<T>(cb: () => Promise<T>): Promise<T>;
+    /** Hibernation API: adopt a server-side socket so the runtime can evict
+     *  the DO from memory between messages without dropping connections. */
+    acceptWebSocket(ws: WebSocket, tags?: string[]): void;
+    getWebSockets(tag?: string): WebSocket[];
   }
   export abstract class DurableObject<Env = unknown> {
     protected ctx: DurableObjectState;
@@ -22,6 +26,14 @@ declare module "cloudflare:workers" {
 
 interface DurableObjectId {
   toString(): string;
+}
+
+/** Workers global for WebSocket upgrades: [0] goes back to the client in the
+ *  101 response, [1] is the server end the DO accepts. The DOM WebSocket type
+ *  is a compatible subset (send/close) of the workerd socket. */
+declare class WebSocketPair {
+  0: WebSocket;
+  1: WebSocket;
 }
 
 /** RPC stub: each method of the DO class, always returning a Promise. */

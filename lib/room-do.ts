@@ -100,6 +100,56 @@ export class RoomDO extends DurableObject {
   }
   private async save(state: RoomState): Promise<void> {
     await this.ctx.storage.put("state", state);
+    // Every mutation funnels through here, so broadcasting here keeps all
+    // connected phones live without each action having to remember to.
+    const msg = JSON.stringify({ type: "state", state });
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(msg);
+      } catch {
+        /* socket mid-close; it'll be reaped by webSocketClose */
+      }
+    }
+  }
+
+  /** WebSocket upgrade — reached directly from worker.ts (Next.js route
+   *  handlers can't return 101s). Uses the hibernation API so idle rooms
+   *  are evicted from memory while their sockets stay open. */
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      return new Response("Expected WebSocket upgrade", { status: 426 });
+    }
+    const pair = new WebSocketPair();
+    this.ctx.acceptWebSocket(pair[1]);
+    return new Response(null, { status: 101, webSocket: pair[0] } as ResponseInit);
+  }
+
+  /** Clients send "ping" as a keepalive; anything else is ignored — all
+   *  mutations go through the HTTP actions, sockets are receive-only. */
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    if (message === "ping") {
+      try {
+        ws.send("pong");
+      } catch {
+        /* closing */
+      }
+    }
+  }
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    try {
+      ws.close();
+    } catch {
+      /* already closed */
+    }
+  }
+
+  async webSocketError(ws: WebSocket): Promise<void> {
+    try {
+      ws.close();
+    } catch {
+      /* already closed */
+    }
   }
 
   /** Idempotent: returns the existing room if already initialised. */

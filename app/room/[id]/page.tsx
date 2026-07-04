@@ -1664,13 +1664,128 @@ export default function RoomPage() {
     }
   }, [code]);
 
+  // Live updates over a WebSocket to the room's Durable Object. The DO
+  // broadcasts full state on every mutation, so claims pop on everyone's
+  // phone instantly instead of waiting out the poll interval. Polling
+  // below stays as the fallback (and slows way down while the socket is
+  // healthy). `next dev` has no DO — the socket just fails and polling
+  // carries the room like before.
+  const [wsConnected, setWsConnected] = useState(false);
+  // Socket messages must not clobber the edit form mid-typing; mirror the
+  // edit state into a ref so the handler sees it without resubscribing.
+  const editingRef = useRef(false);
+  editingRef.current = !!(editingItemId || addingItem);
+  const hasRoom = !!state;
+  useEffect(() => {
+    if (!hasRoom || typeof WebSocket === "undefined") return;
+    let ws: WebSocket | null = null;
+    let closed = false;
+    let attempt = 0;
+    let everConnected = false;
+    let retryTimer: number | undefined;
+    let pingTimer: number | undefined;
+
+    const teardownSocket = () => {
+      setWsConnected(false);
+      if (pingTimer !== undefined) {
+        clearInterval(pingTimer);
+        pingTimer = undefined;
+      }
+    };
+    const scheduleRetry = () => {
+      if (closed) return;
+      attempt += 1;
+      // Never-connected (e.g. next dev, old deploy): give up after a few
+      // tries and let polling own the room. A socket that HAS worked
+      // keeps retrying forever — flaky restaurant wifi comes and goes.
+      if (!everConnected && attempt > 5) return;
+      const delay = Math.min(15000, 1000 * 2 ** Math.min(attempt, 4));
+      retryTimer = window.setTimeout(connect, delay);
+    };
+    const connect = () => {
+      if (closed) return;
+      const proto = window.location.protocol === "https:" ? "wss" : "ws";
+      try {
+        ws = new WebSocket(`${proto}://${window.location.host}/api/room/${code}/ws`);
+      } catch {
+        scheduleRetry();
+        return;
+      }
+      ws.onopen = () => {
+        attempt = 0;
+        everConnected = true;
+        setWsConnected(true);
+        // Catch anything that happened while we weren't connected.
+        refresh();
+        pingTimer = window.setInterval(() => {
+          try {
+            ws?.send("ping");
+          } catch {
+            /* closing */
+          }
+        }, 25000);
+      };
+      ws.onmessage = (e) => {
+        if (typeof e.data !== "string" || e.data === "pong") return;
+        // Skip while editing — the poll effect refreshes on edit-end.
+        if (editingRef.current) return;
+        try {
+          const msg = JSON.parse(e.data) as { type?: string; state?: RoomState };
+          if (msg.type === "state" && msg.state) {
+            setState(msg.state);
+            everLoadedRef.current = true;
+            setStatus("ok");
+          }
+        } catch {
+          /* malformed frame — polling still reconciles */
+        }
+      };
+      ws.onclose = () => {
+        teardownSocket();
+        scheduleRetry();
+      };
+      ws.onerror = () => {
+        try {
+          ws?.close();
+        } catch {
+          /* already closed */
+        }
+      };
+    };
+    // Mobile browsers kill sockets when the tab is backgrounded (e.g. the
+    // guest hops to the Swish app to pay). Reconnect the moment they're back.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || closed) return;
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+      attempt = 0;
+      connect();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    connect();
+    return () => {
+      closed = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+      if (pingTimer !== undefined) clearInterval(pingTimer);
+      try {
+        ws?.close();
+      } catch {
+        /* already closed */
+      }
+      setWsConnected(false);
+    };
+  }, [hasRoom, code, refresh]);
+
   useEffect(() => {
     refresh();
     // Pause live polling while editing/adding an item, so it can't clobber inputs.
     if (editingItemId || addingItem) return;
-    const timer = setInterval(refresh, 2500);
+    // With a live socket the poll is just a safety net; without one it's
+    // the transport.
+    const timer = setInterval(refresh, wsConnected ? 15000 : 2500);
     return () => clearInterval(timer);
-  }, [refresh, editingItemId, addingItem]);
+  }, [refresh, editingItemId, addingItem, wsConnected]);
 
   // Remember this room locally so it shows up in history.
   useEffect(() => {
