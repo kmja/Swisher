@@ -2622,6 +2622,36 @@ export default function Page() {
                   <span className="absolute bottom-0 left-0 h-6 w-6 border-b-4 border-l-4 border-swish" />
                   <span className="absolute bottom-0 right-0 h-6 w-6 border-b-4 border-r-4 border-swish" />
                 </div>
+                {/* Emoji sprites clustered around the ticker: each dish the
+                    model reads pops up at a slightly different spot flanking
+                    the HUD pill, floats up and fades out — same motion family
+                    as the join-dialog scatter. Golden-angle position hops keep
+                    consecutive pops apart but deterministic. Rendered BEFORE
+                    the pill so the count stays legible on top. */}
+                {scanEmojis.length > 0 && (
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-44">
+                    {scanEmojis.map((it, idx) => {
+                      const left = 24 + ((idx * 61.8034) % 52);
+                      const top = 16 + ((idx * 43.7) % 94);
+                      const rot = ((idx * 47) % 25) - 12;
+                      const size = ["text-3xl", "text-4xl", "text-2xl"][idx % 3];
+                      return (
+                        <span
+                          key={idx}
+                          className={`absolute ${size} leading-none`}
+                          style={{ left: `${left}%`, top: `${top}px`, transform: `rotate(${rot}deg)` }}
+                        >
+                          <span
+                            className="emoji-sprite block drop-shadow-lg"
+                            style={{ animationDelay: `${(idx % 3) * 90}ms` }}
+                          >
+                            <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
                 {/* Live progress HUD on the photo itself. The streamed line
                     count used to live only in the setup card's small caption,
                     which the host dismisses early — so the read looked like
@@ -2648,37 +2678,6 @@ export default function Page() {
                     )}
                   </span>
                 </div>
-                {/* Emoji sprites: each dish the model reads pops up at a
-                    semi-random spot on the photo, floats up and fades out —
-                    same motion family as the join-dialog scatter. Positions
-                    hop by golden-angle steps so consecutive pops land far
-                    apart but deterministically (no reshuffle on re-render).
-                    Spent sprites end at opacity 0, so no pruning needed
-                    within a single scan. */}
-                {scanEmojis.length > 0 && (
-                  <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                    {scanEmojis.map((it, idx) => {
-                      const left = 10 + ((idx * 61.8034) % 72);
-                      const top = 14 + ((idx * 38.1966) % 52);
-                      const rot = ((idx * 47) % 25) - 12;
-                      const size = ["text-4xl", "text-5xl", "text-3xl"][idx % 3];
-                      return (
-                        <span
-                          key={idx}
-                          className={`absolute ${size} leading-none`}
-                          style={{ left: `${left}%`, top: `${top}%`, transform: `rotate(${rot}deg)` }}
-                        >
-                          <span
-                            className="emoji-sprite block drop-shadow-lg"
-                            style={{ animationDelay: `${(idx % 3) * 90}ms` }}
-                          >
-                            <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
             {imageUrl ? null : (
