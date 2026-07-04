@@ -2589,7 +2589,7 @@ export default function Page() {
                     user needs to SEE the receipt being scanned, not a
                     pink grid. */}
                 <div className="absolute inset-0 bg-black/20" />
-                <div className="scan-grid absolute inset-0 opacity-20" />
+                <div className="scan-grid scan-grid-drift absolute inset-0 opacity-20" />
                 {/* Real "found-line" markers — rectangles computed by
                     detectTextLines from the captured photo's actual
                     pixels (dark rows ≈ text rows). Each fades in with
@@ -2615,6 +2615,36 @@ export default function Page() {
                 {/* sweeping band + bright glowing beam */}
                 <div className="scanline absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-transparent via-swish/45 to-transparent" />
                 <div className="scanline absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
+                {/* cross-hatch: a soft return beam and a slow vertical beam
+                    (same layers the live viewfinder runs) so the sweep reads
+                    as a machine working in two axes, not a screensaver */}
+                <div className="vf-scan-y-back pointer-events-none absolute inset-0">
+                  <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-swish/50 to-transparent" />
+                </div>
+                <div className="vf-scan-x pointer-events-none absolute inset-0">
+                  <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-transparent via-swish/40 to-transparent shadow-[0_0_16px_3px_rgba(238,92,154,0.25)]" />
+                </div>
+                {/* marching-ants perimeter — dashes crawling clockwise */}
+                <div className="pointer-events-none absolute inset-x-2 top-2 h-[2px] scan-ants-h" />
+                <div className="pointer-events-none absolute inset-y-2 right-2 w-[2px] scan-ants-v" />
+                <div className="pointer-events-none absolute inset-x-2 bottom-2 h-[2px] scan-ants-h ants-reverse" />
+                <div className="pointer-events-none absolute inset-y-2 left-2 w-[2px] scan-ants-v ants-reverse" />
+                {/* instrument ticks: blinking marks on both edges at the
+                    detected text rows, staggered down the receipt */}
+                <div className="pointer-events-none absolute inset-0">
+                  {detectedLines.filter((_, i) => i % 2 === 0).map((line, i) => (
+                    <span key={i}>
+                      <span
+                        className="scan-tick absolute left-1 h-[2px] w-2.5 bg-white/80"
+                        style={{ top: `${line.y}%`, animationDelay: `${(i % 5) * 0.26}s` }}
+                      />
+                      <span
+                        className="scan-tick absolute right-1 h-[2px] w-2.5 bg-white/80"
+                        style={{ top: `${line.y}%`, animationDelay: `${(i % 5) * 0.26}s` }}
+                      />
+                    </span>
+                  ))}
+                </div>
                 {/* glowing corner brackets */}
                 <div className="scan-glow pointer-events-none absolute inset-4">
                   <span className="absolute left-0 top-0 h-6 w-6 border-l-4 border-t-4 border-swish" />

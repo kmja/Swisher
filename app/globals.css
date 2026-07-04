@@ -244,6 +244,48 @@ textarea {
   animation: scan-pulse 1.15s ease-in-out infinite;
 }
 
+/* ── OCR overlay tech dressing ─────────────────────────────────────────
+   scan-grid-drift  the pink grid crawls diagonally, one 22px cell per
+                    loop, so the backdrop reads as live machinery.
+   scan-ants-h/v    marching-ants perimeter: thin dashed strips on each
+                    photo edge whose dashes march clockwise (the right
+                    and bottom strips run the same keyframes reversed).
+   scan-tick        small edge ticks blinking at the detected text rows —
+                    the "instrument readout" for the line markers. */
+@keyframes scan-grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 22px, 22px 0; }
+}
+.scan-grid-drift {
+  animation: scan-grid-drift 2.8s linear infinite;
+}
+@keyframes scan-ants-h {
+  from { background-position-x: 0; }
+  to { background-position-x: 24px; }
+}
+@keyframes scan-ants-v {
+  from { background-position-y: 0; }
+  to { background-position-y: 24px; }
+}
+.scan-ants-h {
+  background-image: repeating-linear-gradient(90deg, rgba(238, 92, 154, 0.85) 0 10px, transparent 10px 24px);
+  animation: scan-ants-h 0.8s linear infinite;
+}
+.scan-ants-v {
+  background-image: repeating-linear-gradient(180deg, rgba(238, 92, 154, 0.85) 0 10px, transparent 10px 24px);
+  animation: scan-ants-v 0.8s linear infinite;
+}
+.ants-reverse {
+  animation-direction: reverse;
+}
+@keyframes scan-tick-blink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.scan-tick {
+  animation: scan-tick-blink 1.3s ease-in-out infinite;
+}
+
 /* Little pop each time the live OCR line counter ticks up — the HUD text
    remounts per count (key={scanCount}) so the animation replays. */
 @keyframes count-pop {
