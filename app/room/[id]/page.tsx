@@ -1824,12 +1824,12 @@ export default function RoomPage() {
     if (personId) {
       setJoinShown(false);
       setJoinFlyOut(true);
-      // Hold the mount long enough for the emojis to fly clear (500ms) —
-      // longer than the 300ms card/backdrop fade.
+      // Hold the mount long enough for the slowed exit to finish — the
+      // 850ms emoji fly is the longest of the exit animations.
       const timer = setTimeout(() => {
         setJoinMounted(false);
         setJoining(false);
-      }, 500);
+      }, 900);
       return () => clearTimeout(timer);
     }
   }, [state, personId]);
@@ -2228,15 +2228,15 @@ export default function RoomPage() {
           The card + emojis fade in over it. Separate from the card so the
           flying emojis stay crisp. */}
       <div
-        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-out ${
-          joinFlyOut ? "opacity-0" : "opacity-100"
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity ease-out ${
+          joinFlyOut ? "duration-700 opacity-0" : "duration-300 opacity-100"
         }`}
       />
       <div className="relative w-full max-w-md">
         <div
-          className={`relative rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-opacity duration-300 ease-out ${
-            joinShown ? "opacity-100" : "opacity-0"
-          }`}
+          className={`relative rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/10 transition-opacity ease-out ${
+            joinFlyOut ? "duration-700" : "duration-300"
+          } ${joinShown ? "opacity-100" : "opacity-0"}`}
         >
           {/* Compact context: meal name, then the date and who paid. */}
           {state && (
@@ -2257,7 +2257,22 @@ export default function RoomPage() {
           />
           <button
             type="button"
-            onClick={join}
+            onClick={(e) => {
+              // Super-clear press: a quick squash then an overshoot pop so
+              // the tap registers unmistakably before the dialog leaves.
+              if (typeof e.currentTarget.animate === "function") {
+                e.currentTarget.animate(
+                  [
+                    { transform: "scale(1)" },
+                    { transform: "scale(0.9)", offset: 0.3 },
+                    { transform: "scale(1.06)", offset: 0.65 },
+                    { transform: "scale(1)" },
+                  ],
+                  { duration: 360, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
+                );
+              }
+              join();
+            }}
             disabled={!name.trim() || joining}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-swish px-4 py-3.5 font-semibold text-white active:bg-swish-dark disabled:opacity-50"
           >
@@ -2318,7 +2333,7 @@ export default function RoomPage() {
                       left: s.left,
                       right: s.right,
                       transform: joinFlyOut ? flown : rest,
-                      transition: "transform 500ms cubic-bezier(0.4, 0, 0.7, 0.2)",
+                      transition: "transform 850ms cubic-bezier(0.4, 0, 0.7, 0.2)",
                     }}
                   >
                     <span
