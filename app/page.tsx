@@ -2598,37 +2598,32 @@ export default function Page() {
                     Cap the per-marker delay at 1.5 s total so long
                     receipts don't take forever to light up. */}
                 <div className="pointer-events-none absolute inset-0">
-                  {detectedLines.map((line, i) => (
-                    <span
-                      key={i}
-                      className="ocr-line absolute rounded-[2px] bg-swish/45 shadow-[0_0_6px_2px_rgba(238,92,154,0.45)]"
-                      style={{
-                        top: `${line.y}%`,
-                        left: `${line.x}%`,
-                        width: `${line.w}%`,
-                        height: `${Math.max(0.6, Math.min(2.5, line.h))}%`,
-                        animationDelay: `${Math.min(1.5, i * 0.05)}s`,
-                      }}
-                    />
-                  ))}
+                  {detectedLines.map((line, i) => {
+                    const reveal = Math.min(1.5, i * 0.05);
+                    return (
+                      <span
+                        key={i}
+                        className="ocr-line absolute rounded-[3px] bg-swish/75 shadow-[0_0_10px_3px_rgba(238,92,154,0.65)]"
+                        style={{
+                          top: `${line.y}%`,
+                          left: `${line.x}%`,
+                          width: `${line.w}%`,
+                          height: `${Math.max(0.8, Math.min(2.8, line.h))}%`,
+                          // Comma list: first delay staggers the reveal wipe,
+                          // second starts the breathe once the wipe is done.
+                          animationDelay: `${reveal}s, ${reveal + 0.45}s`,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
-                {/* sweeping band + bright glowing beam */}
-                <div className="scanline absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-transparent via-swish/45 to-transparent" />
-                <div className="scanline absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
-                {/* cross-hatch: a soft return beam and a slow vertical beam
-                    (same layers the live viewfinder runs) so the sweep reads
-                    as a machine working in two axes, not a screensaver */}
-                <div className="vf-scan-y-back pointer-events-none absolute inset-0">
-                  <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-swish/50 to-transparent" />
+                {/* one slow beam sweeping top → bottom with a soft comet
+                    tail — the single moving element; the growing block of
+                    found-row markers carries the progress story */}
+                <div className="vf-scan-y pointer-events-none absolute inset-0" style={{ animationDuration: "4.6s" }}>
+                  <div className="absolute inset-x-0 top-0 h-24 -translate-y-full bg-gradient-to-b from-transparent to-swish/25" />
+                  <div className="absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
                 </div>
-                <div className="vf-scan-x pointer-events-none absolute inset-0">
-                  <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-transparent via-swish/40 to-transparent shadow-[0_0_16px_3px_rgba(238,92,154,0.25)]" />
-                </div>
-                {/* marching-ants perimeter — dashes crawling clockwise */}
-                <div className="pointer-events-none absolute inset-x-2 top-2 h-[2px] scan-ants-h" />
-                <div className="pointer-events-none absolute inset-y-2 right-2 w-[2px] scan-ants-v" />
-                <div className="pointer-events-none absolute inset-x-2 bottom-2 h-[2px] scan-ants-h ants-reverse" />
-                <div className="pointer-events-none absolute inset-y-2 left-2 w-[2px] scan-ants-v ants-reverse" />
                 {/* instrument ticks: blinking marks on both edges at the
                     detected text rows, staggered down the receipt */}
                 <div className="pointer-events-none absolute inset-0">

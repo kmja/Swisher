@@ -131,7 +131,7 @@ const isFood = makeMatcher([
 
 const isStarter = makeMatcher([
   "förrätt", "starter", "appetizer", "antipasti", "antipasto", "tapas", "meze", "mezze",
-  "amuse", "bruschetta", "carpaccio", "tartare", "vitello tonnato", "räkcocktail",
+  "amuse", "bruschetta", "bruscheta", "bruschette", "carpaccio", "tartare", "vitello tonnato", "räkcocktail",
   "toast skagen", "skagentoast", "löjromstoast",
   "charkbricka", "ostbricka", "delikatessbricka", "skaldjursplateau", "skaldjursplatå",
   "delningsbricka",
@@ -222,7 +222,10 @@ export const CUSTOM_ICON_NAMES: Record<string, string[]> = {
     "öl kanna", "60cl öl", "70cl öl", "stop", "öl stop",
   ],
   sangria: ["sangria", "karaff sangria", "kanna sangria", "tillbringare sangria"],
-  bruschetta: ["bruschetta"],
+  // "bruscheta" = Romanian spelling (single t), "bruschette" = Italian
+  // plural — without these the icon falls through to the model's emoji,
+  // which describes the topping and differs per line.
+  bruschetta: ["bruschetta", "bruscheta", "bruschette"],
   carpaccio: ["carpaccio", "vitello tonnato"],
 };
 
@@ -345,7 +348,7 @@ const autoSharedMatch = makeMatcher([
 ]);
 const maybeSharedMatch = makeMatcher([
   "mixed grill", "blandad grill", "flaska", "btl", "bottle", "bröd", "vitlöksbröd", "oliver", "olives",
-  "nachos", "guacamole", "hummus", "bruschetta", "lökringar", "edamame",
+  "nachos", "guacamole", "hummus", "bruschetta", "bruscheta", "lökringar", "edamame",
 ]);
 
 /**

@@ -59,6 +59,12 @@ describe("emojiFor", () => {
     // Lasagne has its own hand-drawn icon, not the generic 🍝 spaghetti.
     expect(emojiFor("Vegetarisk lasagne")).toBe("ci:lasagne");
     expect(emojiFor("Lasagna bolognese")).toBe("ci:lasagne");
+    // Spelling variants must hit the same icon — the Romanian single-t
+    // "bruscheta" used to fall through to the model's per-topping emoji,
+    // giving two bruschettas on one receipt different icons.
+    expect(emojiFor("Bruscheta cu roșii", undefined, "🍅")).toBe("ci:bruschetta");
+    expect(emojiFor("Bruscheta cu file", undefined, "🥩")).toBe("ci:bruschetta");
+    expect(emojiFor("Bruschetta al pomodoro")).toBe("ci:bruschetta");
   });
 
   it("picks the right water container instead of the generic droplet", () => {
