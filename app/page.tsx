@@ -1060,6 +1060,9 @@ export default function Page() {
   const [ocrModel, setOcrModel] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
+  // Items streamed in so far during the current scan — enough display
+  // fields to pop each dish's emoji on the photo as the model reads it.
+  const [scanEmojis, setScanEmojis] = useState<{ description: string; emoji?: string; category?: string }[]>([]);
   // Text-row rectangles detected from the captured photo's pixels —
   // black ink on white paper makes a dark-row scan a good enough
   // approximation that we can paint REAL "found line" markers on the
@@ -1698,6 +1701,7 @@ export default function Page() {
     setOcrError(null);
     setOcrFailed(false);
     setScanCount(null);
+    setScanEmojis([]);
     // Real line count observed while the OCR response streams in — used
     // both for the live ticker and as the start of the settle animation.
     let liveCount = 0;
@@ -1736,7 +1740,7 @@ export default function Page() {
             if (!line) continue;
             try {
               const evt = JSON.parse(line) as {
-                progress?: { count?: number };
+                progress?: { count?: number; item?: { description?: string; emoji?: string; category?: string } };
                 result?: Record<string, unknown>;
                 model?: string;
                 error?: string;
@@ -1744,6 +1748,15 @@ export default function Page() {
               if (typeof evt.progress?.count === "number" && evt.progress.count > liveCount) {
                 liveCount = evt.progress.count;
                 setScanCount(liveCount);
+                const it = evt.progress.item;
+                if (it && typeof it.description === "string" && it.description) {
+                  const found = {
+                    description: it.description,
+                    emoji: typeof it.emoji === "string" ? it.emoji : undefined,
+                    category: typeof it.category === "string" ? it.category : undefined,
+                  };
+                  setScanEmojis((prev) => [...prev, found]);
+                }
               }
               if (evt.result) {
                 result = evt.result;
@@ -2613,11 +2626,21 @@ export default function Page() {
                     count used to live only in the setup card's small caption,
                     which the host dismisses early — so the read looked like
                     a bare looping animation. Top-centre so the fixed setup
-                    card at the bottom never covers it. */}
+                    card at the bottom never covers it. The just-read dish's
+                    emoji pops next to the count. */}
                 <div className="pointer-events-none absolute inset-x-0 top-7 flex justify-center">
                   <span className="rounded-full bg-black/65 px-4 py-1.5 text-sm font-semibold text-white shadow-lg backdrop-blur">
                     {scanCount !== null && scanCount > 0 ? (
-                      <span key={scanCount} className="count-pop tabular-nums">
+                      <span key={scanCount} className="count-pop flex items-center gap-2 tabular-nums">
+                        {scanEmojis.length > 0 && (
+                          <span className="text-lg leading-none">
+                            <ItemEmoji
+                              description={scanEmojis[scanEmojis.length - 1].description}
+                              hint={scanEmojis[scanEmojis.length - 1].category}
+                              modelEmoji={scanEmojis[scanEmojis.length - 1].emoji}
+                            />
+                          </span>
+                        )}
                         {t.linesFound(scanCount)}
                       </span>
                     ) : (
@@ -2625,6 +2648,24 @@ export default function Page() {
                     )}
                   </span>
                 </div>
+                {/* Tally of dishes read so far, growing down the right edge —
+                    each emoji pops in as its line completes. Capped to the
+                    latest 12 so a long receipt doesn't overflow the photo. */}
+                {scanEmojis.length > 0 && (
+                  <div className="pointer-events-none absolute right-2.5 top-[4.5rem] flex flex-col items-center gap-1.5">
+                    {scanEmojis.slice(-12).map((it, i) => {
+                      const idx = scanEmojis.length - Math.min(scanEmojis.length, 12) + i;
+                      return (
+                        <span
+                          key={idx}
+                          className="count-pop flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-lg leading-none shadow backdrop-blur"
+                        >
+                          <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
             {imageUrl ? null : (

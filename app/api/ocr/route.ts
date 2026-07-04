@@ -178,10 +178,12 @@ async function runClaudeStream(
   return text;
 }
 
-/** How many complete item objects the (partial) model output contains so
- *  far — drives the live "N lines found" counter while the model reads. */
-function countStreamedItems(text: string): number {
-  return (text.match(/\{[^{}]*"description"[^{}]*\}/g) ?? []).length;
+/** The complete item objects the (partial) model output contains so far —
+ *  drives the live "N lines found" counter and the per-item emoji pops
+ *  while the model reads. Items are flat objects, so brace-free matching
+ *  finds exactly the finished ones. */
+function streamedItems(text: string): string[] {
+  return text.match(/\{[^{}]*"description"[^{}]*\}/g) ?? [];
 }
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
@@ -446,10 +448,23 @@ export async function POST(req: Request) {
         try {
           let lastCount = 0;
           const text = await runClaudeStream(key, images, (soFar) => {
-            const count = countStreamedItems(soFar);
-            if (count > lastCount) {
-              lastCount = count;
-              send({ progress: { count } });
+            const found = streamedItems(soFar);
+            if (found.length > lastCount) {
+              lastCount = found.length;
+              // Ship the just-finished item's display fields with the tick
+              // so the client can pop its emoji on the photo.
+              let item: { description?: string; emoji?: string; category?: string } | undefined;
+              try {
+                const it = JSON.parse(found[found.length - 1]) as Record<string, unknown>;
+                item = {
+                  description: typeof it.description === "string" ? it.description : undefined,
+                  emoji: typeof it.emoji === "string" ? it.emoji : undefined,
+                  category: typeof it.category === "string" ? it.category : undefined,
+                };
+              } catch {
+                /* odd escaping — the count still ticks */
+              }
+              send({ progress: { count: lastCount, item } });
             }
           });
           const parsed = extractJson(text);
