@@ -413,13 +413,18 @@ export async function POST(req: Request) {
     );
   }
 
-  // Streaming path: when the client opts in (Accept: application/x-ndjson)
-  // and Claude is available, stream the read live — a progress event per
-  // completed line item, then the final result. The Workers AI fallbacks
-  // still run (non-streaming) inside the same response if Claude fails, so
-  // the contract is: 0+ progress lines, then exactly one result or error.
-  const wantsStream = (req.headers.get("accept") ?? "").includes("application/x-ndjson");
-  if (wantsStream && anthropicKey) {
+  // Streaming path: when the client opts in via Accept, stream the read
+  // live — a progress event per completed line item, then the final
+  // result. The Workers AI fallbacks still run (non-streaming) inside the
+  // same response if Claude fails, so the contract is: 0+ progress
+  // events, then exactly one result or error. SSE is preferred — it's
+  // the one content type every hop (Cloudflare, proxies, browsers)
+  // treats as strictly unbuffered; x-ndjson is kept for one-deploy-old
+  // clients.
+  const accept = req.headers.get("accept") ?? "";
+  const wantsSse = accept.includes("text/event-stream");
+  const wantsNdjson = accept.includes("application/x-ndjson");
+  if ((wantsSse || wantsNdjson) && anthropicKey) {
     const key = anthropicKey;
     const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
     const fallbacks = attempts.filter((a) => a.name !== ANTHROPIC_MODEL);
@@ -428,11 +433,15 @@ export async function POST(req: Request) {
       async start(controller) {
         const send = (obj: unknown) => {
           try {
-            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+            const json = JSON.stringify(obj);
+            controller.enqueue(encoder.encode(wantsSse ? `data: ${json}\n\n` : `${json}\n`));
           } catch {
             /* client went away mid-stream */
           }
         };
+        // Flush an immediate no-op frame so headers + first byte leave
+        // right away — some layers hold the response until first write.
+        send({ progress: { count: 0 } });
         const diag: string[] = [];
         try {
           let lastCount = 0;
@@ -476,7 +485,13 @@ export async function POST(req: Request) {
       },
     });
     return new Response(stream, {
-      headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" },
+      headers: {
+        "Content-Type": wantsSse ? "text/event-stream; charset=utf-8" : "application/x-ndjson",
+        // no-transform stops intermediary compression from re-buffering
+        // the stream; X-Accel-Buffering covers nginx-style proxies.
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+      },
     });
   }
 

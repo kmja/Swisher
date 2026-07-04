@@ -1713,14 +1713,17 @@ export default function Page() {
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
-        // Opt into NDJSON streaming: the server sends a progress event as
-        // each receipt line is read, so the counter ticks in real time
-        // instead of the host staring at a static "reading…" for 10s.
-        headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
+        // Opt into streaming: the server sends a progress event as each
+        // receipt line is read, so the counter ticks in real time instead
+        // of the host staring at a static "reading…" for 10s. SSE is
+        // preferred (never buffered by any hop); x-ndjson keeps a
+        // one-deploy-old server streaming too.
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/x-ndjson" },
         body: JSON.stringify(frames.length > 1 ? { images: frames } : { image: primary }),
       });
+      const resType = res.headers.get("Content-Type") ?? "";
       let data: Record<string, unknown>;
-      if (res.ok && res.body && (res.headers.get("Content-Type") ?? "").includes("x-ndjson")) {
+      if (res.ok && res.body && (resType.includes("x-ndjson") || resType.includes("event-stream"))) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = "";
@@ -1733,8 +1736,12 @@ export default function Page() {
           buf += decoder.decode(value, { stream: true });
           let nl: number;
           while ((nl = buf.indexOf("\n")) >= 0) {
-            const line = buf.slice(0, nl).trim();
+            const raw = buf.slice(0, nl).trim();
             buf = buf.slice(nl + 1);
+            // Accept both stream formats: SSE frames ("data: {...}",
+            // ":" comments, blank separators) and bare NDJSON lines.
+            if (!raw || raw.startsWith(":")) continue;
+            const line = raw.startsWith("data:") ? raw.slice(5).trim() : raw;
             if (!line) continue;
             try {
               const evt = JSON.parse(line) as {
