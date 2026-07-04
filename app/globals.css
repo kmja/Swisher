@@ -244,6 +244,17 @@ textarea {
   animation: scan-pulse 1.15s ease-in-out infinite;
 }
 
+/* Little pop each time the live OCR line counter ticks up — the HUD text
+   remounts per count (key={scanCount}) so the animation replays. */
+@keyframes count-pop {
+  from { transform: scale(1.35); }
+  to { transform: scale(1); }
+}
+.count-pop {
+  display: inline-block;
+  animation: count-pop 0.25s ease-out;
+}
+
 /* Person icon pops in when added to the group. */
 @keyframes pop-in {
   from { transform: scale(0); opacity: 0; }

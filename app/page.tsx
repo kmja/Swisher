@@ -1078,7 +1078,6 @@ export default function Page() {
   // "noPrices" = OCR found item lines but none had a price (e.g. an
   // online-order pickup slip lists the order but no money).
   const [ocrFailReason, setOcrFailReason] = useState<"general" | "noPrices">("general");
-  const [scanPhase, setScanPhase] = useState(0);
   // True between OCR-complete and host-info-complete: the scan overlay keeps
   // its setup card up so the host can finish typing their name & phone
   // before the app advances to the items step.
@@ -1432,14 +1431,6 @@ export default function Page() {
     setRateDate(date);
     setPayMethod(next === "EUR" ? "sepa" : "swish");
   }
-
-  // Cycle the scanning status text while OCR runs.
-  useEffect(() => {
-    if (!ocrLoading) return;
-    setScanPhase(0);
-    const iv = setInterval(() => setScanPhase((p) => p + 1), 900);
-    return () => clearInterval(iv);
-  }, [ocrLoading]);
 
   // Detect text rows in the captured photo as soon as OCR kicks off —
   // shows up as a stream of pink rectangles laid down on the receipt
@@ -2617,6 +2608,22 @@ export default function Page() {
                   <span className="absolute right-0 top-0 h-6 w-6 border-r-4 border-t-4 border-swish" />
                   <span className="absolute bottom-0 left-0 h-6 w-6 border-b-4 border-l-4 border-swish" />
                   <span className="absolute bottom-0 right-0 h-6 w-6 border-b-4 border-r-4 border-swish" />
+                </div>
+                {/* Live progress HUD on the photo itself. The streamed line
+                    count used to live only in the setup card's small caption,
+                    which the host dismisses early — so the read looked like
+                    a bare looping animation. Top-centre so the fixed setup
+                    card at the bottom never covers it. */}
+                <div className="pointer-events-none absolute inset-x-0 top-7 flex justify-center">
+                  <span className="rounded-full bg-black/65 px-4 py-1.5 text-sm font-semibold text-white shadow-lg backdrop-blur">
+                    {scanCount !== null && scanCount > 0 ? (
+                      <span key={scanCount} className="count-pop tabular-nums">
+                        {t.linesFound(scanCount)}
+                      </span>
+                    ) : (
+                      <span className="scan-pulse">{t.readingReceipt}</span>
+                    )}
+                  </span>
                 </div>
               </div>
             )}
