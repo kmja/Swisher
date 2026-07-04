@@ -255,23 +255,44 @@ textarea {
   animation: count-pop 0.25s ease-out;
 }
 
-/* OCR emoji sprite: each dish the model reads pops up on the photo with a
-   bright overshoot, floats upward a touch, then fades away — the same
-   playful family as the join-dialog emoji scatter. Runs once (forwards)
-   so spent sprites end invisible. */
-@keyframes emoji-sprite {
-  0% { transform: translateY(10px) scale(0); opacity: 0; }
-  14% { transform: translateY(0) scale(1.3); opacity: 1; }
-  26% { transform: translateY(-2px) scale(1); opacity: 1; }
-  72% { transform: translateY(-16px) scale(1.02); opacity: 0.9; }
-  100% { transform: translateY(-32px) scale(0.85); opacity: 0; }
+/* OCR emoji toss: each dish the model reads gets flung into the air on a
+   parabolic arc — fast decelerating rise to the apex, accelerating fall
+   (gravity), fading away on the way down. Split across two nested layers:
+   the outer runs constant-velocity horizontal drift + tumble (linear, like
+   real ballistics), the inner runs the vertical parabola via per-keyframe
+   easing. Both run once (forwards) so spent sprites end invisible. */
+@keyframes emoji-toss-x {
+  from { transform: translateX(0) rotate(0deg); }
+  to { transform: translateX(var(--toss-x, 36px)) rotate(var(--toss-rot, 24deg)); }
 }
-.emoji-sprite {
-  animation: emoji-sprite 2.4s ease-out forwards;
+.emoji-toss-x {
+  animation: emoji-toss-x 1.9s linear forwards;
+}
+@keyframes emoji-toss-y {
+  0% {
+    transform: translateY(14px) scale(0.5);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.2, 0.9, 0.35, 1); /* launch: decelerate to apex */
+  }
+  10% { opacity: 1; }
+  48% {
+    transform: translateY(-64px) scale(1.05);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.6, 0.03, 0.9, 0.4); /* gravity: accelerate down */
+  }
+  78% { opacity: 0.5; }
+  100% {
+    transform: translateY(28px) scale(0.95);
+    opacity: 0;
+  }
+}
+.emoji-toss-y {
+  animation: emoji-toss-y 1.9s linear forwards;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Purely decorative — skip it entirely rather than pinning sprites on. */
-  .emoji-sprite { animation: none; opacity: 0; }
+  .emoji-toss-x,
+  .emoji-toss-y { animation: none; opacity: 0; }
 }
 
 /* Person icon pops in when added to the group. */

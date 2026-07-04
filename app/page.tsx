@@ -2631,21 +2631,28 @@ export default function Page() {
                 {scanEmojis.length > 0 && (
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-44">
                     {scanEmojis.map((it, idx) => {
-                      const left = 24 + ((idx * 61.8034) % 52);
-                      const top = 16 + ((idx * 43.7) % 94);
-                      const rot = ((idx * 47) % 25) - 12;
+                      // Launch origin hops around the ticker; toss direction,
+                      // tumble and size vary per sprite — all deterministic
+                      // from the index so nothing reshuffles on re-render.
+                      const left = 28 + ((idx * 61.8034) % 44);
+                      const top = 44 + ((idx * 43.7) % 60);
+                      const dx = Math.round(((idx * 37.9) % 88) - 44);
+                      const rot = Math.round(((idx * 83) % 70) - 35);
                       const size = ["text-3xl", "text-4xl", "text-2xl"][idx % 3];
+                      const delay = `${(idx % 3) * 90}ms`;
                       return (
                         <span
                           key={idx}
                           className={`absolute ${size} leading-none`}
-                          style={{ left: `${left}%`, top: `${top}px`, transform: `rotate(${rot}deg)` }}
+                          style={{ left: `${left}%`, top: `${top}px` }}
                         >
                           <span
-                            className="emoji-sprite block drop-shadow-lg"
-                            style={{ animationDelay: `${(idx % 3) * 90}ms` }}
+                            className="emoji-toss-x block"
+                            style={{ "--toss-x": `${dx}px`, "--toss-rot": `${rot}deg`, animationDelay: delay } as React.CSSProperties}
                           >
-                            <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                            <span className="emoji-toss-y block drop-shadow-lg" style={{ animationDelay: delay }}>
+                              <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
+                            </span>
                           </span>
                         </span>
                       );
@@ -2661,16 +2668,7 @@ export default function Page() {
                 <div className="pointer-events-none absolute inset-x-0 top-7 flex justify-center">
                   <span className="rounded-full bg-black/65 px-4 py-1.5 text-sm font-semibold text-white shadow-lg backdrop-blur">
                     {scanCount !== null && scanCount > 0 ? (
-                      <span key={scanCount} className="count-pop flex items-center gap-2 tabular-nums">
-                        {scanEmojis.length > 0 && (
-                          <span className="text-lg leading-none">
-                            <ItemEmoji
-                              description={scanEmojis[scanEmojis.length - 1].description}
-                              hint={scanEmojis[scanEmojis.length - 1].category}
-                              modelEmoji={scanEmojis[scanEmojis.length - 1].emoji}
-                            />
-                          </span>
-                        )}
+                      <span key={scanCount} className="count-pop tabular-nums">
                         {t.linesFound(scanCount)}
                       </span>
                     ) : (
