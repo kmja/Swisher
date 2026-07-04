@@ -1060,6 +1060,7 @@ export default function RoomPage() {
   // Mirror of the dialog's render condition, updated in render so the
   // room-enter ref callback (fires during commit) can read it.
   const joinActiveRef = useRef(false);
+  const joinNameRef = useRef<HTMLInputElement>(null);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   // Host's name / Swish number / group-size are always-visible input
@@ -1834,6 +1835,17 @@ export default function RoomPage() {
     }
   }, [state, personId]);
 
+  // Focus the name field as soon as the dialog is shown. More reliable
+  // than the `autoFocus` attr for an element that mounts asynchronously
+  // inside a fading container — and on Android this also pops the
+  // keyboard. (iOS won't summon the keyboard without a user gesture; no
+  // programmatic workaround exists there.)
+  useEffect(() => {
+    if (!joinShown) return;
+    const r = requestAnimationFrame(() => joinNameRef.current?.focus());
+    return () => cancelAnimationFrame(r);
+  }, [joinShown]);
+
   // Lock body scroll while the join dialog is up so the room behind it
   // stays put and non-interactive until the guest has joined. Mirrors the
   // dialog's render condition so it engages in the same frame.
@@ -2248,6 +2260,7 @@ export default function RoomPage() {
             </div>
           )}
           <input
+            ref={joinNameRef}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t.namePlaceholder}
