@@ -2266,6 +2266,7 @@ export default function RoomPage() {
             placeholder={t.namePlaceholder}
             onKeyDown={(e) => e.key === "Enter" && join()}
             autoFocus
+            autoCapitalize="sentences"
             className="w-full rounded-xl bg-gray-50 px-4 py-3 outline-none"
           />
           <button
