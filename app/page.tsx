@@ -1018,9 +1018,13 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
     };
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      // Keep receipts detailed: faint thermal digits (e.g. 1180 vs 118) need
-      // pixels, so cap the long side generously rather than at 1280.
-      const maxDim = 2200;
+      // Cap the long side at 1600. Above this, faint thermal digits are
+      // already legible to the vision model, and every extra pixel costs
+      // upload time + ~50% more vision tokens (→ slower OCR) for little
+      // accuracy gain. A/B vs 2200px: ~40% smaller upload, ~47% fewer
+      // vision tokens. Watch faint/blurry receipts — bump back toward 1800
+      // if digits start getting misread.
+      const maxDim = 1600;
       const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
