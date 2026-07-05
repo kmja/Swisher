@@ -27,8 +27,15 @@ const CLAUDE_MODELS = new Set([
   "claude-opus-4-8",
 ]);
 
-const buildPrompt = (opts: { emoji: boolean; translation: boolean }) => `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other"${opts.emoji ? ',"emoji":string' : ""}${opts.translation ? ',"translation":string|null' : ""}}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
+// English names of the app languages, for the translation instruction.
+const LANG_NAME: Record<string, string> = {
+  sv: "Swedish", en: "English", de: "German", fr: "French", es: "Spanish",
+  it: "Italian", nl: "Dutch", da: "Danish", no: "Norwegian", fi: "Finnish",
+  pl: "Polish", pt: "Portuguese",
+};
+
+const buildPrompt = (opts: { emoji: boolean; translateTo: string | null }) => `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
+{"items":[{"description":string,"price":number,"quantity":number,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other"${opts.emoji ? ',"emoji":string' : ""}${opts.translateTo ? ',"translation":string|null' : ""}}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -40,7 +47,7 @@ Rules:
 - The description is the item NAME only. Strip the leading quantity (it goes in "quantity"): "2 glas Sybille Kuntz" → description "Glas Sybille Kuntz", quantity 2; "3 Kaffe" → "Kaffe", quantity 3.
 - Spell each item the correct Swedish way: restore å/ä/ö and fix OCR letter slips so a recognisable dish/drink reads properly — e.g. "lansorts lage" → "Landsorts Lager", "rakor" → "räkor", "rört majonäs" → "Rökt majonnäs", "fläskkar" → "Fläskkarré", "marängsvisst" → "Marängsviss", "kalvkinn" → "Kalvkind", "fårslök" → "Färsklök", "gstron" → "Ostron", "entrecote" → "Entrecôte" — and use normal capitalisation, not ALL CAPS.
 ${opts.emoji ? `- "emoji" is one emoji that best represents the item, using your knowledge of brands and types: a wine — including brands like "Sybille Kuntz" or "O'scuru" — is 🍷; a beer is 🍺; Coca-Cola/soda is 🥤; coffee is ☕; oysters are 🦪; pork/meat is 🥩. Pick the most specific food or drink emoji you can.
-` : ""}${opts.translation ? `- "translation": if the description is NOT already in English, provide a natural English name for the dish or drink (e.g. "Bruschetta cu file" → "Bruschetta with beef tenderloin", "Tagliatelle ai funghi porcini" → "Tagliatelle with porcini mushrooms"). Keep brand names as-is. Use null when the description is already in English or when it's a brand/proper name that needs no translation.
+` : ""}${opts.translateTo ? `- "translation": if the description is NOT already in ${opts.translateTo}, translate it into a natural ${opts.translateTo} dish/drink name (e.g. into English: "Bruschetta cu file" → "Bruschetta with beef tenderloin", "Tagliatelle ai funghi porcini" → "Tagliatelle with porcini mushrooms"). Keep brand names, place names and proper nouns as-is. Use null when the description is already in ${opts.translateTo}, or is just a brand/number that needs no translation.
 ` : ""}
 - Crucially, keep it the SAME item — only correct its spelling, never swap an unclear word for a different, more plausible-sounding dish. If you genuinely cannot tell what a word is, transcribe it literally letter by letter rather than guessing. Never invent items, lines, or prices that are not printed on the receipt.
 - When a line names a brand or product, keep that real brand name as printed instead of forcing a generic word (e.g. "Coca-Cola", "Ramlösa", "Pågen", "Brooklyn Lager", "Heinz"). Never invent a brand that isn't there, and never rewrite a genuine brand into a plain word.
@@ -353,7 +360,7 @@ async function withCurrency(parsed: OcrResult): Promise<Record<string, unknown>>
 }
 
 export async function POST(req: Request) {
-  let body: { image?: string; images?: string[]; model?: string; emoji?: boolean; translation?: boolean };
+  let body: { image?: string; images?: string[]; model?: string; emoji?: boolean; lang?: string };
   try {
     body = await req.json();
   } catch {
@@ -361,8 +368,12 @@ export async function POST(req: Request) {
   }
   const claudeModel =
     typeof body.model === "string" && CLAUDE_MODELS.has(body.model) ? body.model : ANTHROPIC_MODEL;
-  // Default both fields ON (back-compat with clients that don't send them).
-  const prompt = buildPrompt({ emoji: body.emoji !== false, translation: body.translation !== false });
+  // Translate into the app's language — and only when an item isn't already
+  // in it (the model returns null otherwise), so a Swedish user reading a
+  // Swedish receipt pays nothing, while a foreign receipt gets translated
+  // into their language. Falls back to English if the lang is unknown.
+  const translateTo = typeof body.lang === "string" ? LANG_NAME[body.lang] ?? "English" : "English";
+  const prompt = buildPrompt({ emoji: body.emoji !== false, translateTo });
 
   // Accept either `image` (single dataURL) or `images` (panorama frames in
   // order, top → bottom). Validate every input is a base64 dataURL.

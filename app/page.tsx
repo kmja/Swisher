@@ -1073,24 +1073,6 @@ export default function Page() {
       return "";
     }
   });
-  // Debug toggles: ask the model for per-item emoji / translation or not,
-  // to measure what each field costs. Default on; persisted.
-  const [ocrEmojis, setOcrEmojis] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return localStorage.getItem("kvitt-ocr-emoji") !== "0";
-    } catch {
-      return true;
-    }
-  });
-  const [ocrTranslations, setOcrTranslations] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return localStorage.getItem("kvitt-ocr-translation") !== "0";
-    } catch {
-      return true;
-    }
-  });
   // Wall-clock breakdown of the last scan, shown in the debug panel so we
   // can see where the time actually goes (compress / upload / model read).
   const [scanTimings, setScanTimings] = useState<
@@ -1807,8 +1789,9 @@ export default function Page() {
         body: JSON.stringify({
           ...(frames.length > 1 ? { images: frames } : { image: primary }),
           ...(ocrModelOverride ? { model: ocrModelOverride } : {}),
-          emoji: ocrEmojis,
-          translation: ocrTranslations,
+          // Translate foreign items into the app's language (null when the
+          // item is already in it, so same-language receipts pay nothing).
+          lang,
         }),
       });
       const resType = res.headers.get("Content-Type") ?? "";
@@ -2878,30 +2861,6 @@ export default function Page() {
                       <option value="claude-sonnet-5">Sonnet 5</option>
                       <option value="claude-opus-4-8">Opus 4.8</option>
                     </select>
-                    {([
-                      ["Emoji", ocrEmojis, setOcrEmojis, "kvitt-ocr-emoji"],
-                      ["Translation", ocrTranslations, setOcrTranslations, "kvitt-ocr-translation"],
-                    ] as const).map(([label, val, setter, key]) => (
-                      <label
-                        key={key}
-                        className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white shadow-lg ring-1 ring-white/30 backdrop-blur"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={val}
-                          onChange={(e) => {
-                            setter(e.target.checked);
-                            try {
-                              localStorage.setItem(key, e.target.checked ? "1" : "0");
-                            } catch {
-                              /* storage unavailable */
-                            }
-                          }}
-                          className="h-3.5 w-3.5 accent-swish"
-                        />
-                        {label}
-                      </label>
-                    ))}
                   </div>
                 )}
                 {/* Flashlight: only surfaced when the browser exposes the
