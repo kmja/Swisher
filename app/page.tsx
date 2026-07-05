@@ -1041,6 +1041,36 @@ function fileToCompressedDataUrl(file: File, maxDim = 1600): Promise<string> {
   });
 }
 
+// Debug: a rolling log of recent scans (timings + model + the full parsed
+// OCR JSON), persisted to localStorage so it survives the flow moving off
+// the capture screen. Lets us A/B models by copying a batch of scans in one
+// go instead of eyeballing the on-screen readout one at a time.
+type ScanLogEntry = {
+  ts: string;
+  model: string | null;
+  maxDim: number;
+  timings: { compressMs: number; uploadMs: number; readMs: number; totalMs: number };
+  result: unknown;
+};
+const SCAN_LOG_KEY = "kvitt-scan-log";
+function loadScanLog(): ScanLogEntry[] {
+  try {
+    const raw = localStorage.getItem(SCAN_LOG_KEY);
+    return raw ? (JSON.parse(raw) as ScanLogEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+function pushScanLog(entry: ScanLogEntry): ScanLogEntry[] {
+  const log = [entry, ...loadScanLog()].slice(0, 20);
+  try {
+    localStorage.setItem(SCAN_LOG_KEY, JSON.stringify(log));
+  } catch {
+    /* storage full / unavailable */
+  }
+  return log;
+}
+
 export default function Page() {
   const [lang, setLang] = useState<Lang>("sv");
   const t = translations[lang];
@@ -1074,6 +1104,13 @@ export default function Page() {
   // Debug: OCR model override. null → server default (Sonnet). Lets us
   // A/B Sonnet vs the far cheaper Gemini Flash-Lite on the same receipt.
   const [ocrModelOverride, setOcrModelOverride] = useState<string | null>(null);
+  // Debug: rolling log of recent scans, for bulk export. Hydrated from
+  // localStorage after mount to keep SSR output stable.
+  const [scanLog, setScanLog] = useState<ScanLogEntry[]>([]);
+  const [logCopied, setLogCopied] = useState(false);
+  useEffect(() => {
+    setScanLog(loadScanLog());
+  }, []);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   // Items streamed in so far during the current scan — enough display
@@ -1855,14 +1892,22 @@ export default function Page() {
       }
       const tDone = performance.now();
       const firstByte = tFirstByte || tDone;
-      setScanTimings({
+      const timings = {
         compressMs: Math.round(compressMsRef.current),
         uploadMs: Math.round(firstByte - tFetch),
         readMs: Math.round(tDone - firstByte),
         totalMs: Math.round(compressMsRef.current + (tDone - tFetch)),
-        model: scanModel,
-        maxDim: imgMaxDim,
-      });
+      };
+      setScanTimings({ ...timings, model: scanModel, maxDim: imgMaxDim });
+      setScanLog(
+        pushScanLog({
+          ts: new Date().toISOString(),
+          model: scanModel,
+          maxDim: imgMaxDim,
+          timings,
+          result: data,
+        }),
+      );
       const mapped: UiItem[] = (
         data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number; translation?: string | null }[]
       ).map((it) => ({
@@ -3916,6 +3961,59 @@ export default function Page() {
                 </dl>
               </div>
             )}
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Scan log</p>
+                <span className="font-mono text-[11px] tabular-nums text-gray-400">{scanLog.length} saved</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  disabled={scanLog.length === 0}
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(JSON.stringify(scanLog, null, 2))
+                      .then(() => {
+                        setLogCopied(true);
+                        setTimeout(() => setLogCopied(false), 1500);
+                      })
+                      .catch(() => {});
+                  }}
+                  className="rounded-lg bg-gray-100 py-2 text-xs font-semibold text-ink active:bg-gray-200 disabled:opacity-40"
+                >
+                  {logCopied ? "Copied" : "Copy"}
+                </button>
+                <button
+                  type="button"
+                  disabled={scanLog.length === 0}
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(scanLog, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `kvitt-scans-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="rounded-lg bg-gray-100 py-2 text-xs font-semibold text-ink active:bg-gray-200 disabled:opacity-40"
+                >
+                  Download
+                </button>
+                <button
+                  type="button"
+                  disabled={scanLog.length === 0}
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem(SCAN_LOG_KEY);
+                    } catch {}
+                    setScanLog([]);
+                  }}
+                  className="rounded-lg bg-gray-100 py-2 text-xs font-semibold text-red-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <a
                 href="/debug/icons"
