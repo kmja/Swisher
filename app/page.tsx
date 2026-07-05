@@ -3921,8 +3921,8 @@ export default function Page() {
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">OCR model</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {([
-                  ["Sonnet", null],
-                  ["Gemini 3.1 Flash-Lite", "gemini-3.1-flash-lite"],
+                  ["Gemini 3.1 FL (default)", "gemini-3.1-flash-lite"],
+                  ["Sonnet", "claude-sonnet-4-6"],
                   ["Gemini 3 Flash", "gemini-3-flash"],
                   ["Gemini 3.5 Flash", "gemini-3.5-flash"],
                 ] as const).map(([label, id]) => (
@@ -3931,7 +3931,11 @@ export default function Page() {
                     type="button"
                     onClick={() => setOcrModelOverride(id)}
                     className={`rounded-lg px-2 py-2 text-xs font-semibold transition-colors ${
-                      ocrModelOverride === id ? "bg-swish text-white" : "bg-gray-100 text-gray-600 active:bg-gray-200"
+                      // A null override falls through to the server default,
+                      // which is 3.1 Flash-Lite — so highlight that button too.
+                      (ocrModelOverride ?? "gemini-3.1-flash-lite") === id
+                        ? "bg-swish text-white"
+                        : "bg-gray-100 text-gray-600 active:bg-gray-200"
                     }`}
                   >
                     {label}

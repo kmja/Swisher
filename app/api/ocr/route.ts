@@ -548,7 +548,8 @@ export async function POST(req: Request) {
   }
   const requested = typeof body.model === "string" ? body.model : "";
   const isGemini = GEMINI_MODELS.has(requested);
-  const claudeModel = CLAUDE_MODELS.has(requested) ? requested : ANTHROPIC_MODEL;
+  const isClaude = CLAUDE_MODELS.has(requested);
+  const claudeModel = isClaude ? requested : ANTHROPIC_MODEL;
   const geminiModel = isGemini ? requested : GEMINI_MODEL;
   // Translate into the app's language — and only when an item isn't already
   // in it (the model returns null otherwise), so a Swedish user reading a
@@ -593,37 +594,55 @@ export async function POST(req: Request) {
     // Not running inside the Cloudflare runtime (e.g. plain `next start`).
   }
 
-  // The primary reader is the model the client selected — Claude by
-  // default, Gemini when a gemini-* id is requested and a key is set.
-  // Both stream and share the extractJson contract; Workers AI models
-  // are the keyless fallback. If Gemini is asked for but unkeyed, fall
-  // back to Claude so the request still succeeds.
+  // Ordered streamable model attempts. The default (no explicit override)
+  // reads with Gemini 3.1 Flash-Lite and falls back to Sonnet — far cheaper
+  // and faster, with Sonnet as the safety net. An explicit Claude override
+  // reads with Claude alone (for A/B); an explicit Gemini override reads with
+  // that Gemini model, still backed by Sonnet. Workers AI models (added
+  // below) are the final keyless fallback. Each attempt streams and shares
+  // the extractJson contract.
+  type ModelAttempt = {
+    name: string;
+    run: () => Promise<string>;
+    stream: (onText: (soFar: string) => void) => Promise<string>;
+  };
   const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
-  let primaryAttempt:
-    | { name: string; run: () => Promise<string>; stream: (onText: (soFar: string) => void) => Promise<string> }
-    | null = null;
-  if (isGemini && geminiKey) {
-    const key = geminiKey;
-    const candidates = geminiCandidates(geminiModel);
-    primaryAttempt = {
-      name: geminiModel,
-      run: () => runGemini(key, images, candidates, prompt),
-      stream: (onText) => runGeminiStream(key, images, onText, candidates, prompt),
-    };
-  } else if (anthropicKey) {
-    const key = anthropicKey;
-    primaryAttempt = {
-      name: claudeModel,
-      run: () => runClaude(key, images, claudeModel, prompt),
-      stream: (onText) => runClaudeStream(key, images, onText, claudeModel, prompt),
-    };
+  const geminiAttempt: ModelAttempt | null = geminiKey
+    ? (() => {
+        const key = geminiKey;
+        const candidates = geminiCandidates(geminiModel);
+        return {
+          name: geminiModel,
+          run: () => runGemini(key, images, candidates, prompt),
+          stream: (onText: (soFar: string) => void) => runGeminiStream(key, images, onText, candidates, prompt),
+        };
+      })()
+    : null;
+  const claudeAttempt: ModelAttempt | null = anthropicKey
+    ? (() => {
+        const key = anthropicKey;
+        return {
+          name: claudeModel,
+          run: () => runClaude(key, images, claudeModel, prompt),
+          stream: (onText: (soFar: string) => void) => runClaudeStream(key, images, onText, claudeModel, prompt),
+        };
+      })()
+    : null;
+
+  const modelAttempts: ModelAttempt[] = [];
+  if (isClaude) {
+    // Explicit Claude: Claude only (keep the A/B clean), then Workers AI.
+    if (claudeAttempt) modelAttempts.push(claudeAttempt);
+  } else {
+    // Default or explicit Gemini: Gemini primary, Sonnet fallback.
+    if (geminiAttempt) modelAttempts.push(geminiAttempt);
+    if (claudeAttempt) modelAttempts.push(claudeAttempt);
   }
 
-  const attempts: { name: string; run: () => Promise<AiResult> }[] = [];
-
-  if (primaryAttempt) {
-    attempts.push({ name: primaryAttempt.name, run: primaryAttempt.run });
-  }
+  const attempts: { name: string; run: () => Promise<AiResult> }[] = modelAttempts.map((a) => ({
+    name: a.name,
+    run: a.run,
+  }));
 
   if (ai) {
     const client = ai;
@@ -662,9 +681,11 @@ export async function POST(req: Request) {
   const accept = req.headers.get("accept") ?? "";
   const wantsSse = accept.includes("text/event-stream");
   const wantsNdjson = accept.includes("application/x-ndjson");
-  if ((wantsSse || wantsNdjson) && primaryAttempt) {
-    const chosen = primaryAttempt;
-    const fallbacks = attempts.filter((a) => a.name !== chosen.name);
+  if ((wantsSse || wantsNdjson) && modelAttempts.length > 0) {
+    // Stream the first model; the rest of the chain (Sonnet fallback, then
+    // Workers AI) runs non-streaming inside the same response if it fails.
+    const chosen = modelAttempts[0];
+    const fallbacks = attempts.slice(1);
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
