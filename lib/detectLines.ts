@@ -1,38 +1,36 @@
 /**
- * Quick client-side text-line detector for receipt photos.
+ * Locate the receipt in a photo and lay out scan bars across it.
  *
- * Two stages, both cheap at a 360-px sample:
- *   1. Find the PAPER: receipts are the big bright blob in the frame.
- *      Threshold on brightness (adaptive, from the luminance histogram),
- *      take the largest connected bright component, and record its
- *      per-row horizontal extent. This is what makes detection work on
- *      restaurant photos where the receipt covers a third of a dark
- *      table — counting dark pixels frame-wide drowns in the background.
- *   2. Find the INK: within the paper's per-row extent, rows with enough
- *      dark pixels are text rows. The dark threshold adapts to how
- *      brightly the paper is actually lit.
+ * We deliberately do NOT try to detect individual text rows by pixel
+ * darkness — across real photos (crisp white receipts, dim shots, photos
+ * of a screen, curled paper with shadows) no single ink threshold holds,
+ * and a wrong one yields either zero markers or one giant blob. What IS
+ * reliable is finding the PAPER: it's the largest bright blob in the
+ * frame. So we find the paper, trace its width at each height (so the
+ * bars follow a tilted or curved receipt), and spread evenly-spaced bars
+ * down its text area. The bars read as a scanner sweeping the receipt
+ * line by line and always land on the actual paper.
  *
- * Returned rectangles are in percentages of the source image so the
- * caller can position them with `top: ${y}%; left: ${x}%; …`.
+ * Rectangles are in percentages of the source image so the caller can
+ * position them within the displayed image rect.
  */
 
 export type DetectedLine = {
-  /** Y of the line's top edge, as a percentage of the image height. */
+  /** Y of the bar's centre-ish top, as a percentage of image height. */
   y: number;
-  /** X of the line's left edge, as a percentage of the image width. */
+  /** X of the bar's left edge, as a percentage of image width. */
   x: number;
-  /** Width of the line, as a percentage of the image width. */
+  /** Width of the bar, as a percentage of image width. */
   w: number;
-  /** Height of the line, as a percentage of the image height. */
+  /** Height of the bar, as a percentage of image height. */
   h: number;
 };
 
 const SAMPLE_LONG_EDGE = 360;
-const MIN_LINE_HEIGHT = 2; // sample px; skip 1-px streaks (paper noise)
-const MAX_LINE_HEIGHT_FRAC = 0.12; // of the paper's height; skip logos/art
-const MIN_DARK_FRACTION = 0.05; // of the row's paper extent
-const MIN_LINE_WIDTH_FRAC = 0.15; // of the row's paper extent
-const MIN_COMPONENT_FRAC = 0.02; // bright blob must cover ≥2% of the frame
+const MIN_COMPONENT_FRAC = 0.02; // paper blob must cover ≥2% of the frame
+const BAR_COUNT = 18; // scan bars spread down the receipt
+const EDGE_MARGIN = 0.08; // skip the top/bottom 8% of the paper (blank margins)
+const SIDE_INSET = 0.06; // pull bars in from the paper edges a touch
 
 async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -80,8 +78,7 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
     hist[b]++;
   }
 
-  // ── Stage 1: the paper ──────────────────────────────────────────────
-  // Bright threshold from the histogram's upper tail: the paper is the
+  // Bright threshold from the histogram's upper tail — the paper is the
   // brightest sizeable thing, so anchor just below its 88th percentile.
   let acc = 0;
   let p88 = 255;
@@ -95,9 +92,8 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
   }
   const brightTh = Math.max(110, Math.min(200, p88 - 25));
 
-  // Largest 4-connected bright component via an explicit stack flood
-  // fill — labels: 0 unvisited, 1 visited-not-paper, 2 the winner.
-  const label = new Uint8Array(n);
+  // Largest 4-connected bright component via an explicit stack flood fill.
+  const label = new Uint8Array(n); // 0 unvisited, 1 visited, 2 the winner
   const stack = new Int32Array(n);
   let bestCount = 0;
   let bestSeed = -1;
@@ -124,13 +120,11 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
   }
   if (bestSeed < 0 || bestCount < n * MIN_COMPONENT_FRAC) return [];
 
-  // Re-flood the winner to mark it (label 2) and collect per-row extents
-  // + its mean brightness (for the adaptive ink threshold). Per-row
-  // extents rather than a bounding box so a tilted receipt doesn't drag
-  // dark table corners into the ink counts.
+  // Re-flood the winner and record its width at every row. Per-row extents
+  // (not a bounding box) so a tilted receipt's bars slant with the paper
+  // instead of overhanging the dark background.
   const rowLeft = new Int32Array(h).fill(w);
   const rowRight = new Int32Array(h).fill(-1);
-  let paperLumSum = 0;
   {
     let top = 0;
     stack[top++] = bestSeed;
@@ -139,7 +133,6 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
       const p = stack[--top];
       const px = p % w;
       const py = (p / w) | 0;
-      paperLumSum += lum[p];
       if (px < rowLeft[py]) rowLeft[py] = px;
       if (px > rowRight[py]) rowRight[py] = px;
       if (px > 0 && label[p - 1] === 1 && lum[p - 1] >= brightTh) { label[p - 1] = 2; stack[top++] = p - 1; }
@@ -148,78 +141,46 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
       if (py < h - 1 && label[p + w] === 1 && lum[p + w] >= brightTh) { label[p + w] = 2; stack[top++] = p + w; }
     }
   }
-  const paperMean = paperLumSum / bestCount;
-  // Ink is well below the paper's own brightness — a dim shot lowers
-  // both, so the threshold follows the paper instead of a fixed 115.
-  const darkTh = Math.max(70, Math.min(140, paperMean - 70));
 
-  // ── Stage 2: ink rows within the paper ─────────────────────────────
-  const paperTop = rowRight.findIndex((r) => r >= 0);
+  let paperTop = rowRight.findIndex((r) => r >= 0);
   let paperBottom = h - 1;
   while (paperBottom > 0 && rowRight[paperBottom] < 0) paperBottom--;
-  const maxLineHeight = Math.max(MIN_LINE_HEIGHT + 1, Math.round((paperBottom - paperTop) * MAX_LINE_HEIGHT_FRAC));
+  if (paperTop < 0 || paperBottom <= paperTop) return [];
+  const paperH = paperBottom - paperTop;
 
-  const counts = new Int32Array(h);
-  const lefts = new Int32Array(h).fill(w);
-  const rights = new Int32Array(h).fill(-1);
-  const extents = new Int32Array(h);
-  for (let y = 0; y < h; y++) {
-    const l = rowLeft[y];
-    const r = rowRight[y];
-    if (r < 0 || r - l < 8) continue;
-    extents[y] = r - l;
-    let count = 0;
-    const rowStart = y * w;
-    // Inset by a couple of px so the paper's own shadowed edge doesn't
-    // register as ink.
-    for (let x = l + 2; x <= r - 2; x++) {
-      if (lum[rowStart + x] < darkTh) {
-        count++;
-        if (x < lefts[y]) lefts[y] = x;
-        if (x > rights[y]) rights[y] = x;
-      }
-    }
-    counts[y] = count;
+  // Widest row ≈ how wide the receipt really is; skip rows narrower than
+  // half of it (a curled corner tapering to a point) when placing bars.
+  let maxWidth = 0;
+  for (let y = paperTop; y <= paperBottom; y++) {
+    const rw = rowRight[y] - rowLeft[y];
+    if (rw > maxWidth) maxWidth = rw;
   }
 
+  const barH = Math.max(0.8, (paperH / h) * 100 / BAR_COUNT * 0.5);
   const lines: DetectedLine[] = [];
-  let inLine = false;
-  let startY = 0;
-  let leftMin = w;
-  let rightMax = 0;
-
-  const closeLine = (endY: number) => {
-    const lineH = endY - startY;
-    const lineW = rightMax - leftMin;
-    const midExtent = extents[Math.min(h - 1, startY + (lineH >> 1))] || 1;
-    if (lineH >= MIN_LINE_HEIGHT && lineH <= maxLineHeight && lineW >= midExtent * MIN_LINE_WIDTH_FRAC) {
-      lines.push({
-        y: (startY / h) * 100,
-        x: (leftMin / w) * 100,
-        w: (lineW / w) * 100,
-        h: (lineH / h) * 100,
-      });
-    }
-    inLine = false;
-  };
-
-  for (let y = 0; y < h; y++) {
-    const isText = extents[y] > 0 && counts[y] >= extents[y] * MIN_DARK_FRACTION;
-    if (isText) {
-      if (!inLine) {
-        inLine = true;
-        startY = y;
-        leftMin = lefts[y];
-        rightMax = rights[y];
-      } else {
-        if (lefts[y] < leftMin) leftMin = lefts[y];
-        if (rights[y] > rightMax) rightMax = rights[y];
+  for (let k = 0; k < BAR_COUNT; k++) {
+    const frac = EDGE_MARGIN + (k / (BAR_COUNT - 1)) * (1 - 2 * EDGE_MARGIN);
+    let yPx = Math.round(paperTop + frac * paperH);
+    // Nudge to the nearest row that actually has decent paper width.
+    let l = rowLeft[yPx];
+    let r = rowRight[yPx];
+    if (r - l < maxWidth * 0.5) {
+      for (let d = 1; d <= 4; d++) {
+        for (const yy of [yPx - d, yPx + d]) {
+          if (yy < paperTop || yy > paperBottom) continue;
+          if (rowRight[yy] - rowLeft[yy] >= maxWidth * 0.5) { yPx = yy; l = rowLeft[yy]; r = rowRight[yy]; break; }
+        }
+        if (r - l >= maxWidth * 0.5) break;
       }
-    } else if (inLine) {
-      closeLine(y);
     }
+    if (r <= l) continue;
+    const inset = (r - l) * SIDE_INSET;
+    lines.push({
+      y: (yPx / h) * 100,
+      x: ((l + inset) / w) * 100,
+      w: ((r - l - 2 * inset) / w) * 100,
+      h: barH,
+    });
   }
-  if (inLine) closeLine(h);
-
   return lines;
 }

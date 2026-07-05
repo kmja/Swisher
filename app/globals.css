@@ -238,21 +238,13 @@ textarea {
 /* ── OCR overlay tech dressing ─────────────────────────────────────────
    scan-grid-drift  the pink grid crawls diagonally, one 22px cell per
                     loop, so the backdrop reads as live machinery.
-   scan-tick        small edge ticks blinking at the detected text rows —
-                    the "instrument readout" for the line markers. */
+   (the row bars themselves carry the progress story.) */
 @keyframes scan-grid-drift {
   from { background-position: 0 0, 0 0; }
   to { background-position: 0 22px, 22px 0; }
 }
 .scan-grid-drift {
   animation: scan-grid-drift 2.8s linear infinite;
-}
-@keyframes scan-tick-blink {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 1; }
-}
-.scan-tick {
-  animation: scan-tick-blink 1.3s ease-in-out infinite;
 }
 
 /* Little pop each time the live OCR line counter ticks up — the HUD text

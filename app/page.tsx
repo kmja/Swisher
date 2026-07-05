@@ -1068,6 +1068,34 @@ export default function Page() {
   // approximation that we can paint REAL "found line" markers on the
   // photo while the OCR call runs in the background.
   const [detectedLines, setDetectedLines] = useState<DetectedLine[]>([]);
+  // The captured photo is object-contain (letterboxed), so scan markers —
+  // positioned in % of the source image — must map onto the DISPLAYED
+  // image rect, not the whole container. Measured from the <img> element.
+  const scanImgRef = useRef<HTMLImageElement>(null);
+  const [scanBox, setScanBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const measureScanBox = useCallback(() => {
+    const el = scanImgRef.current;
+    if (!el || !el.naturalWidth || !el.naturalHeight || !el.clientWidth || !el.clientHeight) return;
+    const cw = el.clientWidth;
+    const ch = el.clientHeight;
+    const imgAspect = el.naturalWidth / el.naturalHeight;
+    const boxAspect = cw / ch;
+    let dw: number;
+    let dh: number;
+    if (imgAspect > boxAspect) {
+      dw = cw;
+      dh = cw / imgAspect;
+    } else {
+      dh = ch;
+      dw = ch * imgAspect;
+    }
+    setScanBox({
+      left: ((cw - dw) / 2 / cw) * 100,
+      top: ((ch - dh) / 2 / ch) * 100,
+      width: (dw / cw) * 100,
+      height: (dh / ch) * 100,
+    });
+  }, []);
   // Pre-scan quality hint. Filled by analyzeImageQuality whenever a
   // new shot is committed to imageUrl, cleared when the host retakes
   // or commits to OCR. Surfaces as a non-blocking warning chip above
@@ -1448,8 +1476,14 @@ export default function Page() {
     detectTextLines(imageUrl).then((lines) => {
       if (!cancelled) setDetectedLines(lines);
     });
-    return () => { cancelled = true; };
-  }, [ocrLoading, imageUrl]);
+    measureScanBox();
+    const onResize = () => measureScanBox();
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", onResize);
+    };
+  }, [ocrLoading, imageUrl, measureScanBox]);
 
   // Show the setup card 1 s into the scan (just long enough for the user to
   // register "okay it's scanning"). Cleared when the host actually leaves
@@ -2546,7 +2580,7 @@ export default function Page() {
           <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" className="h-full w-full object-contain" />
+              <img ref={scanImgRef} onLoad={measureScanBox} src={imageUrl} alt="" className="h-full w-full object-contain" />
             ) : null}
             {/* OCR couldn't pull anything out of this shot. Cover the
                 preview with a clear banner explaining what happened
@@ -2590,20 +2624,25 @@ export default function Page() {
                     pink grid. */}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="scan-grid scan-grid-drift absolute inset-0 opacity-20" />
-                {/* Real "found-line" markers — rectangles computed by
-                    detectTextLines from the captured photo's actual
-                    pixels (dark rows ≈ text rows). Each fades in with
-                    a staggered delay so the markers visibly cascade
-                    down the receipt while the OCR call is in flight.
-                    Cap the per-marker delay at 1.5 s total so long
-                    receipts don't take forever to light up. */}
-                <div className="pointer-events-none absolute inset-0">
+                {/* Scan bars laid across the receipt — positioned inside the
+                    letterboxed image rect (scanBox) so they land on the paper,
+                    not the black bars. They cascade in top→bottom, then
+                    breathe, reading as a scanner sweeping the receipt. */}
+                <div
+                  className="pointer-events-none absolute"
+                  style={{
+                    left: `${scanBox?.left ?? 0}%`,
+                    top: `${scanBox?.top ?? 0}%`,
+                    width: `${scanBox?.width ?? 100}%`,
+                    height: `${scanBox?.height ?? 100}%`,
+                  }}
+                >
                   {detectedLines.map((line, i) => {
                     const reveal = Math.min(1.5, i * 0.05);
                     return (
                       <span
                         key={i}
-                        className="ocr-line absolute rounded-[3px] bg-swish/75 shadow-[0_0_10px_3px_rgba(238,92,154,0.65)]"
+                        className="ocr-line absolute rounded-full bg-swish/75 shadow-[0_0_10px_3px_rgba(238,92,154,0.65)]"
                         style={{
                           top: `${line.y}%`,
                           left: `${line.x}%`,
@@ -2623,22 +2662,6 @@ export default function Page() {
                 <div className="vf-scan-y pointer-events-none absolute inset-0" style={{ animationDuration: "4.6s" }}>
                   <div className="absolute inset-x-0 top-0 h-24 -translate-y-full bg-gradient-to-b from-transparent to-swish/25" />
                   <div className="absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
-                </div>
-                {/* instrument ticks: blinking marks on both edges at the
-                    detected text rows, staggered down the receipt */}
-                <div className="pointer-events-none absolute inset-0">
-                  {detectedLines.filter((_, i) => i % 2 === 0).map((line, i) => (
-                    <span key={i}>
-                      <span
-                        className="scan-tick absolute left-1 h-[2px] w-2.5 bg-white/80"
-                        style={{ top: `${line.y}%`, animationDelay: `${(i % 5) * 0.26}s` }}
-                      />
-                      <span
-                        className="scan-tick absolute right-1 h-[2px] w-2.5 bg-white/80"
-                        style={{ top: `${line.y}%`, animationDelay: `${(i % 5) * 0.26}s` }}
-                      />
-                    </span>
-                  ))}
                 </div>
                 {/* glowing corner brackets */}
                 <div className="scan-glow pointer-events-none absolute inset-4">
