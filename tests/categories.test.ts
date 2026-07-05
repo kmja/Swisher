@@ -171,4 +171,16 @@ describe("emojiFor", () => {
     // over the generic drink mug.
     expect(emojiFor("O'scuru", undefined, "🍷")).toBe("🍷");
   });
+
+  it("doesn't let a comma-appended side hijack the icon of the main dish", () => {
+    // A burger with a fries side is a burger, not fries — the keyword rules
+    // only look at the dish name before the first comma, so the model's 🍔
+    // wins over the "fries" modifier.
+    expect(emojiFor("Favorite S, Fr. Fries, vegetarisk", undefined, "🍔")).toBe("🍔");
+    expect(emojiFor("Texas D, fries", undefined, "🍔")).toBe("🍔");
+    expect(emojiFor("Lafayette D, fries, glutenfri, Tryffel", undefined, "🍔")).toBe("🍔");
+    // A standalone fries side (no comma) still resolves to the fries icon.
+    expect(emojiFor("Pommes frites")).toBe("🍟");
+    expect(emojiFor("Fries")).toBe("🍟");
+  });
 });

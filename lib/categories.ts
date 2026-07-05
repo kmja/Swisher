@@ -372,7 +372,14 @@ function isEmoji(s: string | undefined): s is string {
  * finally the generic category icon.
  */
 export function emojiFor(description: string, hint?: string, modelEmoji?: string): string {
-  for (const [match, emoji] of EMOJI_RULES) if (match(description)) return emoji;
+  // Match keyword rules against the primary dish name only — the part before
+  // the first comma. Trailing comma-separated modifiers and sides must not
+  // hijack the icon: "Favorite S, Fr. Fries, vegetarisk" is a burger, not
+  // fries, and "Texas D, fries" is a burger too. The model's own emoji (set
+  // with full context) is the better source for those, so let it win. Known
+  // standalone sides ("Pommes frites") have no comma, so they still match.
+  const head = description.split(",")[0];
+  for (const [match, emoji] of EMOJI_RULES) if (match(head)) return emoji;
   if (isEmoji(modelEmoji)) return modelEmoji;
   return CATEGORY_EMOJI[categoryFor(description, hint)];
 }

@@ -1968,6 +1968,19 @@ export default function Page() {
       setRateDate(typeof data.rateDate === "string" ? data.rateDate : null);
       setCountry(typeof data.country === "string" && /^[A-Z]{2}$/.test(data.country) ? data.country : null);
 
+      // The OCR emits a printed tip line BOTH as a category:"tip" line item
+      // and via the top-level `dricks` field. Strip the line items out of the
+      // food list here so the tip isn't double-counted — it's re-added once,
+      // below, as a single shared row. Keep their summed amount as a tip
+      // source in case `dricks` wasn't set.
+      let ocrTipOre = 0;
+      for (let i = mapped.length - 1; i >= 0; i--) {
+        if (mapped[i].category === "tip") {
+          ocrTipOre += parseAmountToOre(mapped[i].priceInput) ?? 0;
+          mapped.splice(i, 1);
+        }
+      }
+
       const totalOre = typeof data.total === "number" ? Math.round(data.total * 100) : null;
       const chargedOre = typeof data.charged === "number" && data.charged > 0 ? Math.round(data.charged * 100) : 0;
       const dricksOre = typeof data.dricks === "number" && data.dricks > 0 ? Math.round(data.dricks * 100) : 0;
@@ -1975,7 +1988,7 @@ export default function Page() {
       // actual card charge over the bill (host rounded up / tipped at the terminal).
       const billOre = totalOre ?? mapped.reduce((acc, it) => acc + (parseAmountToOre(it.priceInput) ?? 0), 0);
       const impliedTipOre = chargedOre - billOre >= 100 ? chargedOre - billOre : 0;
-      const tipOre = dricksOre > 0 ? dricksOre : impliedTipOre;
+      const tipOre = dricksOre > 0 ? dricksOre : ocrTipOre > 0 ? ocrTipOre : impliedTipOre;
       setOcrFoundTip(tipOre > 0);
       // Add the tip as a shared row so it shows in the list and splits evenly.
       if (tipOre > 0) {
