@@ -26,15 +26,22 @@ const CLAUDE_MODELS = new Set([
   "claude-sonnet-5",
   "claude-opus-4-8",
 ]);
-// Google Gemini — ~20-30× cheaper than Sonnet per scan with a generous
-// free tier, used when a gemini-* id is requested and GEMINI_API_KEY is
+// Google Gemini — far cheaper than Sonnet per scan (3.1 Flash-Lite ~7×,
+// 3 Flash ~4×), used when a gemini-* id is requested and GEMINI_API_KEY is
 // set. Same streaming contract as Claude, so the live progress ticks work.
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_MODELS = new Set([
+  "gemini-3.1-flash-lite",
+  "gemini-3-flash",
+  "gemini-3.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-flash-lite-latest",
 ]);
+// The 3.x models may still be served under a -preview id. Try the bare id
+// first, then a -preview variant, so a not-yet-GA rename doesn't silently
+// drop the scan to the Workers AI fallback (which would confuse the A/B).
+function geminiCandidates(model: string): string[] {
+  return model.startsWith("gemini-3") ? [model, `${model}-preview`] : [model];
+}
 
 // English names of the app languages, for the translation instruction.
 const LANG_NAME: Record<string, string> = {
@@ -227,72 +234,96 @@ function geminiParts(
   return parts;
 }
 
-// responseMimeType forces raw JSON (no markdown fences); thinkingBudget 0
-// disables Flash-Lite's optional reasoning so the A/B reflects the cheap,
-// fast config we'd actually ship. Output is generous — Gemini tokens are
-// cheap and truncating a long receipt would skew the comparison.
+// responseMimeType forces raw JSON (no markdown fences). No thinkingConfig
+// override: each model uses its default reasoning (3.x models think by
+// default, which should fix the price-column misalignment 2.5 Flash-Lite
+// showed with thinking off). Output is generous so thinking tokens plus a
+// long receipt never truncate the JSON and skew the comparison.
 const GEMINI_GEN_CONFIG = {
-  maxOutputTokens: 4096,
+  maxOutputTokens: 8192,
   responseMimeType: "application/json",
-  thinkingConfig: { thinkingBudget: 0 },
 };
 
-/** Non-streaming Gemini call — mirrors runClaude. Returns the model's text;
- *  throws on non-2xx so the caller falls back to Workers AI. */
+const geminiBody = (
+  images: { mediaType: string; base64: string }[],
+  prompt: string,
+): string =>
+  JSON.stringify({
+    system_instruction: { parts: [{ text: prompt }] },
+    contents: [{ role: "user", parts: geminiParts(images, images.length > 1) }],
+    generationConfig: GEMINI_GEN_CONFIG,
+  });
+
+/** Non-streaming Gemini call — mirrors runClaude. Tries each candidate id in
+ *  turn, skipping ones the API doesn't recognise (404), so a -preview rename
+ *  doesn't fail the scan. Throws on other non-2xx so the caller falls back
+ *  to Workers AI. */
 async function runGemini(
   apiKey: string,
   images: { mediaType: string; base64: string }[],
-  model: string,
+  models: string[],
   prompt: string,
 ): Promise<string> {
-  const multi = images.length > 1;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: prompt }] },
-        contents: [{ role: "user", parts: geminiParts(images, multi) }],
-        generationConfig: GEMINI_GEN_CONFIG,
-      }),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`gemini ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  const body = geminiBody(images, prompt);
+  let lastErr = "gemini: no candidate resolved";
+  for (const model of models) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body,
+      },
+    );
+    if (res.status === 404) {
+      lastErr = `gemini ${model}:404`;
+      continue;
+    }
+    if (!res.ok) {
+      throw new Error(`gemini ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+    }
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    return (json.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
   }
-  const json = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  };
-  return (json.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+  throw new Error(lastErr);
 }
 
 /** Streaming variant of runGemini — parses the `?alt=sse` frames and calls
- *  onText with the accumulated text after each chunk. Resolves to the full
- *  text. Same shape as runClaudeStream so the streaming route is agnostic. */
+ *  onText with the accumulated text after each chunk. Tries each candidate
+ *  id (skipping 404s) before streaming. Resolves to the full text. Same
+ *  shape as runClaudeStream so the streaming route is agnostic. */
 async function runGeminiStream(
   apiKey: string,
   images: { mediaType: string; base64: string }[],
   onText: (soFar: string) => void,
-  model: string,
+  models: string[],
   prompt: string,
 ): Promise<string> {
-  const multi = images.length > 1;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: prompt }] },
-        contents: [{ role: "user", parts: geminiParts(images, multi) }],
-        generationConfig: GEMINI_GEN_CONFIG,
-      }),
-    },
-  );
-  if (!res.ok || !res.body) {
-    throw new Error(`gemini ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  const body = geminiBody(images, prompt);
+  let res: Response | null = null;
+  let lastErr = "gemini: no candidate resolved";
+  for (const model of models) {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body,
+      },
+    );
+    if (r.status === 404) {
+      lastErr = `gemini ${model}:404`;
+      continue;
+    }
+    if (!r.ok || !r.body) {
+      throw new Error(`gemini ${r.status}: ${(await r.text().catch(() => "")).slice(0, 120)}`);
+    }
+    res = r;
+    break;
   }
+  if (!res || !res.body) throw new Error(lastErr);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -552,10 +583,11 @@ export async function POST(req: Request) {
     | null = null;
   if (isGemini && geminiKey) {
     const key = geminiKey;
+    const candidates = geminiCandidates(geminiModel);
     primaryAttempt = {
       name: geminiModel,
-      run: () => runGemini(key, images, geminiModel, prompt),
-      stream: (onText) => runGeminiStream(key, images, onText, geminiModel, prompt),
+      run: () => runGemini(key, images, candidates, prompt),
+      stream: (onText) => runGeminiStream(key, images, onText, candidates, prompt),
     };
   } else if (anthropicKey) {
     const key = anthropicKey;

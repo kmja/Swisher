@@ -3898,16 +3898,18 @@ export default function Page() {
             </dl>
             <div>
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">OCR model</p>
-              <div className="flex gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {([
                   ["Sonnet", null],
-                  ["Gemini Flash-Lite", "gemini-2.5-flash-lite"],
+                  ["Gemini 3.1 Flash-Lite", "gemini-3.1-flash-lite"],
+                  ["Gemini 3 Flash", "gemini-3-flash"],
+                  ["Gemini 3.5 Flash", "gemini-3.5-flash"],
                 ] as const).map(([label, id]) => (
                   <button
                     key={label}
                     type="button"
                     onClick={() => setOcrModelOverride(id)}
-                    className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                    className={`rounded-lg px-2 py-2 text-xs font-semibold transition-colors ${
                       ocrModelOverride === id ? "bg-swish text-white" : "bg-gray-100 text-gray-600 active:bg-gray-200"
                     }`}
                   >
