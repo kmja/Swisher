@@ -407,6 +407,13 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .scan-ink { animation: none; }
   .scan-beam { animation: none; opacity: 0; }
+  /* The scan chrome is a stack of infinite animations (sweeping beams, a
+     drifting grid, a pulsing glow) that each repaint every frame for the
+     whole OCR wait. Reduced-motion users get a static scanner instead —
+     both the accessible behaviour and a drop of the wasted per-frame work. */
+  .vf-scan-y, .vf-scan-y-back, .vf-scan-x { animation: none; }
+  .scan-pulse, .scan-grid-drift, .scan-glow { animation: none; }
+  .count-pop { animation: none; }
 }
 
 /* Skeleton shimmer — a translucent highlight sweeps left → right

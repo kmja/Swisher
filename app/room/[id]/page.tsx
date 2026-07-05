@@ -3555,7 +3555,7 @@ export default function RoomPage() {
           }
         };
         return (
-          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 text-white shadow-lg backdrop-blur">
+          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 pb-[env(safe-area-inset-bottom)] text-white shadow-lg backdrop-blur">
             {/* Cart expansion uses a grid-template-rows trick to
                 animate height from 0 to auto. The outer grid switches
                 grid-rows-[0fr] ↔ grid-rows-[1fr]; the inner scroll

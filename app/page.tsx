@@ -1533,6 +1533,14 @@ export default function Page() {
       setScanOverlay(null);
       return;
     }
+    // buildScanOverlay is a heavy synchronous pixel pass (flood fill + integral
+    // images + connected-component filtering) that fires exactly when the scan
+    // animation mounts. Under reduced motion the reveal/beam it feeds are
+    // disabled, so skip the work entirely — it would only hitch the frame.
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setScanOverlay(null);
+      return;
+    }
     let cancelled = false;
     buildScanOverlay(imageUrl).then((url) => {
       if (!cancelled) setScanOverlay(url);
@@ -4328,7 +4336,7 @@ function Footer({
   if (step === "capture") return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 border-t border-black/5 bg-white/90 px-4 py-3 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 border-t border-black/5 bg-white/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
       <div className="mx-auto flex max-w-md items-center gap-3">
         <button
           type="button"

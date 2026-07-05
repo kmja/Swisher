@@ -17,6 +17,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Extend the page under the notch / home indicator so fixed footers can
+  // pad themselves with env(safe-area-inset-*) instead of colliding with it.
+  viewportFit: "cover",
   // Next renders this into two <meta name="theme-color"> tags with
   // media queries so the URL bar / Android system chrome tracks the
   // user's light / dark preference. Light mode keeps the swish brand
