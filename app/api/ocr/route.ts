@@ -539,6 +539,22 @@ async function withCurrency(parsed: OcrResult): Promise<Record<string, unknown>>
   return { ...toSek(parsed, fx.rate), currency, rate: fx.rate, rateApprox: fx.approx, rateDate: fx.date ?? null };
 }
 
+/** Structured log emitted when the primary model (Gemini by default) fails and
+ *  the read has to fall back to another model. `quota: true` flags a 429 — a
+ *  free-tier rate / daily-cap rejection. Count these per day in Cloudflare's
+ *  Observability tab (filter `msg:"ocr_fallback" quota:true`): a nonzero daily
+ *  count means traffic is exceeding the free 500/day, i.e. the point where
+ *  enabling Gemini billing starts to pay off. Logging never throws — a scan
+ *  must never fail because a log line couldn't be written. */
+function logFallback(from: string, reason: string): void {
+  const quota = /\b429\b/.test(reason) || /resource[_ ]?exhausted|quota|rate.?limit/i.test(reason);
+  try {
+    console.warn(JSON.stringify({ msg: "ocr_fallback", from, quota, reason: reason.slice(0, 160) }));
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function POST(req: Request) {
   let body: { image?: string; images?: string[]; model?: string; emoji?: boolean; lang?: string };
   try {
@@ -730,8 +746,11 @@ export async function POST(req: Request) {
             return;
           }
           diag.push(`${chosen.name}:no-items`);
+          logFallback(chosen.name, "no-items");
         } catch (err) {
-          diag.push(`${chosen.name}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+          const msg = err instanceof Error ? err.message : String(err);
+          diag.push(`${chosen.name}:${msg.slice(0, 80)}`);
+          logFallback(chosen.name, msg);
         }
         for (const { name, run } of fallbacks) {
           try {
@@ -766,12 +785,14 @@ export async function POST(req: Request) {
     });
   }
 
+  const primaryName = attempts[0]?.name;
   const diag: string[] = [];
   for (const { name, run } of attempts) {
     try {
       const text = resultText(await run());
       if (!text.trim()) {
         diag.push(`${name}:empty`);
+        if (name === primaryName) logFallback(name, "empty");
         continue;
       }
       const parsed = extractJson(text);
@@ -782,8 +803,11 @@ export async function POST(req: Request) {
         );
       }
       diag.push(`${name}:no-items`);
+      if (name === primaryName) logFallback(name, "no-items");
     } catch (err) {
-      diag.push(`${name}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      diag.push(`${name}:${msg.slice(0, 80)}`);
+      if (name === primaryName) logFallback(name, msg);
     }
   }
   return NextResponse.json({ error: `Couldn't read the receipt. ${diag.join(" | ")}` }, { status: 502 });
