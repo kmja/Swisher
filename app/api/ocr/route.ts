@@ -34,7 +34,14 @@ const LANG_NAME: Record<string, string> = {
   pl: "Polish", pt: "Portuguese",
 };
 
-const buildPrompt = (opts: { emoji: boolean; translateTo: string | null }) => `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
+const buildPrompt = (opts: { emoji: boolean; translateTo: string | null; alsoKnown?: string[] }) => {
+  // Languages the diner is assumed to read — the target plus any extra
+  // languages we don't bother translating away from (e.g. Nordic users
+  // read English fine, so an English receipt stays untranslated for them).
+  const known = opts.translateTo
+    ? [...new Set([opts.translateTo, ...(opts.alsoKnown ?? [])])].join(" or ")
+    : "";
+  return `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
 {"items":[{"description":string,"price":number,"quantity":number,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other"${opts.emoji ? ',"emoji":string' : ""}${opts.translateTo ? ',"translation":string|null' : ""}}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
@@ -47,7 +54,7 @@ Rules:
 - The description is the item NAME only. Strip the leading quantity (it goes in "quantity"): "2 glas Sybille Kuntz" → description "Glas Sybille Kuntz", quantity 2; "3 Kaffe" → "Kaffe", quantity 3.
 - Spell each item the correct Swedish way: restore å/ä/ö and fix OCR letter slips so a recognisable dish/drink reads properly — e.g. "lansorts lage" → "Landsorts Lager", "rakor" → "räkor", "rört majonäs" → "Rökt majonnäs", "fläskkar" → "Fläskkarré", "marängsvisst" → "Marängsviss", "kalvkinn" → "Kalvkind", "fårslök" → "Färsklök", "gstron" → "Ostron", "entrecote" → "Entrecôte" — and use normal capitalisation, not ALL CAPS.
 ${opts.emoji ? `- "emoji" is one emoji that best represents the item, using your knowledge of brands and types: a wine — including brands like "Sybille Kuntz" or "O'scuru" — is 🍷; a beer is 🍺; Coca-Cola/soda is 🥤; coffee is ☕; oysters are 🦪; pork/meat is 🥩. Pick the most specific food or drink emoji you can.
-` : ""}${opts.translateTo ? `- "translation": if the description is NOT already in ${opts.translateTo}, translate it into a natural ${opts.translateTo} dish/drink name (e.g. into English: "Bruschetta cu file" → "Bruschetta with beef tenderloin", "Tagliatelle ai funghi porcini" → "Tagliatelle with porcini mushrooms"). Keep brand names, place names and proper nouns as-is. Use null when the description is already in ${opts.translateTo}, or is just a brand/number that needs no translation.
+` : ""}${opts.translateTo ? `- "translation": if the description is NOT already in ${known}, translate it into a natural ${opts.translateTo} dish/drink name (e.g. into English: "Bruschetta cu file" → "Bruschetta with beef tenderloin", "Tagliatelle ai funghi porcini" → "Tagliatelle with porcini mushrooms"). Keep brand names, place names and proper nouns as-is. Use null when the description is already in ${known}, or is just a brand/number that needs no translation.
 ` : ""}
 - Crucially, keep it the SAME item — only correct its spelling, never swap an unclear word for a different, more plausible-sounding dish. If you genuinely cannot tell what a word is, transcribe it literally letter by letter rather than guessing. Never invent items, lines, or prices that are not printed on the receipt.
 - When a line names a brand or product, keep that real brand name as printed instead of forcing a generic word (e.g. "Coca-Cola", "Ramlösa", "Pågen", "Brooklyn Lager", "Heinz"). Never invent a brand that isn't there, and never rewrite a genuine brand into a plain word.
@@ -70,6 +77,7 @@ ${opts.emoji ? `- "emoji" is one emoji that best represents the item, using your
 - "charged" = the amount actually paid, printed on a separate card/payment line BELOW the total — e.g. "MasterCard", "Mastercard Bankkort", "Bankkort", "Visa", "Kontokort", "Kortköp", "Köp", "Debiterat", "Betalt", or a terminal/slip total. Read it whenever such a line exists. It is often HIGHER than "total" because the guest rounded up or tipped at the terminal — so when you see e.g. "Total 2546,00" and below it "MasterCard Bankkort 2700,00", set total=2546 and charged=2700 (the 154 difference is the tip). null only if no payment line is shown; never copy "total" into "charged".
 - Never output non-item rows as items: skip totals and metadata such as "Summa", "Total", "Att betala", "Moms"/"Varav moms", "Netto", "Kontant", "Växel", "Kort"/"Kortköp"/"Bankkort"/"Swish", "Dricks", "Avrundning", "Bord", "Servitör", "Org.nr", "Kvitto", "Terminal". Keep it concise — one object per ordered dish/drink line.
 - POS receipts are UPPERCASE, faint, abbreviated and often truncated. Expand truncations to the full Swedish name ("BRAISERAD KALVKIN" → "Braiserad Kalvkind", "JANSSONS FREST" → "Janssons Frestelse", "WALLENB" → "Wallenbergare", "ESPR MARTINI" → "Espresso Martini", "NORRL GULD" → "Norrlands Guld"), and undo letter-shape errors: l/1/I, 0/O↔o/ö, rn→m, cl/d confusion, dropped é/ô (entrecote→Entrecôte, creme brulee→Crème Brûlée). A trailing size like "33cl", "40cl", "4cl", "gl", "fl" or "/hg" is part of a drink/by-weight line — keep the item name, not the size, in the description.`;
+};
 
 type AiResult = { response?: string; description?: string; choices?: { message?: { content?: string } }[] } | string;
 type WorkersAI = { run: (model: string, inputs: Record<string, unknown>) => Promise<AiResult> };
@@ -373,7 +381,11 @@ export async function POST(req: Request) {
   // Swedish receipt pays nothing, while a foreign receipt gets translated
   // into their language. Falls back to English if the lang is unknown.
   const translateTo = typeof body.lang === "string" ? LANG_NAME[body.lang] ?? "English" : "English";
-  const prompt = buildPrompt({ emoji: body.emoji !== false, translateTo });
+  // Nordic diners read English fine, so an English receipt shouldn't be
+  // translated into a Nordic app language — treat English as already-known.
+  const NORDIC = new Set(["sv", "da", "no", "fi"]);
+  const alsoKnown = typeof body.lang === "string" && NORDIC.has(body.lang) ? ["English"] : [];
+  const prompt = buildPrompt({ emoji: body.emoji !== false, translateTo, alsoKnown });
 
   // Accept either `image` (single dataURL) or `images` (panorama frames in
   // order, top → bottom). Validate every input is a base64 dataURL.
