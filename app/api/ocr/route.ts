@@ -26,6 +26,15 @@ const CLAUDE_MODELS = new Set([
   "claude-sonnet-5",
   "claude-opus-4-8",
 ]);
+// Google Gemini — ~20-30× cheaper than Sonnet per scan with a generous
+// free tier, used when a gemini-* id is requested and GEMINI_API_KEY is
+// set. Same streaming contract as Claude, so the live progress ticks work.
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_MODELS = new Set([
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-flash-lite-latest",
+]);
 
 // English names of the app languages, for the translation instruction.
 const LANG_NAME: Record<string, string> = {
@@ -205,6 +214,117 @@ async function runClaudeStream(
   return text;
 }
 
+/** Build the Gemini `contents` parts: every image inline, then the user
+ *  instruction (single- or multi-frame). Shared by both Gemini paths. */
+function geminiParts(
+  images: { mediaType: string; base64: string }[],
+  multi: boolean,
+): Array<Record<string, unknown>> {
+  const parts: Array<Record<string, unknown>> = images.map((img) => ({
+    inline_data: { mime_type: img.mediaType, data: img.base64 },
+  }));
+  parts.push({ text: multi ? USER_TEXT_MULTI : USER_TEXT });
+  return parts;
+}
+
+// responseMimeType forces raw JSON (no markdown fences); thinkingBudget 0
+// disables Flash-Lite's optional reasoning so the A/B reflects the cheap,
+// fast config we'd actually ship. Output is generous — Gemini tokens are
+// cheap and truncating a long receipt would skew the comparison.
+const GEMINI_GEN_CONFIG = {
+  maxOutputTokens: 4096,
+  responseMimeType: "application/json",
+  thinkingConfig: { thinkingBudget: 0 },
+};
+
+/** Non-streaming Gemini call — mirrors runClaude. Returns the model's text;
+ *  throws on non-2xx so the caller falls back to Workers AI. */
+async function runGemini(
+  apiKey: string,
+  images: { mediaType: string; base64: string }[],
+  model: string,
+  prompt: string,
+): Promise<string> {
+  const multi = images.length > 1;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: prompt }] },
+        contents: [{ role: "user", parts: geminiParts(images, multi) }],
+        generationConfig: GEMINI_GEN_CONFIG,
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`gemini ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  }
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  return (json.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+}
+
+/** Streaming variant of runGemini — parses the `?alt=sse` frames and calls
+ *  onText with the accumulated text after each chunk. Resolves to the full
+ *  text. Same shape as runClaudeStream so the streaming route is agnostic. */
+async function runGeminiStream(
+  apiKey: string,
+  images: { mediaType: string; base64: string }[],
+  onText: (soFar: string) => void,
+  model: string,
+  prompt: string,
+): Promise<string> {
+  const multi = images.length > 1;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: prompt }] },
+        contents: [{ role: "user", parts: geminiParts(images, multi) }],
+        generationConfig: GEMINI_GEN_CONFIG,
+      }),
+    },
+  );
+  if (!res.ok || !res.body) {
+    throw new Error(`gemini ${res.status}: ${(await res.text().catch(() => "")).slice(0, 120)}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload) continue;
+      try {
+        const evt = JSON.parse(payload) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+        };
+        const chunk = (evt.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+        if (chunk) {
+          text += chunk;
+          onText(text);
+        }
+      } catch {
+        /* keep-alive / unknown frame */
+      }
+    }
+  }
+  return text;
+}
+
 /** The complete item objects the (partial) model output contains so far —
  *  drives the live "N lines found" counter and the per-item emoji pops
  *  while the model reads. Items are flat objects, so brace-free matching
@@ -374,8 +494,10 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
-  const claudeModel =
-    typeof body.model === "string" && CLAUDE_MODELS.has(body.model) ? body.model : ANTHROPIC_MODEL;
+  const requested = typeof body.model === "string" ? body.model : "";
+  const isGemini = GEMINI_MODELS.has(requested);
+  const claudeModel = CLAUDE_MODELS.has(requested) ? requested : ANTHROPIC_MODEL;
+  const geminiModel = isGemini ? requested : GEMINI_MODEL;
   // Translate into the app's language — and only when an item isn't already
   // in it (the model returns null otherwise), so a Swedish user reading a
   // Swedish receipt pays nothing, while a foreign receipt gets translated
@@ -408,21 +530,46 @@ export async function POST(req: Request) {
 
   let ai: WorkersAI | undefined;
   let anthropicKey: string | undefined;
+  let geminiKey: string | undefined;
   try {
     const { env } = getCloudflareContext();
-    const e = env as unknown as { AI?: WorkersAI; ANTHROPIC_API_KEY?: string };
+    const e = env as unknown as { AI?: WorkersAI; ANTHROPIC_API_KEY?: string; GEMINI_API_KEY?: string };
     ai = e.AI;
     anthropicKey = e.ANTHROPIC_API_KEY;
+    geminiKey = e.GEMINI_API_KEY;
   } catch {
     // Not running inside the Cloudflare runtime (e.g. plain `next start`).
   }
 
+  // The primary reader is the model the client selected — Claude by
+  // default, Gemini when a gemini-* id is requested and a key is set.
+  // Both stream and share the extractJson contract; Workers AI models
+  // are the keyless fallback. If Gemini is asked for but unkeyed, fall
+  // back to Claude so the request still succeeds.
+  const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
+  let primaryAttempt:
+    | { name: string; run: () => Promise<string>; stream: (onText: (soFar: string) => void) => Promise<string> }
+    | null = null;
+  if (isGemini && geminiKey) {
+    const key = geminiKey;
+    primaryAttempt = {
+      name: geminiModel,
+      run: () => runGemini(key, images, geminiModel, prompt),
+      stream: (onText) => runGeminiStream(key, images, onText, geminiModel, prompt),
+    };
+  } else if (anthropicKey) {
+    const key = anthropicKey;
+    primaryAttempt = {
+      name: claudeModel,
+      run: () => runClaude(key, images, claudeModel, prompt),
+      stream: (onText) => runClaudeStream(key, images, onText, claudeModel, prompt),
+    };
+  }
+
   const attempts: { name: string; run: () => Promise<AiResult> }[] = [];
 
-  if (anthropicKey) {
-    const key = anthropicKey;
-    const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
-    attempts.push({ name: claudeModel, run: () => runClaude(key, images, claudeModel, prompt) });
+  if (primaryAttempt) {
+    attempts.push({ name: primaryAttempt.name, run: primaryAttempt.run });
   }
 
   if (ai) {
@@ -462,10 +609,9 @@ export async function POST(req: Request) {
   const accept = req.headers.get("accept") ?? "";
   const wantsSse = accept.includes("text/event-stream");
   const wantsNdjson = accept.includes("application/x-ndjson");
-  if ((wantsSse || wantsNdjson) && anthropicKey) {
-    const key = anthropicKey;
-    const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
-    const fallbacks = attempts.filter((a) => a.name !== claudeModel);
+  if ((wantsSse || wantsNdjson) && primaryAttempt) {
+    const chosen = primaryAttempt;
+    const fallbacks = attempts.filter((a) => a.name !== chosen.name);
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -483,7 +629,7 @@ export async function POST(req: Request) {
         const diag: string[] = [];
         try {
           let lastCount = 0;
-          const text = await runClaudeStream(key, images, (soFar) => {
+          const text = await chosen.stream((soFar) => {
             const found = streamedItems(soFar);
             if (found.length > lastCount) {
               lastCount = found.length;
@@ -502,16 +648,16 @@ export async function POST(req: Request) {
               }
               send({ progress: { count: lastCount, item } });
             }
-          }, claudeModel, prompt);
+          });
           const parsed = extractJson(text);
           if (parsed.items.length > 0 || parsed.total !== null) {
-            send({ result: await withCurrency(parsed), model: claudeModel });
+            send({ result: await withCurrency(parsed), model: chosen.name });
             controller.close();
             return;
           }
-          diag.push(`${claudeModel}:no-items`);
+          diag.push(`${chosen.name}:no-items`);
         } catch (err) {
-          diag.push(`${claudeModel}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+          diag.push(`${chosen.name}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
         }
         for (const { name, run } of fallbacks) {
           try {

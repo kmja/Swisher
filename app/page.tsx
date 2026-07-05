@@ -1071,6 +1071,9 @@ export default function Page() {
   // Debug: long-edge cap the photo is downscaled to before OCR. Lets us
   // A/B image size (upload weight + vision-token cost) against accuracy.
   const [imgMaxDim, setImgMaxDim] = useState(1600);
+  // Debug: OCR model override. null → server default (Sonnet). Lets us
+  // A/B Sonnet vs the far cheaper Gemini Flash-Lite on the same receipt.
+  const [ocrModelOverride, setOcrModelOverride] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   // Items streamed in so far during the current scan — enough display
@@ -1782,6 +1785,9 @@ export default function Page() {
           // Translate foreign items into the app's language (null when the
           // item is already in it, so same-language receipts pay nothing).
           lang,
+          // Debug model override (null → server default Sonnet). Lets us
+          // A/B Sonnet vs Gemini Flash-Lite on the same receipt.
+          ...(ocrModelOverride ? { model: ocrModelOverride } : {}),
         }),
       });
       const resType = res.headers.get("Content-Type") ?? "";
@@ -3845,6 +3851,26 @@ export default function Page() {
                 </div>
               )}
             </dl>
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">OCR model</p>
+              <div className="flex gap-1.5">
+                {([
+                  ["Sonnet", null],
+                  ["Gemini Flash-Lite", "gemini-2.5-flash-lite"],
+                ] as const).map(([label, id]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setOcrModelOverride(id)}
+                    className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                      ocrModelOverride === id ? "bg-swish text-white" : "bg-gray-100 text-gray-600 active:bg-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Image size (long edge)</p>
               <div className="flex gap-1.5">
