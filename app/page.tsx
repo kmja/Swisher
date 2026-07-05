@@ -1062,6 +1062,17 @@ export default function Page() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrModel, setOcrModel] = useState<string | null>(null);
+  // Temporary debug: override which Claude model the OCR route uses, set
+  // from the viewfinder selector. "" = server default. Persisted so it
+  // survives a scan → verify → back-to-scan round trip.
+  const [ocrModelOverride, setOcrModelOverride] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem("kvitt-ocr-model") ?? "";
+    } catch {
+      return "";
+    }
+  });
   // Wall-clock breakdown of the last scan, shown in the debug panel so we
   // can see where the time actually goes (compress / upload / model read).
   const [scanTimings, setScanTimings] = useState<
@@ -1775,7 +1786,10 @@ export default function Page() {
         // preferred (never buffered by any hop); x-ndjson keeps a
         // one-deploy-old server streaming too.
         headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/x-ndjson" },
-        body: JSON.stringify(frames.length > 1 ? { images: frames } : { image: primary }),
+        body: JSON.stringify({
+          ...(frames.length > 1 ? { images: frames } : { image: primary }),
+          ...(ocrModelOverride ? { model: ocrModelOverride } : {}),
+        }),
       });
       const resType = res.headers.get("Content-Type") ?? "";
       let data: Record<string, unknown>;
@@ -2818,6 +2832,32 @@ export default function Page() {
                         📷 {pendingShots.length}
                       </span>
                     )}
+                  </div>
+                )}
+                {/* TEMP DEBUG: OCR model selector. Lets us A/B model speed /
+                    accuracy from the viewfinder without a redeploy. Remove
+                    once we've settled on a model. */}
+                {cameraActive && !ocrLoading && (
+                  <div className="pointer-events-auto absolute left-5 top-16 z-40">
+                    <select
+                      value={ocrModelOverride}
+                      onChange={(e) => {
+                        const m = e.target.value;
+                        setOcrModelOverride(m);
+                        try {
+                          localStorage.setItem("kvitt-ocr-model", m);
+                        } catch {
+                          /* storage unavailable */
+                        }
+                      }}
+                      aria-label="OCR model"
+                      className="rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white shadow-lg ring-1 ring-white/30 outline-none backdrop-blur"
+                    >
+                      <option value="">🧠 Sonnet 4.6 (default)</option>
+                      <option value="claude-haiku-4-5-20251001">⚡ Haiku 4.5 (fast)</option>
+                      <option value="claude-sonnet-5">Sonnet 5</option>
+                      <option value="claude-opus-4-8">Opus 4.8</option>
+                    </select>
                   </div>
                 )}
                 {/* Flashlight: only surfaced when the browser exposes the

@@ -18,9 +18,17 @@ const LLAVA_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
 // Claude reads faint receipts far better than the open models; used first when
 // an ANTHROPIC_API_KEY is configured, with Workers AI as the fallback.
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
+// Allowlist for the debug model override sent from the viewfinder — only
+// these can be requested; anything else falls back to the default.
+const CLAUDE_MODELS = new Set([
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5-20251001",
+  "claude-sonnet-5",
+  "claude-opus-4-8",
+]);
 
 const PROMPT = `You read a photographed restaurant receipt (kvitto) — usually Swedish, but sometimes from another country. Return ONLY a JSON object — no markdown, no commentary — exactly matching:
-{"items":[{"description":string,"price":number,"quantity":number,"shared":boolean,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other","emoji":string,"translation":string|null}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
+{"items":[{"description":string,"price":number,"quantity":number,"category":"starter"|"food"|"drink"|"dessert"|"tip"|"other","emoji":string,"translation":string|null}],"total":number|null,"moms":number|null,"dricks":number|null,"charged":number|null,"place":string|null,"date":string|null,"currency":string|null,"country":string|null}
 
 Rules:
 - "place" is the restaurant/café name, usually printed at the top. null if unclear.
@@ -47,7 +55,6 @@ Rules:
 - "price" is the total charged for the WHOLE line in SEK — the number in the rightmost (total) column. For "2 Bryggkaffe 35,00 70,00" price is 70; for "3 Stor Lager 195,00" price is 195. "quantity" is the leading count of units on the line (default 1). Always read the line total, never the per-unit price, so the items add up to the receipt total.
 - Read every price digit by digit and keep the digit count right — thermal receipts are faint and dropping a trailing zero (reading 1180 as 118, or 590 as 59) is a common mistake. Check each price carefully.
 - For a multi-unit line, quantity × per-unit price should equal the line total — a quick sanity check on your own reading. Read the printed grand total ("Tot Kvitto", "Totalt", "Summa", or the amount after "SEK") carefully and accurately, but do NOT adjust item prices to make them add up to it — report exactly what each line shows, even if the lines don't sum to the printed total.
-- "shared": true ONLY when a line is clearly meant for the whole table to split. Strong shared cues: a wine/drink that is a whole bottle or carafe ("Flaska", "Btl", "75cl", "70cl", "0,75l", "karaff", "tillbringare", "pitcher"); a sharing platter or board ("plateau", "charkbricka", "ostbricka", "antipasti", "meze", "tapas", "mixed grill", "skaldjursplatå"); a side or starter clearly for the table ("att dela", "to share", "för bordet", "för 2", "bröd & smör", "oliver"). Individual servings are NOT shared: a beer, a glass ("glas") of wine, a coffee, a single main, or one person's dish is false even when the size is large ("stor"). When genuinely unsure, use false.
 - "category": "drink" for any beverage, "dessert" for sweets/desserts after the meal, "starter" for an appetiser ("Förrätt", antipasti/tapas/meze, bruschetta, carpaccio, tartare, "räkcocktail", "toast skagen", a sharing platter/board served at the start), "food" for any main dish, "tip" for a gratuity / tip / service charge / dricks line that appears as a printed line item on the receipt (use "tip" here, set its price to the tip amount, AND also set the top-level "dricks" field to that amount), "other" if unclear. Items are Swedish — interpret common names (fralla=sandwich, läsk=soda, flankstek/ryggbiff=beef, regnbåge=fish, glögg=mulled wine) and note å/ä/ö may be written as a/o.
 - Swedish prices already include moms (VAT); use the printed line prices as-is. Do not add or remove tax.
 - Use a dot as the decimal separator in your JSON even though the receipt uses a comma.
@@ -81,6 +88,7 @@ const USER_TEXT_MULTI =
 async function runClaude(
   apiKey: string,
   images: { mediaType: string; base64: string }[],
+  model: string = ANTHROPIC_MODEL,
 ): Promise<string> {
   const multi = images.length > 1;
   const userContent: Array<{ type: string; [k: string]: unknown }> = [];
@@ -99,7 +107,7 @@ async function runClaude(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
+      model,
       max_tokens: 2048,
       system: [{ type: "text", text: PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userContent }],
@@ -121,6 +129,7 @@ async function runClaudeStream(
   apiKey: string,
   images: { mediaType: string; base64: string }[],
   onText: (soFar: string) => void,
+  model: string = ANTHROPIC_MODEL,
 ): Promise<string> {
   const multi = images.length > 1;
   const userContent: Array<{ type: string; [k: string]: unknown }> = [];
@@ -139,7 +148,7 @@ async function runClaudeStream(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
+      model,
       max_tokens: 2048,
       stream: true,
       system: [{ type: "text", text: PROMPT, cache_control: { type: "ephemeral" } }],
@@ -230,7 +239,6 @@ function extractJson(text: string): OcrResult {
     for (const it of parsed.items as {
       description?: unknown;
       price?: unknown;
-      shared?: unknown;
       category?: unknown;
       emoji?: unknown;
       quantity?: unknown;
@@ -244,7 +252,6 @@ function extractJson(text: string): OcrResult {
       // prompt asks the model to skip these but enforce it here too so
       // a stray "Vatten 0,00" never makes it into the items list.
       if (price === 0) continue;
-      const shared = it?.shared === true;
       const category = typeof it?.category === "string" ? it.category : undefined;
       const emoji = typeof it?.emoji === "string" ? it.emoji : undefined;
       const y = Number.isFinite(Number(it?.y)) ? Number(it?.y) : undefined;
@@ -253,7 +260,7 @@ function extractJson(text: string): OcrResult {
       // price is the line total; split it into one row per unit so each can be
       // claimed separately, while the rows still sum back to the line total.
       for (const partOre of splitOre(Math.round(price * 100), qty)) {
-        items.push({ description, price: partOre / 100, shared, category, emoji, y, translation });
+        items.push({ description, price: partOre / 100, category, emoji, y, translation });
       }
     }
     return {
@@ -283,11 +290,10 @@ function extractJson(text: string): OcrResult {
       const priceNum = Number(p[1]);
       if (priceNum === 0) continue;
       const qty = Math.max(1, Math.min(20, q ? Number(q[1]) : 1));
-      const shared = /"shared"\s*:\s*true/.test(obj);
       const y = ym ? Number(ym[1]) : undefined;
       const translation = tr && tr[1].trim() ? tr[1].trim() : undefined;
       for (const partOre of splitOre(Math.round(priceNum * 100), qty)) {
-        items.push({ description: d[1].trim(), price: partOre / 100, shared, category: c?.[1], emoji: em?.[1], y, translation });
+        items.push({ description: d[1].trim(), price: partOre / 100, category: c?.[1], emoji: em?.[1], y, translation });
       }
     }
   }
@@ -344,12 +350,14 @@ async function withCurrency(parsed: OcrResult): Promise<Record<string, unknown>>
 }
 
 export async function POST(req: Request) {
-  let body: { image?: string; images?: string[] };
+  let body: { image?: string; images?: string[]; model?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
+  const claudeModel =
+    typeof body.model === "string" && CLAUDE_MODELS.has(body.model) ? body.model : ANTHROPIC_MODEL;
 
   // Accept either `image` (single dataURL) or `images` (panorama frames in
   // order, top → bottom). Validate every input is a base64 dataURL.
@@ -386,7 +394,7 @@ export async function POST(req: Request) {
   if (anthropicKey) {
     const key = anthropicKey;
     const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
-    attempts.push({ name: ANTHROPIC_MODEL, run: () => runClaude(key, images) });
+    attempts.push({ name: claudeModel, run: () => runClaude(key, images, claudeModel) });
   }
 
   if (ai) {
@@ -429,7 +437,7 @@ export async function POST(req: Request) {
   if ((wantsSse || wantsNdjson) && anthropicKey) {
     const key = anthropicKey;
     const images = matches.map((m) => ({ mediaType: m[1], base64: m[2] }));
-    const fallbacks = attempts.filter((a) => a.name !== ANTHROPIC_MODEL);
+    const fallbacks = attempts.filter((a) => a.name !== claudeModel);
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -466,16 +474,16 @@ export async function POST(req: Request) {
               }
               send({ progress: { count: lastCount, item } });
             }
-          });
+          }, claudeModel);
           const parsed = extractJson(text);
           if (parsed.items.length > 0 || parsed.total !== null) {
-            send({ result: await withCurrency(parsed), model: ANTHROPIC_MODEL });
+            send({ result: await withCurrency(parsed), model: claudeModel });
             controller.close();
             return;
           }
-          diag.push(`${ANTHROPIC_MODEL}:no-items`);
+          diag.push(`${claudeModel}:no-items`);
         } catch (err) {
-          diag.push(`${ANTHROPIC_MODEL}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+          diag.push(`${claudeModel}:${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
         }
         for (const { name, run } of fallbacks) {
           try {
