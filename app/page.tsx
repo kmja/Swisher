@@ -1062,6 +1062,12 @@ export default function Page() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrModel, setOcrModel] = useState<string | null>(null);
+  // Wall-clock breakdown of the last scan, shown in the debug panel so we
+  // can see where the time actually goes (compress / upload / model read).
+  const [scanTimings, setScanTimings] = useState<
+    { compressMs: number; uploadMs: number; readMs: number; totalMs: number; model: string | null } | null
+  >(null);
+  const compressMsRef = useRef(0);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   // Items streamed in so far during the current scan — enough display
@@ -1651,18 +1657,24 @@ export default function Page() {
   function capturePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const maxDim = 2200;
+    // Keep this in sync with fileToCompressedDataUrl's cap — 1600 is the
+    // sweet spot for legible thermal digits vs upload + vision-token cost.
+    const maxDim = 1600;
     const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const tCompress = performance.now();
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     enhanceForScan(ctx, canvas.width, canvas.height);
     setOcrError(null);
     setOcrFailed(false);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    // Accumulate compress time across the session's shots (reset on the first).
+    if (pendingShots.length === 0) compressMsRef.current = 0;
+    compressMsRef.current += performance.now() - tCompress;
     // Stack the new shot; the camera stays live so the user can either
     // take another (long receipt) or tap "Read receipt" to commit.
     setPendingShots((prev) => [...prev, dataUrl]);
@@ -1711,14 +1723,18 @@ export default function Page() {
       // as appended frames so the OCR sees the whole multi-page
       // receipt at once.
       const [first, ...rest] = files;
+      const tCompress = performance.now();
       const primary = await fileToCompressedDataUrl(first);
+      compressMsRef.current = performance.now() - tCompress;
       setImageUrl(primary);
       void analyzeImageQuality(primary).then(setImageQuality);
       if (rest.length === 0) {
         runOcr(primary);
         return;
       }
+      const tRest = performance.now();
       const restUrls = await Promise.all(rest.map(fileToCompressedDataUrl));
+      compressMsRef.current += performance.now() - tRest;
       runOcr(primary, { frames: [primary, ...restUrls] });
     } catch (err) {
       setOcrError(err instanceof Error ? err.message : "Could not read the image.");
@@ -1745,6 +1761,11 @@ export default function Page() {
     // Real line count observed while the OCR response streams in — used
     // both for the live ticker and as the start of the settle animation.
     let liveCount = 0;
+    // Timing marks: tFetch (before request) → tFirstByte (upload + routing
+    // done, first stream chunk lands) → tDone (result parsed).
+    const tFetch = performance.now();
+    let tFirstByte = 0;
+    let scanModel: string | null = null;
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
@@ -1768,6 +1789,7 @@ export default function Page() {
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
+          if (!tFirstByte) tFirstByte = performance.now();
           buf += decoder.decode(value, { stream: true });
           let nl: number;
           while ((nl = buf.indexOf("\n")) >= 0) {
@@ -1810,12 +1832,23 @@ export default function Page() {
         }
         if (!result) throw new Error(errorMsg || "OCR failed.");
         data = result;
+        scanModel = model;
         setOcrModel(model);
       } else {
         data = await res.json();
         if (!res.ok) throw new Error((data.error as string) || "OCR failed.");
-        setOcrModel(res.headers.get("X-Ocr-Model"));
+        scanModel = res.headers.get("X-Ocr-Model");
+        setOcrModel(scanModel);
       }
+      const tDone = performance.now();
+      const firstByte = tFirstByte || tDone;
+      setScanTimings({
+        compressMs: Math.round(compressMsRef.current),
+        uploadMs: Math.round(firstByte - tFetch),
+        readMs: Math.round(tDone - firstByte),
+        totalMs: Math.round(compressMsRef.current + (tDone - tFetch)),
+        model: scanModel,
+      });
       const mapped: UiItem[] = (
         data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number; translation?: string | null }[]
       ).map((it) => ({
@@ -3804,6 +3837,30 @@ export default function Page() {
                 </div>
               )}
             </dl>
+            {scanTimings && (
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Last scan</p>
+                <dl className="space-y-1 text-sm">
+                  {([
+                    ["Compress", scanTimings.compressMs],
+                    ["Upload + prefill", scanTimings.uploadMs],
+                    ["Model read", scanTimings.readMs],
+                    ["Total", scanTimings.totalMs],
+                  ] as const).map(([label, ms]) => (
+                    <div key={label} className={`flex justify-between gap-3 ${label === "Total" ? "border-t border-gray-200 pt-1 font-semibold" : ""}`}>
+                      <dt className="text-gray-500">{label}</dt>
+                      <dd className="font-mono tabular-nums text-ink">{(ms / 1000).toFixed(2)}s</dd>
+                    </div>
+                  ))}
+                  {scanTimings.model && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-500">Model</dt>
+                      <dd className="font-mono text-xs text-ink">{scanTimings.model}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <a
                 href="/debug/icons"
