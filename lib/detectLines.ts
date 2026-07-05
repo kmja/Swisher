@@ -1,36 +1,26 @@
 /**
- * Locate the receipt in a photo and lay out scan bars across it.
+ * Build a "scanner" overlay for a receipt photo: the paper outlined, and
+ * its ink (the actual printed text) highlighted.
  *
- * We deliberately do NOT try to detect individual text rows by pixel
- * darkness — across real photos (crisp white receipts, dim shots, photos
- * of a screen, curled paper with shadows) no single ink threshold holds,
- * and a wrong one yields either zero markers or one giant blob. What IS
- * reliable is finding the PAPER: it's the largest bright blob in the
- * frame. So we find the paper, trace its width at each height (so the
- * bars follow a tilted or curved receipt), and spread evenly-spaced bars
- * down its text area. The bars read as a scanner sweeping the receipt
- * line by line and always land on the actual paper.
+ * Why this works where per-row text detection didn't: we first find the
+ * PAPER (the largest bright blob — reliable across crisp receipts, dim
+ * shots, curled paper, even photos of a screen), then highlight ink using
+ * a LOCAL adaptive threshold — each pixel compared to the mean of its own
+ * neighbourhood (Bradley's method, via an integral image). A local
+ * threshold tracks uneven lighting and low contrast that no single global
+ * cut-off can, and because we only paint pixels (not detect rows) an
+ * imperfect edge still just looks like softly highlighted text.
  *
- * Rectangles are in percentages of the source image so the caller can
- * position them within the displayed image rect.
+ * Returns a PNG data URL sized to the sampled image (full frame, non-paper
+ * areas transparent) so the caller can stretch it over the displayed image
+ * rect and it lines up 1:1.
  */
 
-export type DetectedLine = {
-  /** Y of the bar's centre-ish top, as a percentage of image height. */
-  y: number;
-  /** X of the bar's left edge, as a percentage of image width. */
-  x: number;
-  /** Width of the bar, as a percentage of image width. */
-  w: number;
-  /** Height of the bar, as a percentage of image height. */
-  h: number;
-};
-
-const SAMPLE_LONG_EDGE = 360;
+const SAMPLE_LONG_EDGE = 500;
 const MIN_COMPONENT_FRAC = 0.02; // paper blob must cover ≥2% of the frame
-const BAR_COUNT = 18; // scan bars spread down the receipt
-const EDGE_MARGIN = 0.08; // skip the top/bottom 8% of the paper (blank margins)
-const SIDE_INSET = 0.06; // pull bars in from the paper edges a touch
+const ADAPT_RADIUS_FRAC = 0.02; // local-mean window radius, of the long edge
+const ADAPT_T = 0.14; // ink if pixel is ≥14% darker than its local mean
+const INK_RGBA = [246, 92, 156]; // swish-ish pink
 
 async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -41,13 +31,13 @@ async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> {
-  if (typeof window === "undefined") return [];
+export async function buildScanOverlay(dataUrl: string): Promise<string | null> {
+  if (typeof window === "undefined") return null;
   let img: HTMLImageElement;
   try {
     img = await loadImage(dataUrl);
   } catch {
-    return [];
+    return null;
   }
   const aspect = img.width / Math.max(1, img.height);
   const w = aspect >= 1 ? SAMPLE_LONG_EDGE : Math.max(1, Math.round(SAMPLE_LONG_EDGE * aspect));
@@ -56,44 +46,38 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return [];
+  if (!ctx) return null;
   ctx.drawImage(img, 0, 0, w, h);
-  let imgData: ImageData;
+  let src: ImageData;
   try {
-    imgData = ctx.getImageData(0, 0, w, h);
+    src = ctx.getImageData(0, 0, w, h);
   } catch {
-    return [];
+    return null;
   }
-  const data = imgData.data;
+  const data = src.data;
   const n = w * h;
 
-  // Luminance plane + histogram, one pass.
+  // Luminance + histogram.
   const lum = new Uint8Array(n);
   const hist = new Int32Array(256);
   for (let i = 0; i < n; i++) {
     const j = i * 4;
-    const v = (data[j] * 299 + data[j + 1] * 587 + data[j + 2] * 114) / 1000;
-    const b = v | 0;
-    lum[i] = b;
-    hist[b]++;
+    const v = ((data[j] * 299 + data[j + 1] * 587 + data[j + 2] * 114) / 1000) | 0;
+    lum[i] = v;
+    hist[v]++;
   }
 
-  // Bright threshold from the histogram's upper tail — the paper is the
-  // brightest sizeable thing, so anchor just below its 88th percentile.
+  // Bright threshold from the histogram's upper tail → the paper.
   let acc = 0;
   let p88 = 255;
-  const target = n * 0.88;
   for (let v = 0; v < 256; v++) {
     acc += hist[v];
-    if (acc >= target) {
-      p88 = v;
-      break;
-    }
+    if (acc >= n * 0.88) { p88 = v; break; }
   }
   const brightTh = Math.max(110, Math.min(200, p88 - 25));
 
-  // Largest 4-connected bright component via an explicit stack flood fill.
-  const label = new Uint8Array(n); // 0 unvisited, 1 visited, 2 the winner
+  // Largest 4-connected bright component (the paper), by flood fill.
+  const label = new Uint8Array(n); // 0 unvisited, 1 visited, 2 winner
   const stack = new Int32Array(n);
   let bestCount = 0;
   let bestSeed = -1;
@@ -113,16 +97,11 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
       if (py > 0 && label[p - w] === 0 && lum[p - w] >= brightTh) { label[p - w] = 1; stack[top++] = p - w; }
       if (py < h - 1 && label[p + w] === 0 && lum[p + w] >= brightTh) { label[p + w] = 1; stack[top++] = p + w; }
     }
-    if (count > bestCount) {
-      bestCount = count;
-      bestSeed = i;
-    }
+    if (count > bestCount) { bestCount = count; bestSeed = i; }
   }
-  if (bestSeed < 0 || bestCount < n * MIN_COMPONENT_FRAC) return [];
+  if (bestSeed < 0 || bestCount < n * MIN_COMPONENT_FRAC) return null;
 
-  // Re-flood the winner and record its width at every row. Per-row extents
-  // (not a bounding box) so a tilted receipt's bars slant with the paper
-  // instead of overhanging the dark background.
+  // Mark the winner (label 2) and record its width per row for the outline.
   const rowLeft = new Int32Array(h).fill(w);
   const rowRight = new Int32Array(h).fill(-1);
   {
@@ -142,45 +121,96 @@ export async function detectTextLines(dataUrl: string): Promise<DetectedLine[]> 
     }
   }
 
-  let paperTop = rowRight.findIndex((r) => r >= 0);
-  let paperBottom = h - 1;
-  while (paperBottom > 0 && rowRight[paperBottom] < 0) paperBottom--;
-  if (paperTop < 0 || paperBottom <= paperTop) return [];
-  const paperH = paperBottom - paperTop;
-
-  // Widest row ≈ how wide the receipt really is; skip rows narrower than
-  // half of it (a curled corner tapering to a point) when placing bars.
-  let maxWidth = 0;
-  for (let y = paperTop; y <= paperBottom; y++) {
-    const rw = rowRight[y] - rowLeft[y];
-    if (rw > maxWidth) maxWidth = rw;
+  // Integral image of luminance for O(1) local means.
+  const iw = w + 1;
+  const integral = new Float64Array(iw * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++) {
+      rowSum += lum[y * w + x];
+      integral[(y + 1) * iw + (x + 1)] = integral[y * iw + (x + 1)] + rowSum;
+    }
   }
+  const r = Math.max(4, Math.round(SAMPLE_LONG_EDGE * ADAPT_RADIUS_FRAC));
 
-  const barH = Math.max(0.8, (paperH / h) * 100 / BAR_COUNT * 0.5);
-  const lines: DetectedLine[] = [];
-  for (let k = 0; k < BAR_COUNT; k++) {
-    const frac = EDGE_MARGIN + (k / (BAR_COUNT - 1)) * (1 - 2 * EDGE_MARGIN);
-    let yPx = Math.round(paperTop + frac * paperH);
-    // Nudge to the nearest row that actually has decent paper width.
-    let l = rowLeft[yPx];
-    let r = rowRight[yPx];
-    if (r - l < maxWidth * 0.5) {
-      for (let d = 1; d <= 4; d++) {
-        for (const yy of [yPx - d, yPx + d]) {
-          if (yy < paperTop || yy > paperBottom) continue;
-          if (rowRight[yy] - rowLeft[yy] >= maxWidth * 0.5) { yPx = yy; l = rowLeft[yy]; r = rowRight[yy]; break; }
-        }
-        if (r - l >= maxWidth * 0.5) break;
+  // ── Paint the overlay ───────────────────────────────────────────────
+  // "Inside the paper" = within the bright blob's horizontal span at that
+  // row — NOT the bright pixels themselves, since ink is dark and would be
+  // a hole in the blob. Inset a hair so the paper's shadowed edge doesn't
+  // register as ink.
+  const out = ctx.createImageData(w, h);
+  const od = out.data;
+  const [IR, IG, IB] = INK_RGBA;
+  for (let y = 0; y < h; y++) {
+    if (rowRight[y] < 0) continue;
+    const rl = rowLeft[y] + 2;
+    const rr = rowRight[y] - 2;
+    const y1 = Math.max(0, y - r);
+    const y2 = Math.min(h - 1, y + r);
+    for (let x = rl; x <= rr; x++) {
+      const p = y * w + x;
+      const x1 = Math.max(0, x - r);
+      const x2 = Math.min(w - 1, x + r);
+      const area = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum =
+        integral[(y2 + 1) * iw + (x2 + 1)] -
+        integral[y1 * iw + (x2 + 1)] -
+        integral[(y2 + 1) * iw + x1] +
+        integral[y1 * iw + x1];
+      const mean = sum / area;
+      if (lum[p] < mean * (1 - ADAPT_T)) {
+        // Darker pixels highlight more strongly (denser ink → hotter).
+        const strength = Math.min(1, (mean * (1 - ADAPT_T) - lum[p]) / 60 + 0.45);
+        const o = p * 4;
+        od[o] = IR;
+        od[o + 1] = IG;
+        od[o + 2] = IB;
+        od[o + 3] = Math.round(235 * strength);
       }
     }
-    if (r <= l) continue;
-    const inset = (r - l) * SIDE_INSET;
-    lines.push({
-      y: (yPx / h) * 100,
-      x: ((l + inset) / w) * 100,
-      w: ((r - l - 2 * inset) / w) * 100,
-      h: barH,
-    });
   }
-  return lines;
+  ctx.putImageData(out, 0, 0);
+
+  // ── Outline the paper ───────────────────────────────────────────────
+  // Smooth the per-row edges a little so the stroke reads as a clean
+  // border rather than a jagged mask boundary.
+  const ys: number[] = [];
+  const ls: number[] = [];
+  const rs: number[] = [];
+  for (let y = 0; y < h; y += 3) {
+    if (rowRight[y] < 0) continue;
+    let sl = 0;
+    let sr = 0;
+    let c = 0;
+    for (let k = -3; k <= 3; k++) {
+      const yy = y + k;
+      if (yy < 0 || yy >= h || rowRight[yy] < 0) continue;
+      sl += rowLeft[yy];
+      sr += rowRight[yy];
+      c++;
+    }
+    if (!c) continue;
+    ys.push(y);
+    ls.push(sl / c);
+    rs.push(sr / c);
+  }
+  if (ys.length >= 2) {
+    ctx.beginPath();
+    ctx.moveTo(ls[0], ys[0]);
+    for (let i = 1; i < ys.length; i++) ctx.lineTo(ls[i], ys[i]);
+    for (let i = ys.length - 1; i >= 0; i--) ctx.lineTo(rs[i], ys[i]);
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(${IR}, ${IG}, ${IB}, 0.95)`;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = "round";
+    ctx.shadowColor = `rgba(${IR}, ${IG}, ${IB}, 0.9)`;
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+  }
+
+  try {
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
 }

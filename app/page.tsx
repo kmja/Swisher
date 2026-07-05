@@ -18,7 +18,7 @@ import { Money, FxProvider } from "@/components/Money";
 import { currencyFlag, flagEmoji, formatNative, regionName, type Fx } from "@/lib/currency";
 import { addHistory } from "@/lib/history";
 import { analyzeImageQuality, type ImageQuality } from "@/lib/imageQuality";
-import { detectTextLines, type DetectedLine } from "@/lib/detectLines";
+import { buildScanOverlay } from "@/lib/detectLines";
 import { buildOptimisticRoomState, generateRoomCode, pendingCreateKey, type PendingCreatePayload } from "@/lib/optimisticRoom";
 import { readLocalSplit, saveLocalSplit } from "@/lib/local-split";
 import LangToggle from "@/components/LangToggle";
@@ -1067,7 +1067,10 @@ export default function Page() {
   // black ink on white paper makes a dark-row scan a good enough
   // approximation that we can paint REAL "found line" markers on the
   // photo while the OCR call runs in the background.
-  const [detectedLines, setDetectedLines] = useState<DetectedLine[]>([]);
+  // A PNG overlay (transparent) with the receipt outlined and its ink
+  // highlighted, built from the captured photo. Stretched over the
+  // displayed image rect (scanBox) so it lines up 1:1.
+  const [scanOverlay, setScanOverlay] = useState<string | null>(null);
   // The captured photo is object-contain (letterboxed), so scan markers —
   // positioned in % of the source image — must map onto the DISPLAYED
   // image rect, not the whole container. Measured from the <img> element.
@@ -1463,18 +1466,17 @@ export default function Page() {
     setPayMethod(next === "EUR" ? "sepa" : "swish");
   }
 
-  // Detect text rows in the captured photo as soon as OCR kicks off —
-  // shows up as a stream of pink rectangles laid down on the receipt
-  // while the model is still working. Reset on each new scan / when
-  // we leave the loading state so the next photo gets fresh markers.
+  // Build the ink/outline overlay from the captured photo as soon as OCR
+  // kicks off — the receipt gets outlined and its text highlighted while
+  // the model works. Reset on each new scan / when we leave loading.
   useEffect(() => {
     if (!ocrLoading || !imageUrl) {
-      setDetectedLines([]);
+      setScanOverlay(null);
       return;
     }
     let cancelled = false;
-    detectTextLines(imageUrl).then((lines) => {
-      if (!cancelled) setDetectedLines(lines);
+    buildScanOverlay(imageUrl).then((url) => {
+      if (!cancelled) setScanOverlay(url);
     });
     measureScanBox();
     const onResize = () => measureScanBox();
@@ -2624,38 +2626,24 @@ export default function Page() {
                     pink grid. */}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="scan-grid scan-grid-drift absolute inset-0 opacity-20" />
-                {/* Scan bars laid across the receipt — positioned inside the
-                    letterboxed image rect (scanBox) so they land on the paper,
-                    not the black bars. They cascade in top→bottom, then
-                    breathe, reading as a scanner sweeping the receipt. */}
-                <div
-                  className="pointer-events-none absolute"
-                  style={{
-                    left: `${scanBox?.left ?? 0}%`,
-                    top: `${scanBox?.top ?? 0}%`,
-                    width: `${scanBox?.width ?? 100}%`,
-                    height: `${scanBox?.height ?? 100}%`,
-                  }}
-                >
-                  {detectedLines.map((line, i) => {
-                    const reveal = Math.min(1.5, i * 0.05);
-                    return (
-                      <span
-                        key={i}
-                        className="ocr-line absolute rounded-full bg-swish/75 shadow-[0_0_10px_3px_rgba(238,92,154,0.65)]"
-                        style={{
-                          top: `${line.y}%`,
-                          left: `${line.x}%`,
-                          width: `${line.w}%`,
-                          height: `${Math.max(0.8, Math.min(2.8, line.h))}%`,
-                          // Comma list: first delay staggers the reveal wipe,
-                          // second starts the breathe once the wipe is done.
-                          animationDelay: `${reveal}s, ${reveal + 0.45}s`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                {/* Ink + outline overlay, stretched over the letterboxed
+                    image rect (scanBox) so it lands 1:1 on the receipt. It
+                    wipes in top→bottom then breathes, reading as a scanner
+                    reading the printed text. */}
+                {scanOverlay && (
+                  <div
+                    className="pointer-events-none absolute"
+                    style={{
+                      left: `${scanBox?.left ?? 0}%`,
+                      top: `${scanBox?.top ?? 0}%`,
+                      width: `${scanBox?.width ?? 100}%`,
+                      height: `${scanBox?.height ?? 100}%`,
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={scanOverlay} alt="" className="scan-ink h-full w-full" />
+                  </div>
+                )}
                 {/* one slow beam sweeping top → bottom with a soft comet
                     tail — the single moving element; the growing block of
                     found-row markers carries the progress story */}

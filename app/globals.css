@@ -377,30 +377,24 @@ textarea {
   animation: scan-glow 1.1s ease-in-out infinite;
 }
 
-/* OCR "found-line" markers — translucent pink horizontal bars that
-   fade in one after another over the photo while OCR runs, so the
-   sweep doesn't just look like a screensaver. Each bar carries its
-   own animation-delay from a per-element inline style. scaleX 0 → 1
-   from the left edge mimics a line being "read" left-to-right. */
-@keyframes ocr-line-reveal {
-  0% { opacity: 0; transform: scaleX(0); }
-  60% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0.85; transform: scaleX(1); }
+/* OCR ink/outline overlay — the receipt's text highlighted in pink.
+   Wipes in top → bottom (like the scanner reading down the receipt),
+   then breathes so it stays alive through the rest of the OCR call. */
+@keyframes scan-ink-reveal {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
 }
-@keyframes ocr-line-breathe {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 0.55; }
+@keyframes scan-ink-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
-.ocr-line {
-  opacity: 0;
-  transform-origin: left;
-  /* Reveal wipe, then a slow breathe — the growing block of found rows
-     is the clearest progress signal we have, so it stays bright and
-     alive instead of dimming to a faint tint. Elements set a comma
-     animation-delay inline so the breathe starts after its own reveal. */
+.scan-ink {
   animation:
-    ocr-line-reveal 0.45s ease-out forwards,
-    ocr-line-breathe 2.4s ease-in-out infinite;
+    scan-ink-reveal 1.7s cubic-bezier(0.4, 0, 0.6, 1) forwards,
+    scan-ink-breathe 2.2s ease-in-out 1.7s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-ink { animation: none; }
 }
 
 /* Skeleton shimmer — a translucent highlight sweeps left → right
