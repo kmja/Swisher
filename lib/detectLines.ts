@@ -16,9 +16,9 @@
  * rect and it lines up 1:1.
  */
 
-const SAMPLE_LONG_EDGE = 500;
+const SAMPLE_LONG_EDGE = 700;
 const MIN_COMPONENT_FRAC = 0.02; // paper blob must cover ≥2% of the frame
-const ADAPT_RADIUS_FRAC = 0.02; // local-mean window radius, of the long edge
+const ADAPT_RADIUS_FRAC = 0.018; // local-mean window radius, of the long edge
 const ADAPT_T = 0.14; // ink if pixel is ≥14% darker than its local mean
 const INK_RGBA = [246, 92, 156]; // swish-ish pink
 
@@ -134,19 +134,21 @@ export async function buildScanOverlay(dataUrl: string): Promise<string | null> 
   const r = Math.max(4, Math.round(SAMPLE_LONG_EDGE * ADAPT_RADIUS_FRAC));
 
   // ── Paint the overlay ───────────────────────────────────────────────
+  // Adaptive ink detection → per-row ink density + horizontal extent.
   // "Inside the paper" = within the bright blob's horizontal span at that
-  // row — NOT the bright pixels themselves, since ink is dark and would be
-  // a hole in the blob. Inset a hair so the paper's shadowed edge doesn't
-  // register as ink.
-  const out = ctx.createImageData(w, h);
-  const od = out.data;
-  const [IR, IG, IB] = INK_RGBA;
+  // row (NOT the bright pixels themselves — ink is dark, a hole in the
+  // blob). We don't paint ink pixels; we use the density profile to locate
+  // each text LINE, then swipe one marker over it.
+  const density = new Float32Array(h);
+  const inkLeft = new Int32Array(h).fill(w);
+  const inkRight = new Int32Array(h).fill(-1);
   for (let y = 0; y < h; y++) {
     if (rowRight[y] < 0) continue;
     const rl = rowLeft[y] + 2;
     const rr = rowRight[y] - 2;
     const y1 = Math.max(0, y - r);
     const y2 = Math.min(h - 1, y + r);
+    let c = 0;
     for (let x = rl; x <= rr; x++) {
       const p = y * w + x;
       const x1 = Math.max(0, x - r);
@@ -157,19 +159,73 @@ export async function buildScanOverlay(dataUrl: string): Promise<string | null> 
         integral[y1 * iw + (x2 + 1)] -
         integral[(y2 + 1) * iw + x1] +
         integral[y1 * iw + x1];
-      const mean = sum / area;
-      if (lum[p] < mean * (1 - ADAPT_T)) {
-        // Darker pixels highlight more strongly (denser ink → hotter).
-        const strength = Math.min(1, (mean * (1 - ADAPT_T) - lum[p]) / 60 + 0.45);
-        const o = p * 4;
-        od[o] = IR;
-        od[o + 1] = IG;
-        od[o + 2] = IB;
-        od[o + 3] = Math.round(235 * strength);
+      if (lum[p] < (sum / area) * (1 - ADAPT_T)) {
+        c++;
+        if (x < inkLeft[y]) inkLeft[y] = x;
+        if (x > inkRight[y]) inkRight[y] = x;
       }
     }
+    const rw = rowRight[y] - rowLeft[y];
+    density[y] = rw > 0 ? c / rw : 0;
   }
-  ctx.putImageData(out, 0, 0);
+
+  let paperTop = rowRight.findIndex((v) => v >= 0);
+  let paperBottom = h - 1;
+  while (paperBottom > 0 && rowRight[paperBottom] < 0) paperBottom--;
+  if (paperTop < 0 || paperBottom <= paperTop) return null;
+
+  // Find text lines as PEAKS in the (smoothed) density profile — one bump
+  // per printed line, even when lines are contiguous with no clean gap
+  // (dense/low-contrast receipts). minDist assumes at most ~45 lines.
+  const smooth = new Float32Array(h);
+  for (let y = 0; y < h; y++) {
+    let s = 0;
+    let c = 0;
+    for (let k = -1; k <= 1; k++) {
+      const yy = y + k;
+      if (yy >= 0 && yy < h) { s += density[yy]; c++; }
+    }
+    smooth[y] = s / c;
+  }
+  const minDist = Math.max(4, Math.round((paperBottom - paperTop) / 45));
+  const strokeH = Math.max(3, Math.round(minDist * 0.9));
+  const peaks: number[] = [];
+  for (let y = paperTop; y <= paperBottom; y++) {
+    if (smooth[y] < 0.06) continue;
+    let isMax = true;
+    for (let k = -minDist; k <= minDist; k++) {
+      const yy = y + k;
+      if (yy >= 0 && yy < h && smooth[yy] > smooth[y]) { isMax = false; break; }
+    }
+    if (isMax && !(peaks.length && y - peaks[peaks.length - 1] < minDist)) peaks.push(y);
+  }
+
+  // ── Swipe a highlighter marker over each text line ─────────────────
+  const [IR, IG, IB] = INK_RGBA;
+  ctx.fillStyle = `rgba(${IR}, ${IG}, ${IB}, 0.42)`;
+  const half = Math.round(strokeH / 2);
+  const roundRect = (x: number, yy: number, ww: number, hh: number, rad: number) => {
+    const rr2 = Math.min(rad, ww / 2, hh / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr2, yy);
+    ctx.arcTo(x + ww, yy, x + ww, yy + hh, rr2);
+    ctx.arcTo(x + ww, yy + hh, x, yy + hh, rr2);
+    ctx.arcTo(x, yy + hh, x, yy, rr2);
+    ctx.arcTo(x, yy, x + ww, yy, rr2);
+    ctx.closePath();
+    ctx.fill();
+  };
+  for (const yc of peaks) {
+    let l = w;
+    let rr3 = -1;
+    for (let y = yc - half; y <= yc + half; y++) {
+      if (y < 0 || y >= h || inkRight[y] < 0) continue;
+      if (inkLeft[y] < l) l = inkLeft[y];
+      if (inkRight[y] > rr3) rr3 = inkRight[y];
+    }
+    if (rr3 <= l) continue;
+    roundRect(l - 3, yc - half, rr3 - l + 6, strokeH + 2, strokeH);
+  }
 
   // ── Outline the paper ───────────────────────────────────────────────
   // Smooth the per-row edges a little so the stroke reads as a clean

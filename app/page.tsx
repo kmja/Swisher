@@ -2626,31 +2626,33 @@ export default function Page() {
                     pink grid. */}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="scan-grid scan-grid-drift absolute inset-0 opacity-20" />
-                {/* Ink + outline overlay, stretched over the letterboxed
-                    image rect (scanBox) so it lands 1:1 on the receipt. It
-                    wipes in top→bottom then breathes, reading as a scanner
-                    reading the printed text. */}
+                {/* Ink + outline overlay stretched over the letterboxed image
+                    rect (scanBox) so it lands 1:1 on the receipt, PLUS a beam
+                    that sweeps top→bottom. They mount together and share the
+                    same linear timing, so the highlight is revealed exactly
+                    where the beam is — the beam looks like it's developing the
+                    highlight as it passes. Beam keeps looping after; the
+                    highlight is revealed once and then breathes. */}
                 {scanOverlay && (
-                  <div
-                    className="pointer-events-none absolute"
-                    style={{
-                      left: `${scanBox?.left ?? 0}%`,
-                      top: `${scanBox?.top ?? 0}%`,
-                      width: `${scanBox?.width ?? 100}%`,
-                      height: `${scanBox?.height ?? 100}%`,
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={scanOverlay} alt="" className="scan-ink h-full w-full" />
-                  </div>
+                  <>
+                    <div
+                      className="pointer-events-none absolute"
+                      style={{
+                        left: `${scanBox?.left ?? 0}%`,
+                        top: `${scanBox?.top ?? 0}%`,
+                        width: `${scanBox?.width ?? 100}%`,
+                        height: `${scanBox?.height ?? 100}%`,
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={scanOverlay} alt="" className="scan-ink h-full w-full" />
+                    </div>
+                    <div className="scan-beam pointer-events-none absolute inset-0">
+                      <div className="absolute inset-x-0 top-0 h-20 -translate-y-full bg-gradient-to-b from-transparent to-swish/25" />
+                      <div className="absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
+                    </div>
+                  </>
                 )}
-                {/* one slow beam sweeping top → bottom with a soft comet
-                    tail — the single moving element; the growing block of
-                    found-row markers carries the progress story */}
-                <div className="vf-scan-y pointer-events-none absolute inset-0" style={{ animationDuration: "4.6s" }}>
-                  <div className="absolute inset-x-0 top-0 h-24 -translate-y-full bg-gradient-to-b from-transparent to-swish/25" />
-                  <div className="absolute inset-x-0 top-0 h-[3px] bg-swish shadow-[0_0_18px_5px_rgba(238,92,154,0.85)]" />
-                </div>
                 {/* glowing corner brackets */}
                 <div className="scan-glow pointer-events-none absolute inset-4">
                   <span className="absolute left-0 top-0 h-6 w-6 border-l-4 border-t-4 border-swish" />

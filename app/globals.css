@@ -377,24 +377,36 @@ textarea {
   animation: scan-glow 1.1s ease-in-out infinite;
 }
 
-/* OCR ink/outline overlay — the receipt's text highlighted in pink.
-   Wipes in top → bottom (like the scanner reading down the receipt),
-   then breathes so it stays alive through the rest of the OCR call. */
+/* OCR ink/outline overlay + its beam. The marker highlight is revealed
+   top → bottom by a clip-path, and a beam sweeps top → bottom on the
+   SAME linear timing (started together) so the highlight appears right at
+   the beam's edge — the beam looks like it's developing the highlight as
+   it passes. The reveal runs once (then breathes); the beam loops. Keep
+   SCAN_SWEEP identical in both. */
 @keyframes scan-ink-reveal {
   from { clip-path: inset(0 0 100% 0); }
   to { clip-path: inset(0 0 0 0); }
 }
 @keyframes scan-ink-breathe {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.62; }
 }
 .scan-ink {
   animation:
-    scan-ink-reveal 1.7s cubic-bezier(0.4, 0, 0.6, 1) forwards,
-    scan-ink-breathe 2.2s ease-in-out 1.7s infinite;
+    scan-ink-reveal 2.4s linear forwards,
+    scan-ink-breathe 2.2s ease-in-out 2.4s infinite;
+}
+@keyframes scan-beam-sweep {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+.scan-beam {
+  animation: scan-beam-sweep 2.4s linear infinite;
+  will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
   .scan-ink { animation: none; }
+  .scan-beam { animation: none; opacity: 0; }
 }
 
 /* Skeleton shimmer — a translucent highlight sweeps left → right
