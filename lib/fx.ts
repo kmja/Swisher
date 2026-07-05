@@ -29,9 +29,14 @@ export type FxRate = {
 
 type FrankfurterResp = { date?: string; rates?: { SEK?: number } };
 
+// A blocked/slow provider must never stall a scan whose OCR already finished —
+// the rate fetch runs inside the OCR response. Bound every call so we fall
+// through to the next provider (and ultimately the static table) instead.
+const FX_TIMEOUT_MS = 2500;
+
 async function frankfurter(url: string): Promise<{ rate: number; date?: string } | null> {
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, { signal: AbortSignal.timeout(FX_TIMEOUT_MS) });
     if (!r.ok) return null;
     const j = (await r.json()) as FrankfurterResp;
     const sek = j?.rates?.SEK;
@@ -69,7 +74,9 @@ export async function fetchRateToSek(currency: string, date?: string | null): Pr
 
   // 3) open.er-api.com latest — keyless, ~160 currencies (no history).
   try {
-    const r = await fetch(`https://open.er-api.com/v6/latest/${cur}`);
+    const r = await fetch(`https://open.er-api.com/v6/latest/${cur}`, {
+      signal: AbortSignal.timeout(FX_TIMEOUT_MS),
+    });
     if (r.ok) {
       const j = (await r.json()) as { result?: string; rates?: Record<string, number> };
       const sek = j?.rates?.SEK;

@@ -1481,7 +1481,9 @@ export default function Page() {
   // date and re-scale every amount (recovering the printed figure, then
   // converting it at the new rate). All amounts stay stored as SEK öre.
   async function changeCurrency(next: string) {
-    if (next === currency || fxChanging) return;
+    // Allow re-selecting the current currency when its rate is missing — that's
+    // the retry path out of the rate-missing state. Otherwise a no-op reselect.
+    if (fxChanging || (next === currency && fxRate !== null)) return;
     const oldRate = fxRate ?? 1;
     let newRate: number | null = 1;
     let approx = false;
@@ -1812,9 +1814,16 @@ export default function Page() {
     const tFetch = performance.now();
     let tFirstByte = 0;
     let scanModel: string | null = null;
+    // Bound the whole scan: a stalled connection (flaky restaurant wifi drops
+    // mid-stream) would otherwise leave reader.read() awaiting forever with the
+    // spinner stuck on "reading…". Abort past the server's own 60s cap so a
+    // hung read surfaces as the failure card instead. Cleared in `finally`.
+    const scanCtrl = new AbortController();
+    const scanTimeout = setTimeout(() => scanCtrl.abort(), 65000);
     try {
       const res = await fetch("/api/ocr", {
         method: "POST",
+        signal: scanCtrl.signal,
         // Opt into streaming: the server sends a progress event as each
         // receipt line is read, so the counter ticks in real time instead
         // of the host staring at a static "reading…" for 10s. SSE is
@@ -1939,6 +1948,18 @@ export default function Page() {
       setOcrLoading(false);
 
       if (append) {
+        // Strip any tip line-item from this page before appending — same reason
+        // as the primary path: a "Dricks"/"tip" line would otherwise show as a
+        // claimable food row and double-count. Fold its amount into the single
+        // shared tip row instead (creating one if this page is the first tip).
+        let appendTipOre = 0;
+        const foodMapped = mapped.filter((it) => {
+          if (it.category === "tip") {
+            appendTipOre += parseAmountToOre(it.priceInput) ?? 0;
+            return false;
+          }
+          return true;
+        });
         // Long receipts get scanned in overlapping photos; drop items in this
         // batch that already appeared in earlier batches with the same name and
         // price (multiset, so a legitimate triple "3× Bryggkaffe" stays a triple).
@@ -1946,7 +1967,7 @@ export default function Page() {
           const keyOf = (it: UiItem) => `${(it.description ?? "").trim().toLowerCase()}|${parseAmountToOre(it.priceInput) ?? 0}`;
           const budget = new Map<string, number>();
           for (const it of prev) budget.set(keyOf(it), (budget.get(keyOf(it)) ?? 0) + 1);
-          const filtered = mapped.filter((it) => {
+          const filtered = foodMapped.filter((it) => {
             const k = keyOf(it);
             const left = budget.get(k) ?? 0;
             if (left > 0) {
@@ -1955,7 +1976,20 @@ export default function Page() {
             }
             return true;
           });
-          return [...prev, ...filtered];
+          let next = [...prev, ...filtered];
+          if (appendTipOre > 0) {
+            const tipIdx = next.findIndex((it) => it.isTip);
+            if (tipIdx >= 0) {
+              const curOre = parseAmountToOre(next[tipIdx].priceInput) ?? 0;
+              next = next.map((it, i) => (i === tipIdx ? { ...it, priceInput: formatOre(curOre + appendTipOre) } : it));
+            } else {
+              next = [
+                ...next,
+                { id: uid(), description: t.tip, priceInput: formatOre(appendTipOre), sharers: [], shared: true, category: "other", imgIndex: -1, isTip: true },
+              ];
+            }
+          }
+          return next;
         });
         return;
       }
@@ -2085,10 +2119,14 @@ export default function Page() {
       };
       requestAnimationFrame(step);
     } catch (err) {
-      setOcrError(err instanceof Error ? err.message : "OCR failed.");
+      // An AbortError here is the 65s timeout firing on a stalled stream.
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      setOcrError(aborted ? "Scan timed out." : err instanceof Error ? err.message : "OCR failed.");
       setOcrFailReason("general");
       setOcrFailed(true);
       setOcrLoading(false);
+    } finally {
+      clearTimeout(scanTimeout);
     }
   }
 
@@ -2435,7 +2473,7 @@ export default function Page() {
   // overwriting the host's explicit pick in edge cases, so it's gone.
 
   const itemsStepValid =
-    validItems.length > 0 && namedDiners.length >= 2 && payDestOk;
+    validItems.length > 0 && namedDiners.length >= 2 && payDestOk && !rateMissing;
 
   // --- assign ----------------------------------------------------------------
   function toggleSharer(itemId: string, dinerId: string) {
@@ -2487,7 +2525,11 @@ export default function Page() {
   // Empty name is fine — we fall back to the playful t.genericHostName
   // placeholder when creating the room, so the host doesn't have to
   // type anything if they don't want to.
-  const roomReady = validItems.length > 0 && payDestOk;
+  // Block room creation while a foreign receipt has no FX rate — otherwise the
+  // native amounts get stored as SEK öre (rate defaults to 1) and every diner
+  // is overcharged by the exchange rate. The host recovers via the currency
+  // picker (re-select to retry, or switch to a supported currency).
+  const roomReady = validItems.length > 0 && payDestOk && !rateMissing;
 
   function createRoom() {
     if (!roomReady || creatingRoom) return;
