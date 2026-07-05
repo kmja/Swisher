@@ -1005,7 +1005,7 @@ function enhanceForScan(ctx: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /** Downscale a photo to keep the OCR upload small and fast. */
-function fileToCompressedDataUrl(file: File): Promise<string> {
+function fileToCompressedDataUrl(file: File, maxDim = 1600): Promise<string> {
   return new Promise((resolve, reject) => {
     // URL.createObjectURL sidesteps the FileReader permission quirks that
     // trigger "unknown filereader" errors on Android gallery picks and on
@@ -1023,8 +1023,8 @@ function fileToCompressedDataUrl(file: File): Promise<string> {
       // upload time + ~50% more vision tokens (→ slower OCR) for little
       // accuracy gain. A/B vs 2200px: ~40% smaller upload, ~47% fewer
       // vision tokens. Watch faint/blurry receipts — bump back toward 1800
-      // if digits start getting misread.
-      const maxDim = 1600;
+      // if digits start getting misread. Caller can override the cap (the
+      // debug image-size selector) to A/B different sizes.
       const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
@@ -1065,9 +1065,12 @@ export default function Page() {
   // Wall-clock breakdown of the last scan, shown in the debug panel so we
   // can see where the time actually goes (compress / upload / model read).
   const [scanTimings, setScanTimings] = useState<
-    { compressMs: number; uploadMs: number; readMs: number; totalMs: number; model: string | null } | null
+    { compressMs: number; uploadMs: number; readMs: number; totalMs: number; model: string | null; maxDim: number } | null
   >(null);
   const compressMsRef = useRef(0);
+  // Debug: long-edge cap the photo is downscaled to before OCR. Lets us
+  // A/B image size (upload weight + vision-token cost) against accuracy.
+  const [imgMaxDim, setImgMaxDim] = useState(1600);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState<number | null>(null);
   // Items streamed in so far during the current scan — enough display
@@ -1657,10 +1660,9 @@ export default function Page() {
   function capturePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    // Keep this in sync with fileToCompressedDataUrl's cap — 1600 is the
-    // sweet spot for legible thermal digits vs upload + vision-token cost.
-    const maxDim = 1600;
-    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    // Mirrors fileToCompressedDataUrl's cap (default 1600) — overridable
+    // via the debug image-size selector to A/B upload + vision-token cost.
+    const scale = Math.min(1, imgMaxDim / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
@@ -1724,7 +1726,7 @@ export default function Page() {
       // receipt at once.
       const [first, ...rest] = files;
       const tCompress = performance.now();
-      const primary = await fileToCompressedDataUrl(first);
+      const primary = await fileToCompressedDataUrl(first, imgMaxDim);
       compressMsRef.current = performance.now() - tCompress;
       setImageUrl(primary);
       void analyzeImageQuality(primary).then(setImageQuality);
@@ -1733,7 +1735,7 @@ export default function Page() {
         return;
       }
       const tRest = performance.now();
-      const restUrls = await Promise.all(rest.map(fileToCompressedDataUrl));
+      const restUrls = await Promise.all(rest.map((f) => fileToCompressedDataUrl(f, imgMaxDim)));
       compressMsRef.current += performance.now() - tRest;
       runOcr(primary, { frames: [primary, ...restUrls] });
     } catch (err) {
@@ -1853,6 +1855,7 @@ export default function Page() {
         readMs: Math.round(tDone - firstByte),
         totalMs: Math.round(compressMsRef.current + (tDone - tFetch)),
         model: scanModel,
+        maxDim: imgMaxDim,
       });
       const mapped: UiItem[] = (
         data.items as { description: string; price: number; shared?: boolean; category?: string; emoji?: string; y?: number; translation?: string | null }[]
@@ -2025,7 +2028,7 @@ export default function Page() {
       // Multiple-page receipt picked from the gallery: append each
       // page in order so the OCR sees the whole thing.
       for (const file of files) {
-        const dataUrl = await fileToCompressedDataUrl(file);
+        const dataUrl = await fileToCompressedDataUrl(file, imgMaxDim);
         await runOcr(dataUrl, { append: true });
       }
     } catch (err) {
@@ -3842,6 +3845,23 @@ export default function Page() {
                 </div>
               )}
             </dl>
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Image size (long edge)</p>
+              <div className="flex gap-1.5">
+                {[1200, 1400, 1600, 2000, 2400].map((px) => (
+                  <button
+                    key={px}
+                    type="button"
+                    onClick={() => setImgMaxDim(px)}
+                    className={`flex-1 rounded-lg py-2 text-xs font-semibold tabular-nums transition-colors ${
+                      imgMaxDim === px ? "bg-swish text-white" : "bg-gray-100 text-gray-600 active:bg-gray-200"
+                    }`}
+                  >
+                    {px}
+                  </button>
+                ))}
+              </div>
+            </div>
             {scanTimings && (
               <div className="rounded-xl bg-gray-50 p-3">
                 <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Last scan</p>
@@ -3863,6 +3883,10 @@ export default function Page() {
                       <dd className="font-mono text-xs text-ink">{scanTimings.model}</dd>
                     </div>
                   )}
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">Image size</dt>
+                    <dd className="font-mono text-xs tabular-nums text-ink">{scanTimings.maxDim}px</dd>
+                  </div>
                 </dl>
               </div>
             )}
