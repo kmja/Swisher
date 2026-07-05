@@ -177,9 +177,7 @@ export async function buildScanOverlay(dataUrl: string): Promise<string | null> 
   }
   const dx = Math.max(3, Math.round(SAMPLE_LONG_EDGE * 0.007));
   const dy = Math.max(1, Math.round(SAMPLE_LONG_EDGE * 0.003));
-  const out = ctx.createImageData(w, h);
-  const od = out.data;
-  const [IR, IG, IB] = INK_RGBA;
+  const dmask = new Uint8Array(n);
   for (let y = 0; y < h; y++) {
     if (rowRight[y] < 0) continue;
     const y1 = Math.max(0, y - dy);
@@ -192,13 +190,51 @@ export async function buildScanOverlay(dataUrl: string): Promise<string | null> 
         maskInt[y1 * iw + (x2 + 1)] -
         maskInt[(y2 + 1) * iw + x1] +
         maskInt[y1 * iw + x1];
-      if (s > 0) {
-        const o = (y * w + x) * 4;
-        od[o] = IR;
-        od[o + 1] = IG;
-        od[o + 2] = IB;
-        od[o + 3] = 130; // ~0.5 marker alpha
+      if (s > 0) dmask[y * w + x] = 1;
+    }
+  }
+
+  // ── Drop stray specks ───────────────────────────────────────────────
+  // Label 8-connected components of the dilated mask and paint only those
+  // above a minimum size. A lone speck of ink (paper crease, dust) dilates
+  // to a small isolated blob (~one dilation footprint); real text merges
+  // into large stroke regions — so a threshold of a couple of footprints
+  // cleanly removes noise without touching text.
+  const minCluster = (2 * dx + 1) * (2 * dy + 1) * 2;
+  const seen = new Uint8Array(n);
+  const members = new Int32Array(n);
+  const out = ctx.createImageData(w, h);
+  const od = out.data;
+  const [IR, IG, IB] = INK_RGBA;
+  for (let i = 0; i < n; i++) {
+    if (!dmask[i] || seen[i]) continue;
+    let count = 0;
+    let top = 0;
+    stack[top++] = i;
+    seen[i] = 1;
+    while (top > 0) {
+      const p = stack[--top];
+      members[count++] = p;
+      const px = p % w;
+      const py = (p / w) | 0;
+      for (let ddy = -1; ddy <= 1; ddy++) {
+        for (let ddx = -1; ddx <= 1; ddx++) {
+          if (!ddx && !ddy) continue;
+          const nx = px + ddx;
+          const ny = py + ddy;
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+          const q = ny * w + nx;
+          if (dmask[q] && !seen[q]) { seen[q] = 1; stack[top++] = q; }
+        }
       }
+    }
+    if (count < minCluster) continue;
+    for (let m = 0; m < count; m++) {
+      const o = members[m] * 4;
+      od[o] = IR;
+      od[o + 1] = IG;
+      od[o + 2] = IB;
+      od[o + 3] = 130; // ~0.5 marker alpha
     }
   }
   ctx.putImageData(out, 0, 0);
