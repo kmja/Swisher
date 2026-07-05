@@ -133,99 +133,75 @@ export async function buildScanOverlay(dataUrl: string): Promise<string | null> 
   }
   const r = Math.max(4, Math.round(SAMPLE_LONG_EDGE * ADAPT_RADIUS_FRAC));
 
-  // ── Paint the overlay ───────────────────────────────────────────────
-  // Adaptive ink detection → per-row ink density + horizontal extent.
-  // "Inside the paper" = within the bright blob's horizontal span at that
-  // row (NOT the bright pixels themselves — ink is dark, a hole in the
-  // blob). We don't paint ink pixels; we use the density profile to locate
-  // each text LINE, then swipe one marker over it.
-  const density = new Float32Array(h);
-  const inkLeft = new Int32Array(h).fill(w);
-  const inkRight = new Int32Array(h).fill(-1);
+  // ── Ink mask ────────────────────────────────────────────────────────
+  // A pixel is ink if it's notably darker than its local mean (adaptive,
+  // so it tracks uneven light) AND that local mean is paper-bright. The
+  // brightness gate is what keeps the hand holding the receipt — whose
+  // creases are darker than their own local skin mean, but whose skin is
+  // NOT paper-bright — from being highlighted. Scan only within the paper
+  // blob's per-row span, inset a hair off its shadowed edge.
+  const inkGate = brightTh - 20;
+  const mask = new Uint8Array(n);
   for (let y = 0; y < h; y++) {
     if (rowRight[y] < 0) continue;
     const rl = rowLeft[y] + 2;
     const rr = rowRight[y] - 2;
     const y1 = Math.max(0, y - r);
     const y2 = Math.min(h - 1, y + r);
-    let c = 0;
     for (let x = rl; x <= rr; x++) {
       const p = y * w + x;
       const x1 = Math.max(0, x - r);
       const x2 = Math.min(w - 1, x + r);
       const area = (x2 - x1 + 1) * (y2 - y1 + 1);
-      const sum =
-        integral[(y2 + 1) * iw + (x2 + 1)] -
-        integral[y1 * iw + (x2 + 1)] -
-        integral[(y2 + 1) * iw + x1] +
-        integral[y1 * iw + x1];
-      if (lum[p] < (sum / area) * (1 - ADAPT_T)) {
-        c++;
-        if (x < inkLeft[y]) inkLeft[y] = x;
-        if (x > inkRight[y]) inkRight[y] = x;
+      const mean =
+        (integral[(y2 + 1) * iw + (x2 + 1)] -
+          integral[y1 * iw + (x2 + 1)] -
+          integral[(y2 + 1) * iw + x1] +
+          integral[y1 * iw + x1]) / area;
+      if (mean >= inkGate && lum[p] < mean * (1 - ADAPT_T)) mask[p] = 1;
+    }
+  }
+
+  // ── Broaden into brush strokes ──────────────────────────────────────
+  // Dilate the ink mask (via its own integral image) MORE horizontally
+  // than vertically, so letters and words merge into a broad swipe along
+  // each line while adjacent lines stay separate. Then paint the dilated
+  // mask as translucent pink — highlighting the actual ink, thickened.
+  const maskInt = new Int32Array(iw * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++) {
+      rowSum += mask[y * w + x];
+      maskInt[(y + 1) * iw + (x + 1)] = maskInt[y * iw + (x + 1)] + rowSum;
+    }
+  }
+  const dx = Math.max(3, Math.round(SAMPLE_LONG_EDGE * 0.007));
+  const dy = Math.max(1, Math.round(SAMPLE_LONG_EDGE * 0.003));
+  const out = ctx.createImageData(w, h);
+  const od = out.data;
+  const [IR, IG, IB] = INK_RGBA;
+  for (let y = 0; y < h; y++) {
+    if (rowRight[y] < 0) continue;
+    const y1 = Math.max(0, y - dy);
+    const y2 = Math.min(h - 1, y + dy);
+    for (let x = 0; x < w; x++) {
+      const x1 = Math.max(0, x - dx);
+      const x2 = Math.min(w - 1, x + dx);
+      const s =
+        maskInt[(y2 + 1) * iw + (x2 + 1)] -
+        maskInt[y1 * iw + (x2 + 1)] -
+        maskInt[(y2 + 1) * iw + x1] +
+        maskInt[y1 * iw + x1];
+      if (s > 0) {
+        const o = (y * w + x) * 4;
+        od[o] = IR;
+        od[o + 1] = IG;
+        od[o + 2] = IB;
+        od[o + 3] = 130; // ~0.5 marker alpha
       }
     }
-    const rw = rowRight[y] - rowLeft[y];
-    density[y] = rw > 0 ? c / rw : 0;
   }
-
-  let paperTop = rowRight.findIndex((v) => v >= 0);
-  let paperBottom = h - 1;
-  while (paperBottom > 0 && rowRight[paperBottom] < 0) paperBottom--;
-  if (paperTop < 0 || paperBottom <= paperTop) return null;
-
-  // Find text lines as PEAKS in the (smoothed) density profile — one bump
-  // per printed line, even when lines are contiguous with no clean gap
-  // (dense/low-contrast receipts). minDist assumes at most ~45 lines.
-  const smooth = new Float32Array(h);
-  for (let y = 0; y < h; y++) {
-    let s = 0;
-    let c = 0;
-    for (let k = -1; k <= 1; k++) {
-      const yy = y + k;
-      if (yy >= 0 && yy < h) { s += density[yy]; c++; }
-    }
-    smooth[y] = s / c;
-  }
-  const minDist = Math.max(4, Math.round((paperBottom - paperTop) / 45));
-  const strokeH = Math.max(3, Math.round(minDist * 0.9));
-  const peaks: number[] = [];
-  for (let y = paperTop; y <= paperBottom; y++) {
-    if (smooth[y] < 0.06) continue;
-    let isMax = true;
-    for (let k = -minDist; k <= minDist; k++) {
-      const yy = y + k;
-      if (yy >= 0 && yy < h && smooth[yy] > smooth[y]) { isMax = false; break; }
-    }
-    if (isMax && !(peaks.length && y - peaks[peaks.length - 1] < minDist)) peaks.push(y);
-  }
-
-  // ── Swipe a highlighter marker over each text line ─────────────────
-  const [IR, IG, IB] = INK_RGBA;
-  ctx.fillStyle = `rgba(${IR}, ${IG}, ${IB}, 0.42)`;
-  const half = Math.round(strokeH / 2);
-  const roundRect = (x: number, yy: number, ww: number, hh: number, rad: number) => {
-    const rr2 = Math.min(rad, ww / 2, hh / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr2, yy);
-    ctx.arcTo(x + ww, yy, x + ww, yy + hh, rr2);
-    ctx.arcTo(x + ww, yy + hh, x, yy + hh, rr2);
-    ctx.arcTo(x, yy + hh, x, yy, rr2);
-    ctx.arcTo(x, yy, x + ww, yy, rr2);
-    ctx.closePath();
-    ctx.fill();
-  };
-  for (const yc of peaks) {
-    let l = w;
-    let rr3 = -1;
-    for (let y = yc - half; y <= yc + half; y++) {
-      if (y < 0 || y >= h || inkRight[y] < 0) continue;
-      if (inkLeft[y] < l) l = inkLeft[y];
-      if (inkRight[y] > rr3) rr3 = inkRight[y];
-    }
-    if (rr3 <= l) continue;
-    roundRect(l - 3, yc - half, rr3 - l + 6, strokeH + 2, strokeH);
-  }
+  ctx.putImageData(out, 0, 0);
 
   // ── Outline the paper ───────────────────────────────────────────────
   // Smooth the per-row edges a little so the stroke reads as a clean
