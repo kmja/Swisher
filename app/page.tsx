@@ -1050,6 +1050,10 @@ type ScanLogEntry = {
   model: string | null;
   maxDim: number;
   timings: { compressMs: number; uploadMs: number; readMs: number; totalMs: number };
+  // The model's own JSON, untouched: native currency, original line totals,
+  // quantity intact — directly comparable to the printed receipt.
+  raw: unknown;
+  // The processed result the app consumes: SEK-converted, per-unit split.
   result: unknown;
 };
 const SCAN_LOG_KEY = "kvitt-scan-log";
@@ -1899,13 +1903,17 @@ export default function Page() {
         totalMs: Math.round(compressMsRef.current + (tDone - tFetch)),
       };
       setScanTimings({ ...timings, model: scanModel, maxDim: imgMaxDim });
+      // Split the server's debug `raw` (untouched model JSON) out of the
+      // processed result so the log shows both, cleanly separated.
+      const { raw: rawModel, ...processed } = data as Record<string, unknown>;
       setScanLog(
         pushScanLog({
           ts: new Date().toISOString(),
           model: scanModel,
           maxDim: imgMaxDim,
           timings,
-          result: data,
+          raw: rawModel ?? null,
+          result: processed,
         }),
       );
       const mapped: UiItem[] = (

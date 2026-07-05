@@ -487,6 +487,27 @@ function extractJson(text: string): OcrResult {
   };
 }
 
+/** The model's own JSON, parsed but otherwise untouched — native currency,
+ *  original line totals, quantity intact (no per-unit split, no 0-line drop,
+ *  no FX). Attached to the response as `raw` so a debug scan log can be
+ *  compared directly against the printed receipt, with the FX layer (which
+ *  is identical across models) removed from what's being eyeballed. Returns
+ *  null if the text won't parse — the salvage path in extractJson still
+ *  produces the real result, this is purely a debugging convenience. */
+function rawModelJson(text: string): unknown {
+  let raw = text.trim();
+  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) raw = fence[1].trim();
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start !== -1 && end > start) raw = raw.slice(start, end + 1);
+  try {
+    return JSON.parse(raw.replace(/,(\s*[}\]])/g, "$1"));
+  } catch {
+    return null;
+  }
+}
+
 /** Multiply every monetary field by the SEK rate, leaving the rest untouched. */
 function toSek(r: OcrResult, rate: number): OcrResult {
   const c = (v: number | null) => (v == null ? null : v * rate);
@@ -683,7 +704,7 @@ export async function POST(req: Request) {
           });
           const parsed = extractJson(text);
           if (parsed.items.length > 0 || parsed.total !== null) {
-            send({ result: await withCurrency(parsed), model: chosen.name });
+            send({ result: { ...(await withCurrency(parsed)), raw: rawModelJson(text) }, model: chosen.name });
             controller.close();
             return;
           }
@@ -700,7 +721,7 @@ export async function POST(req: Request) {
             }
             const parsed = extractJson(text);
             if (parsed.items.length > 0 || parsed.total !== null) {
-              send({ result: await withCurrency(parsed), model: name });
+              send({ result: { ...(await withCurrency(parsed)), raw: rawModelJson(text) }, model: name });
               controller.close();
               return;
             }
@@ -734,7 +755,10 @@ export async function POST(req: Request) {
       }
       const parsed = extractJson(text);
       if (parsed.items.length > 0 || parsed.total !== null) {
-        return NextResponse.json(await withCurrency(parsed), { headers: { "X-Ocr-Model": name } });
+        return NextResponse.json(
+          { ...(await withCurrency(parsed)), raw: rawModelJson(text) },
+          { headers: { "X-Ocr-Model": name } },
+        );
       }
       diag.push(`${name}:no-items`);
     } catch (err) {
