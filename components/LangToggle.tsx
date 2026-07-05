@@ -40,11 +40,10 @@ export default function LangToggle({ lang, onChange }: { lang: Lang; onChange: (
         aria-expanded={open}
         aria-label={active.name}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-2 ring-gray-300 active:bg-gray-50"
+        className="inline-flex items-center gap-1 rounded-full px-2 py-2 text-sm font-semibold text-gray-700 active:bg-gray-100"
       >
-        <span aria-hidden className="text-base leading-none">{active.flag}</span>
-        <span>{active.abbr}</span>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
+        <span aria-hidden className="text-xl leading-none">{active.flag}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
