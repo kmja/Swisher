@@ -2306,6 +2306,7 @@ export default function RoomPage() {
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="join-dialog-title"
       className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-24"
     >
       {/* Backdrop: blur is on from the first frame so the room behind is
@@ -2326,7 +2327,7 @@ export default function RoomPage() {
           {/* Compact context: meal name, then the date and who paid. */}
           {state && (
             <div className="mb-4">
-              <h2 className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
+              <h2 id="join-dialog-title" className="truncate text-lg font-bold text-ink">{state.place || "Kvitt"}</h2>
               <p className="mt-0.5 text-sm text-gray-500">
                 {formatReceiptDate(state.date, lang)} · {t.paidBy} {state.payeeName || tx.genericHostName}
               </p>
@@ -2444,11 +2445,19 @@ export default function RoomPage() {
     </div>
   ) : null;
 
+  // Re-attempt the room load from the notfound/unavailable dead-ends — a
+  // mistyped code stays wrong, but a just-created room that hadn't persisted
+  // yet, or a transient 503, recovers without a full reload.
+  const retryLoad = () => {
+    everLoadedRef.current = false;
+    setStatus("loading");
+    void refresh();
+  };
   // Plain gray page until room state is ready — then the fully-populated
   // join dialog (or the room itself) fades in. No skeleton flash.
   if (status === "loading") return <div className="min-h-dvh" style={{ background: "var(--color-page)" }} />;
-  if (status === "notfound") return <Centered><p>{t.notFound}</p><HomeLink label={t.toStart} /></Centered>;
-  if (status === "unavailable") return <Centered><p>{t.unavailable}</p><HomeLink label={t.toStart} /></Centered>;
+  if (status === "notfound") return <Centered><p>{t.notFound}</p><RetryButton onClick={retryLoad} label={TRY_AGAIN[lang] ?? TRY_AGAIN.en} /><HomeLink label={t.toStart} /></Centered>;
+  if (status === "unavailable") return <Centered><p>{t.unavailable}</p><RetryButton onClick={retryLoad} label={TRY_AGAIN[lang] ?? TRY_AGAIN.en} /><HomeLink label={t.toStart} /></Centered>;
   if (!state) return <div className="min-h-dvh" style={{ background: "var(--color-page)" }} />;
 
   const roomFx: Fx =
@@ -4021,6 +4030,27 @@ function HomeLink({ label }: { label: string }) {
     </a>
   );
 }
+
+// Secondary "try again" action for the notfound/unavailable dead-ends.
+function RetryButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl px-5 py-2.5 text-sm font-semibold text-swish-dark underline underline-offset-2 active:text-swish"
+    >
+      {label}
+    </button>
+  );
+}
+
+// "Try again" label for the room error states. Kept as a local map rather than
+// threaded through the big per-locale R dict — one auxiliary string.
+const TRY_AGAIN: Record<Lang, string> = {
+  sv: "Försök igen", en: "Try again", de: "Erneut versuchen", fr: "Réessayer",
+  es: "Intentar de nuevo", it: "Riprova", nl: "Opnieuw proberen", da: "Prøv igen",
+  no: "Prøv igjen", fi: "Yritä uudelleen", pl: "Spróbuj ponownie", pt: "Tentar novamente",
+};
 
 // Lucide "pencil" — flat stroked icon. Used for the per-item edit buttons.
 function PencilIcon({ size = 16 }: { size?: number }) {
