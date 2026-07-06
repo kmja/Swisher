@@ -49,10 +49,107 @@ const en: typeof sv = {
   youPaid: "You're paid up ✓",
   nothing: "Nothing to pay",
 };
-// Other European locales fall back to en until real translations land.
-const R: Record<Lang, typeof sv> = {
-  sv, en, de: en, fr: en, es: en, it: en, nl: en, da: en, no: en, fi: en, pl: en, pt: en,
+const de: typeof sv = {
+  title: "Verlauf", empty: "Noch keine geteilten Quittungen.",
+  emptyHint: "Scanne eine Quittung und lade Leute ein – sie erscheint dann hier.",
+  newReceipt: "Neue Quittung teilen", loading: "Lädt…", gone: "Raum nicht mehr verfügbar",
+  remove: "Entfernen", host: "Du kassierst", guest: "Dein Anteil",
+  paidOf: (paid, total) => `${paid} von ${total} bezahlt`,
+  outstanding: (amt) => `${amt} ausstehend`, allSettled: "Alles beglichen ✓",
+  waitingForGuests: "Warte auf Gäste…", youOwe: (amt) => `Du schuldest ${amt}`,
+  youPaid: "Du hast bezahlt ✓", nothing: "Nichts zu bezahlen",
 };
+const fr: typeof sv = {
+  title: "Historique", empty: "Aucun reçu partagé pour l'instant.",
+  emptyHint: "Scanne un reçu et invite des gens — il apparaîtra ici.",
+  newReceipt: "Partager un nouveau reçu", loading: "Chargement…", gone: "Salle non disponible",
+  remove: "Supprimer", host: "Tu encaisses", guest: "Ta part",
+  paidOf: (paid, total) => `${paid} sur ${total} payés`,
+  outstanding: (amt) => `${amt} en attente`, allSettled: "Tout est réglé ✓",
+  waitingForGuests: "En attente des invités…", youOwe: (amt) => `Tu dois ${amt}`,
+  youPaid: "Tu as payé ✓", nothing: "Rien à payer",
+};
+const es: typeof sv = {
+  title: "Historial", empty: "Aún no hay recibos compartidos.",
+  emptyHint: "Escanea un recibo e invita a la gente: aparecerá aquí.",
+  newReceipt: "Compartir un recibo nuevo", loading: "Cargando…", gone: "Sala ya no disponible",
+  remove: "Eliminar", host: "Tú cobras", guest: "Tu parte",
+  paidOf: (paid, total) => `${paid} de ${total} pagados`,
+  outstanding: (amt) => `${amt} pendiente`, allSettled: "Todo saldado ✓",
+  waitingForGuests: "Esperando a los invitados…", youOwe: (amt) => `Debes ${amt}`,
+  youPaid: "Has pagado ✓", nothing: "Nada que pagar",
+};
+const it: typeof sv = {
+  title: "Cronologia", empty: "Ancora nessuno scontrino diviso.",
+  emptyHint: "Scansiona uno scontrino e invita le persone: apparirà qui.",
+  newReceipt: "Dividi un nuovo scontrino", loading: "Caricamento…", gone: "Stanza non più disponibile",
+  remove: "Rimuovi", host: "Incassi tu", guest: "La tua parte",
+  paidOf: (paid, total) => `${paid} di ${total} pagati`,
+  outstanding: (amt) => `${amt} in sospeso`, allSettled: "Tutto saldato ✓",
+  waitingForGuests: "In attesa degli ospiti…", youOwe: (amt) => `Devi ${amt}`,
+  youPaid: "Hai pagato ✓", nothing: "Niente da pagare",
+};
+const nl: typeof sv = {
+  title: "Geschiedenis", empty: "Nog geen gedeelde bonnetjes.",
+  emptyHint: "Scan een bon en nodig mensen uit — hij verschijnt hier.",
+  newReceipt: "Nieuwe bon delen", loading: "Laden…", gone: "Kamer niet meer beschikbaar",
+  remove: "Verwijderen", host: "Jij int", guest: "Jouw deel",
+  paidOf: (paid, total) => `${paid} van ${total} betaald`,
+  outstanding: (amt) => `${amt} openstaand`, allSettled: "Alles voldaan ✓",
+  waitingForGuests: "Wachten op gasten…", youOwe: (amt) => `Je moet ${amt} betalen`,
+  youPaid: "Je hebt betaald ✓", nothing: "Niets te betalen",
+};
+const da: typeof sv = {
+  title: "Historik", empty: "Ingen delte kvitteringer endnu.",
+  emptyHint: "Scan en kvittering og inviter folk – så dukker den op her.",
+  newReceipt: "Del en ny kvittering", loading: "Indlæser…", gone: "Rummet er ikke længere tilgængeligt",
+  remove: "Fjern", host: "Du samler ind", guest: "Din del",
+  paidOf: (paid, total) => `${paid} af ${total} betalt`,
+  outstanding: (amt) => `${amt} tilbage`, allSettled: "Alt er betalt ✓",
+  waitingForGuests: "Venter på gæster…", youOwe: (amt) => `Du skal betale ${amt}`,
+  youPaid: "Du har betalt ✓", nothing: "Intet at betale",
+};
+const no: typeof sv = {
+  title: "Historikk", empty: "Ingen delte kvitteringer ennå.",
+  emptyHint: "Skann en kvittering og inviter folk – så dukker den opp her.",
+  newReceipt: "Del en ny kvittering", loading: "Laster…", gone: "Rommet er ikke lenger tilgjengelig",
+  remove: "Fjern", host: "Du samler inn", guest: "Din del",
+  paidOf: (paid, total) => `${paid} av ${total} betalt`,
+  outstanding: (amt) => `${amt} gjenstår`, allSettled: "Alt er gjort opp ✓",
+  waitingForGuests: "Venter på gjester…", youOwe: (amt) => `Du skal betale ${amt}`,
+  youPaid: "Du har betalt ✓", nothing: "Ingenting å betale",
+};
+const fi: typeof sv = {
+  title: "Historia", empty: "Ei vielä jaettuja kuitteja.",
+  emptyHint: "Skannaa kuitti ja kutsu porukkaa – se ilmestyy tänne.",
+  newReceipt: "Jaa uusi kuitti", loading: "Ladataan…", gone: "Huone ei ole enää käytettävissä",
+  remove: "Poista", host: "Sinä keräät", guest: "Sinun osuutesi",
+  paidOf: (paid, total) => `${paid}/${total} maksettu`,
+  outstanding: (amt) => `${amt} maksamatta`, allSettled: "Kaikki maksettu ✓",
+  waitingForGuests: "Odotetaan vieraita…", youOwe: (amt) => `Olet velkaa ${amt}`,
+  youPaid: "Olet maksanut ✓", nothing: "Ei maksettavaa",
+};
+const pl: typeof sv = {
+  title: "Historia", empty: "Brak podzielonych rachunków.",
+  emptyHint: "Zeskanuj rachunek i zaproś znajomych – pojawi się tutaj.",
+  newReceipt: "Podziel nowy rachunek", loading: "Ładowanie…", gone: "Pokój już niedostępny",
+  remove: "Usuń", host: "Ty zbierasz", guest: "Twoja część",
+  paidOf: (paid, total) => `${paid} z ${total} zapłacono`,
+  outstanding: (amt) => `${amt} do zapłaty`, allSettled: "Wszystko rozliczone ✓",
+  waitingForGuests: "Czekanie na gości…", youOwe: (amt) => `Jesteś winien ${amt}`,
+  youPaid: "Zapłacono ✓", nothing: "Nic do zapłaty",
+};
+const pt: typeof sv = {
+  title: "Histórico", empty: "Ainda não há recibos partilhados.",
+  emptyHint: "Digitaliza um recibo e convida pessoas — aparece aqui.",
+  newReceipt: "Partilhar um novo recibo", loading: "A carregar…", gone: "Sala já não disponível",
+  remove: "Remover", host: "Tu recebes", guest: "A tua parte",
+  paidOf: (paid, total) => `${paid} de ${total} pagos`,
+  outstanding: (amt) => `${amt} em falta`, allSettled: "Tudo acertado ✓",
+  waitingForGuests: "À espera de convidados…", youOwe: (amt) => `Deves ${amt}`,
+  youPaid: "Já pagaste ✓", nothing: "Nada a pagar",
+};
+const R: Record<Lang, typeof sv> = { sv, en, de, fr, es, it, nl, da, no, fi, pl, pt };
 
 type Summary =
   | { status: "loading" }

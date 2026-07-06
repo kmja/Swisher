@@ -53,9 +53,77 @@ const en: typeof sv = {
   pricePh: "0.00",
   removeRow: "Remove",
 };
-const R: Record<Lang, typeof sv> = {
-  sv, en, de: en, fr: en, es: en, it: en, nl: en, da: en, no: en, fi: en, pl: en, pt: en,
+const de: typeof sv = {
+  loading: "Lädt…", notFound: "Diese Aufteilung existiert nur auf dem Gerät, auf dem sie erstellt wurde.",
+  toStart: "Zum Start", newReceipt: "Neue Quittung", history: "Verlauf", collect: "Einzuziehen",
+  allPaid: "Alles beglichen ✓", paidOf: (paid, total) => `${paid} von ${total} bezahlt`,
+  paid: "Bezahlt", markPaid: "Als bezahlt markieren", editItems: "Beträge korrigieren",
+  doneEditing: "Fertig", addRow: "Hinzufügen", namePh: "Name", pricePh: "0,00", removeRow: "Entfernen",
 };
+const fr: typeof sv = {
+  loading: "Chargement…", notFound: "Ce partage n'existe que sur l'appareil où il a été créé.",
+  toStart: "Pour commencer", newReceipt: "Nouveau reçu", history: "Historique", collect: "À encaisser",
+  allPaid: "Tout est réglé ✓", paidOf: (paid, total) => `${paid} sur ${total} payés`,
+  paid: "Payé", markPaid: "Marquer payé", editItems: "Corriger les montants",
+  doneEditing: "Terminé", addRow: "Ajouter", namePh: "Nom", pricePh: "0,00", removeRow: "Supprimer",
+};
+const es: typeof sv = {
+  loading: "Cargando…", notFound: "Esta división solo existe en el dispositivo donde se creó.",
+  toStart: "Al inicio", newReceipt: "Nuevo recibo", history: "Historial", collect: "Por cobrar",
+  allPaid: "Todo saldado ✓", paidOf: (paid, total) => `${paid} de ${total} pagados`,
+  paid: "Pagado", markPaid: "Marcar pagado", editItems: "Corregir importes",
+  doneEditing: "Listo", addRow: "Añadir", namePh: "Nombre", pricePh: "0,00", removeRow: "Eliminar",
+};
+const it: typeof sv = {
+  loading: "Caricamento…", notFound: "Questa divisione esiste solo sul dispositivo su cui è stata creata.",
+  toStart: "All'inizio", newReceipt: "Nuovo scontrino", history: "Cronologia", collect: "Da incassare",
+  allPaid: "Tutto saldato ✓", paidOf: (paid, total) => `${paid} di ${total} pagati`,
+  paid: "Pagato", markPaid: "Segna pagato", editItems: "Correggi importi",
+  doneEditing: "Fatto", addRow: "Aggiungi", namePh: "Nome", pricePh: "0,00", removeRow: "Rimuovi",
+};
+const nl: typeof sv = {
+  loading: "Laden…", notFound: "Deze verdeling bestaat alleen op het apparaat waarop hij is gemaakt.",
+  toStart: "Naar start", newReceipt: "Nieuwe bon", history: "Geschiedenis", collect: "Te innen",
+  allPaid: "Alles voldaan ✓", paidOf: (paid, total) => `${paid} van ${total} betaald`,
+  paid: "Betaald", markPaid: "Markeer betaald", editItems: "Bedragen aanpassen",
+  doneEditing: "Klaar", addRow: "Toevoegen", namePh: "Naam", pricePh: "0,00", removeRow: "Verwijderen",
+};
+const da: typeof sv = {
+  loading: "Indlæser…", notFound: "Denne deling findes kun på den enhed, den blev oprettet på.",
+  toStart: "Til start", newReceipt: "Ny kvittering", history: "Historik", collect: "At samle ind",
+  allPaid: "Alt er betalt ✓", paidOf: (paid, total) => `${paid} af ${total} betalt`,
+  paid: "Betalt", markPaid: "Markér betalt", editItems: "Ret beløb",
+  doneEditing: "Færdig", addRow: "Tilføj", namePh: "Navn", pricePh: "0,00", removeRow: "Fjern",
+};
+const no: typeof sv = {
+  loading: "Laster…", notFound: "Denne delingen finnes bare på enheten den ble opprettet på.",
+  toStart: "Til start", newReceipt: "Ny kvittering", history: "Historikk", collect: "Å samle inn",
+  allPaid: "Alt er gjort opp ✓", paidOf: (paid, total) => `${paid} av ${total} betalt`,
+  paid: "Betalt", markPaid: "Merk betalt", editItems: "Rett beløp",
+  doneEditing: "Ferdig", addRow: "Legg til", namePh: "Navn", pricePh: "0,00", removeRow: "Fjern",
+};
+const fi: typeof sv = {
+  loading: "Ladataan…", notFound: "Tämä jako on olemassa vain laitteella, jolla se luotiin.",
+  toStart: "Alkuun", newReceipt: "Uusi kuitti", history: "Historia", collect: "Kerättävää",
+  allPaid: "Kaikki maksettu ✓", paidOf: (paid, total) => `${paid}/${total} maksettu`,
+  paid: "Maksettu", markPaid: "Merkitse maksetuksi", editItems: "Korjaa summat",
+  doneEditing: "Valmis", addRow: "Lisää", namePh: "Nimi", pricePh: "0,00", removeRow: "Poista",
+};
+const pl: typeof sv = {
+  loading: "Ładowanie…", notFound: "Ten podział istnieje tylko na urządzeniu, na którym go utworzono.",
+  toStart: "Do startu", newReceipt: "Nowy rachunek", history: "Historia", collect: "Do zebrania",
+  allPaid: "Wszystko rozliczone ✓", paidOf: (paid, total) => `${paid} z ${total} zapłacono`,
+  paid: "Zapłacone", markPaid: "Oznacz jako zapłacone", editItems: "Popraw kwoty",
+  doneEditing: "Gotowe", addRow: "Dodaj", namePh: "Imię", pricePh: "0,00", removeRow: "Usuń",
+};
+const pt: typeof sv = {
+  loading: "A carregar…", notFound: "Esta divisão só existe no dispositivo onde foi criada.",
+  toStart: "Ao início", newReceipt: "Novo recibo", history: "Histórico", collect: "A receber",
+  allPaid: "Tudo acertado ✓", paidOf: (paid, total) => `${paid} de ${total} pagos`,
+  paid: "Pago", markPaid: "Marcar pago", editItems: "Corrigir valores",
+  doneEditing: "Concluído", addRow: "Adicionar", namePh: "Nome", pricePh: "0,00", removeRow: "Remover",
+};
+const R: Record<Lang, typeof sv> = { sv, en, de, fr, es, it, nl, da, no, fi, pl, pt };
 
 function money(ore: number, fx: Fx): string {
   const native = formatNative(ore, fx);
