@@ -2725,6 +2725,12 @@ export default function RoomPage() {
                 </span>
               )}
             </span>
+            {/* Foreign-item translation as secondary text, mirroring the host
+                verification step so a guest reading an unfamiliar dish name
+                gets the same help. */}
+            {it.translation && (
+              <span className="truncate pl-10 text-[11px] leading-snug text-gray-400">{it.translation}</span>
+            )}
             {it.shared && (
               <span className="text-[11px] text-swish-dark">
                 {partialShare ? `${tx.splitWays} ${shareCap}` : tx.sharedToggle} · <Money ore={it.priceOre} nativeClassName="hidden" />
@@ -2827,11 +2833,16 @@ export default function RoomPage() {
             >
               ✓
             </span>
-            <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
-              <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
-              <span className="min-w-0 flex-1 truncate">{rep.description}</span>
-              {availableCount > 0 && (
-                <span className="shrink-0 text-xs font-normal text-gray-400">×{availableCount}</span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex min-w-0 items-center gap-2 font-medium">
+                <span aria-hidden className="inline-flex w-8 shrink-0 items-center justify-center text-2xl leading-none"><ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} /></span>
+                <span className="min-w-0 flex-1 truncate">{rep.description}</span>
+                {availableCount > 0 && (
+                  <span className="shrink-0 text-xs font-normal text-gray-400">×{availableCount}</span>
+                )}
+              </span>
+              {rep.translation && (
+                <span className="truncate pl-10 text-[11px] leading-snug text-gray-400">{rep.translation}</span>
               )}
             </span>
             <Money
