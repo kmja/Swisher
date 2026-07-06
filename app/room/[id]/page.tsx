@@ -2362,7 +2362,7 @@ export default function RoomPage() {
             <button
               type="button"
               onClick={() => setShowSeats(true)}
-              className="mx-auto mt-3 block text-sm font-medium text-swish-dark underline underline-offset-2 active:text-swish"
+              className="mt-3 block w-fit text-sm font-medium text-gray-500 active:text-gray-700"
             >
               {PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}
             </button>
@@ -4140,13 +4140,16 @@ function SeatCluster({ count }: { count: number }) {
   return (
     <div aria-hidden className="flex items-center justify-center">
       {/* Gray "pebble" avatars matching the host group-size chips. They
-          overlap as the count grows; a white ring (the card colour) keeps
-          each head cleanly separated from the one behind it. */}
+          overlap as the count grows; a ring in the card's own surface colour
+          (white in light, dark-gray in dark — bg-white maps to
+          --color-surface) keeps each head cleanly separated from the one
+          behind it in BOTH themes. Plain ring-white would stay bright white
+          on the dark card. */}
       <div className="flex items-center -space-x-2.5">
         {Array.from({ length: shown }).map((_, i) => (
           <span
             key={i}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-500 ring-2 ring-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-500 ring-2 ring-[var(--color-surface)]"
             style={{ zIndex: shown - i }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
