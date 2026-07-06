@@ -3101,6 +3101,12 @@ export default function Page() {
                       </span>
                     )}
                   </div>
+                  {/* Tell the host why "create room" is disabled once they've
+                      typed something that isn't a valid Swedish mobile number,
+                      instead of leaving the button silently dimmed. */}
+                  {payerPhone.trim() !== "" && !isValidPhone(payerPhone) && (
+                    <p className="mt-1 px-1 text-xs text-red-600">{t.invalidPhone}</p>
+                  )}
                 </div>
                 <div>
                   <p className="mt-6 text-sm text-gray-500">{t.groupSizeLabel}</p>
@@ -3278,6 +3284,19 @@ export default function Page() {
                     )}
                   </div>
                 </div>
+                {/* Escape hatch on the fresh capture screen: a host with a
+                    handwritten bill (or who just wants to key in amounts)
+                    shouldn't have to trigger an OCR failure to reach manual
+                    entry — the same path the failure card offers. */}
+                {!imageUrl && pendingShots.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={skipToManual}
+                    className="mx-auto mt-3 block text-xs font-medium text-white/70 underline underline-offset-2 active:text-white"
+                  >
+                    {t.enterManually}
+                  </button>
+                )}
               </div>
             )}
           </div>

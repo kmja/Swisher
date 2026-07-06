@@ -1704,6 +1704,19 @@ export default function RoomPage() {
     };
     const connect = () => {
       if (closed) return;
+      // A previous socket may still be lingering (notably CLOSING when the
+      // visibility handler fired). Detach its handlers and tear it down first
+      // so its late onclose can't fire scheduleRetry — which would leave two
+      // live sockets and two ping intervals racing until one self-heals.
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+        try {
+          ws.close();
+        } catch {
+          /* already closed */
+        }
+      }
+      teardownSocket();
       const proto = window.location.protocol === "https:" ? "wss" : "ws";
       try {
         ws = new WebSocket(`${proto}://${window.location.host}/api/room/${code}/ws`);
