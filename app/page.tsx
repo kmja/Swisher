@@ -1603,14 +1603,15 @@ export default function Page() {
   useEffect(() => {
     if (!scanReady || !hostReady) return;
     const hasName = (diners[0]?.name?.trim().length ?? 0) > 0;
-    const hasPhone = isValidPhone(payerPhone);
     const hasGroup = groupSize >= 2;
-    if (hasName && hasPhone && hasGroup) {
+    // payDestOk = a valid Swish number OR (on a EUR receipt) a valid IBAN for
+    // SEPA — so a host collecting in € isn't blocked by lacking a Swedish phone.
+    if (hasName && payDestOk && hasGroup) {
       setScanReady(false);
       setHostReady(false);
       setStep("items");
     }
-  }, [scanReady, hostReady, diners, payerPhone, groupSize]);
+  }, [scanReady, hostReady, diners, payDestOk, groupSize]);
 
   // Remember the host across sessions so they don't retype their name/number.
   useEffect(() => {
@@ -3142,6 +3143,45 @@ export default function Page() {
                     <p className="mt-1 px-1 text-xs text-red-600">{t.invalidPhone}</p>
                   )}
                 </div>
+                {/* EUR receipt: let the host collect in euros via SEPA instead of
+                    Swish (kronor). Only appears once the scan has detected a EUR
+                    receipt with a usable rate — a host without a Swedish Swish
+                    number can now finish the setup by entering an IBAN. */}
+                {sepaAvailable && (
+                  <div className="rounded-xl bg-gray-50 p-3">
+                    <p className="text-sm font-medium text-gray-600">{t.payMethodLabel}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      {(["swish", "sepa"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setPayMethod(m)}
+                          className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
+                            payMethod === m ? "bg-swish text-white" : "bg-white text-gray-600 ring-1 ring-black/5 active:bg-gray-100"
+                          }`}
+                        >
+                          {m === "swish" ? t.payMethodSwish : t.payMethodSepa}
+                        </button>
+                      ))}
+                    </div>
+                    {payMethod === "sepa" && (
+                      <div className="mt-2">
+                        <input
+                          value={payeeIban}
+                          onChange={(e) => setPayeeIban(e.target.value)}
+                          placeholder={t.ibanPlaceholder}
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="w-full rounded-xl bg-white px-3 py-2.5 text-base uppercase shadow-sm ring-1 ring-black/5 outline-none"
+                        />
+                        {payeeIban.trim() !== "" && !ibanValid && (
+                          <p className="mt-1 px-1 text-xs text-red-600">{t.ibanInvalid}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div>
                   <p className="mt-6 text-sm text-gray-500">{t.groupSizeLabel}</p>
                   <div className="flex items-center justify-center gap-3">
@@ -3186,11 +3226,11 @@ export default function Page() {
                   </ul>
                 </details>
                 {(() => {
-                  const hasPhone = isValidPhone(payerPhone);
                   const hasGroup = groupSize >= 2;
                   // Name is no longer required — empty falls back to
                   // t.genericHostName (the "Notans hjälte" placeholder).
-                  const canCommit = hasPhone && hasGroup;
+                  // Payment: a valid Swish number OR (EUR receipt) a valid IBAN.
+                  const canCommit = payDestOk && hasGroup;
                   return (
                     <button
                       type="button"
