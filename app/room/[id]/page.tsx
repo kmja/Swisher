@@ -3612,6 +3612,14 @@ export default function RoomPage() {
         const sharedCount = state.items.filter(
           (it) => it.shared && personId !== null && it.claimedBy.includes(personId),
         ).length;
+        const cartSummary =
+          mineCount === 0 && sharedCount === 0
+            ? t.cartEmpty
+            : mineCount === 0
+            ? t.cartSharedItems(sharedCount)
+            : sharedCount === 0
+            ? t.cartPickedItems(mineCount)
+            : `${t.cartPickedItems(mineCount)} · ${t.cartSharedShort(sharedCount)}`;
         const canSwish = !!state.payeeNumber;
         const coverShare = coveringPersonId ? shares.find((s) => s.dinerId === coveringPersonId) : null;
         const coverOre = coverShare?.totalOre ?? 0;
@@ -3659,12 +3667,27 @@ export default function RoomPage() {
         };
         return (
           <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 pb-[env(safe-area-inset-bottom)] text-white shadow-lg backdrop-blur">
+            {/* Big pull-handle chevron centred at the top of the cart —
+                the primary control for expanding / collapsing the item
+                breakdown. Points up when collapsed (tap to reveal the
+                list above), flips down when open. */}
+            <button
+              type="button"
+              onClick={() => setCartOpen((v) => !v)}
+              aria-expanded={cartOpen}
+              aria-controls="cart-breakdown"
+              aria-label={cartSummary}
+              className="flex w-full items-center justify-center py-1.5 active:bg-white/5"
+            >
+              <ChevronRightIcon className={`h-7 w-7 text-white/45 transition-transform duration-200 ${cartOpen ? "rotate-90" : "-rotate-90"}`} />
+            </button>
             {/* Cart expansion uses a grid-template-rows trick to
                 animate height from 0 to auto. The outer grid switches
                 grid-rows-[0fr] ↔ grid-rows-[1fr]; the inner scroll
                 container provides max-height + overflow so the list
                 still scrolls when there are more items than fit. */}
             <div
+              id="cart-breakdown"
               aria-hidden={!cartOpen}
               className={`grid overflow-hidden border-white/10 transition-[grid-template-rows,opacity] duration-300 ease-out ${
                 cartOpen ? "grid-rows-[1fr] border-b opacity-100" : "grid-rows-[0fr] opacity-0"
@@ -3709,32 +3732,22 @@ export default function RoomPage() {
                 </div>
               </div>
             </div>
-            {/* Cart toggle bar — shows the share total + a quick
-                count of what's in the cart, tapping anywhere
-                expands / collapses the breakdown above. Right side
-                stacks "DIN ANDEL" caption above the amount + cart
-                chevron; left side carries the "n valda · m delade"
-                subline. */}
+            {/* Cart summary bar — shows the share total + a quick count
+                of what's in the cart. Tapping it also expands / collapses
+                the breakdown (the big chevron above is the primary
+                control). Right side stacks "DIN ANDEL" caption above the
+                amount; left side carries the "n valda · m delade" subline. */}
             <button
               type="button"
               onClick={() => setCartOpen((v) => !v)}
               className="flex w-full items-center justify-between gap-3 px-5 pt-3 pb-2 text-left active:bg-white/5"
             >
               <span className="min-w-0 flex-1 truncate text-sm text-white/80">
-                {mineCount === 0 && sharedCount === 0
-                  ? t.cartEmpty
-                  : mineCount === 0
-                  ? t.cartSharedItems(sharedCount)
-                  : sharedCount === 0
-                  ? t.cartPickedItems(mineCount)
-                  : `${t.cartPickedItems(mineCount)} · ${t.cartSharedShort(sharedCount)}`}
+                {cartSummary}
               </span>
               <span className="flex shrink-0 flex-col items-end leading-tight">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">{t.yourTotal}</span>
-                <span className="flex items-center gap-1">
-                  <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="hidden" />
-                  <span className={`text-xl leading-none text-white/50 transition-transform ${cartOpen ? "rotate-180" : ""}`}>▾</span>
-                </span>
+                <Money ore={myShare.totalOre} className="text-lg font-bold" nativeClassName="hidden" />
                 {roomFx && (
                   <span className="text-xs font-normal text-white/55">{formatNative(myShare.totalOre, roomFx)}</span>
                 )}
