@@ -147,6 +147,47 @@ describe("computeRoomShares", () => {
     expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(3000);
     expect(unassignedOre).toBe(9000);
   });
+
+  it("weights a diner's shared portion by the seats they're paying for", () => {
+    // Ada pays for 2, Bo for 1. A shared bottle split 3 ways: Ada covers two of
+    // the three portions, Bo one — fully covered, nothing banked.
+    const seated: Diner[] = [
+      { id: "A", name: "Ada", seats: 2 },
+      { id: "B", name: "Bo", seats: 1 },
+    ];
+    const { shares, unassignedOre } = computeRoomShares(
+      [{ priceOre: 9000, shared: true, claimedBy: ["A", "B"] }],
+      seated,
+      0,
+      3,
+    );
+    expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(6000);
+    expect(shares.find((s) => s.dinerId === "B")?.subtotalOre).toBe(3000);
+    expect(unassignedOre).toBe(0);
+  });
+
+  it("lets seats fully cover a shared item when not everyone uses the app", () => {
+    // Table of 4, but only one guest joined — paying for all 4. With no host
+    // groupSize the total seats (4) become the divisor and the item is covered.
+    const solo: Diner[] = [{ id: "A", name: "Ada", seats: 4 }];
+    const { shares, unassignedOre } = computeRoomShares(
+      [{ priceOre: 12000, shared: true, claimedBy: ["A"] }],
+      solo,
+    );
+    expect(shares.find((s) => s.dinerId === "A")?.subtotalOre).toBe(12000);
+    expect(unassignedOre).toBe(0);
+  });
+
+  it("divides the tip across seats, not app users", () => {
+    // Ada (2 seats) + Bo (1 seat): a 3000 tip splits 2000 / 1000 by head count.
+    const seated: Diner[] = [
+      { id: "A", name: "Ada", seats: 2 },
+      { id: "B", name: "Bo", seats: 1 },
+    ];
+    const { shares } = computeRoomShares([], seated, 3000);
+    expect(shares.find((s) => s.dinerId === "A")?.tipOre).toBe(2000);
+    expect(shares.find((s) => s.dinerId === "B")?.tipOre).toBe(1000);
+  });
 });
 
 describe("estimateGroupSize", () => {

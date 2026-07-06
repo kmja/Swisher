@@ -229,7 +229,7 @@ export default function HistoryPage() {
           } catch {
             /* ignore */
           }
-          const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
+          const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name, seats: p.seats }));
           const { shares } = computeRoomShares(state.items, diners, state.tipOre);
           const paidBy = state.paidBy ?? [];
           const isHost = !!personId && personId === state.payeePersonId;

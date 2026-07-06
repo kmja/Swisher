@@ -22,7 +22,12 @@ export type RoomItem = {
   translation?: string;
 };
 
-export type RoomPerson = { id: string; name: string };
+export type RoomPerson = { id: string; name: string; /** People this diner pays for (seats), default 1. */ seats?: number };
+
+/** Total seats at the table = sum of everyone's seat count (default 1 each). */
+export function seatCount(people: RoomPerson[]): number {
+  return people.reduce((acc, p) => acc + Math.max(1, Math.round(p.seats ?? 1)), 0);
+}
 
 export type RoomState = {
   id: string;
@@ -245,15 +250,19 @@ export class RoomDO extends DurableObject {
     return Array.isArray(legacy) ? legacy : [];
   }
 
-  async join(name: string): Promise<{ personId: string; state: RoomState } | null> {
+  async join(name: string, seats = 1): Promise<{ personId: string; state: RoomState } | null> {
     const state = await this.load();
     if (!state) return null;
-    const person: RoomPerson = { id: uid(), name: name.trim().slice(0, 40) || "Gäst" };
+    const person: RoomPerson = {
+      id: uid(),
+      name: name.trim().slice(0, 40) || "Gäst",
+      seats: Math.max(1, Math.min(20, Math.round(seats) || 1)),
+    };
     state.people.push(person);
     // Only pre-claim "fully shared" items (the kind everyone takes a share of
     // by default). Partial shares — one bottle for 2 of 4, etc. — stay open
     // so the newcomer has to opt in by tapping.
-    const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+    const groupSize = Math.max(state.groupSize ?? 0, seatCount(state.people));
     for (const it of state.items) {
       if (!isFullyShared(it, groupSize)) continue;
       if (!it.claimedBy.includes(person.id)) it.claimedBy.push(person.id);
@@ -338,7 +347,7 @@ export class RoomDO extends DurableObject {
         // Turning shared on pre-claims it for everyone only when the result is
         // a *fully* shared item; partial shares stay open so the table opts in.
         if (patch.shared) {
-          const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+          const groupSize = Math.max(state.groupSize ?? 0, seatCount(state.people));
           item.claimedBy = isFullyShared(item, groupSize) ? state.people.map((p) => p.id) : [];
         }
       }
@@ -349,7 +358,7 @@ export class RoomDO extends DurableObject {
       // av alla" section with an empty claimedBy. Anyone already on the
       // list stays; we just additively add everyone who's missing.
       {
-        const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+        const groupSize = Math.max(state.groupSize ?? 0, seatCount(state.people));
         if (item.shared && isFullyShared(item, groupSize)) {
           for (const p of state.people) {
             if (!item.claimedBy.includes(p.id)) item.claimedBy.push(p.id);
@@ -449,7 +458,7 @@ export class RoomDO extends DurableObject {
     if (!data.description?.trim() || priceOre <= 0) return state;
     const shareCount =
       typeof data.shareCount === "number" && data.shareCount > 0 ? Math.round(data.shareCount) : undefined;
-    const groupSize = Math.max(state.groupSize ?? 0, state.people.length);
+    const groupSize = Math.max(state.groupSize ?? 0, seatCount(state.people));
     const fully = isFullyShared({ shared: data.shared === true, shareCount }, groupSize);
     const newItem: RoomItem = {
       id: uid(),

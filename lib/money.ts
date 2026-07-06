@@ -192,35 +192,55 @@ export function computeRoomShares(
    *  splitting "shared for 4" items 1-way. */
   groupSize = 0,
 ): { shares: Share[]; unassignedOre: number } {
+  const byId = new Map(people.map((p) => [p.id, p]));
+  const seatsOf = (p: Diner) => Math.max(1, Math.round(p.seats ?? 1));
   const subtotals = new Map<string, number>();
   for (const p of people) subtotals.set(p.id, 0);
-  const n = people.length;
-  const fallbackDivisor = Math.max(1, groupSize, n);
+  // Effective head count = total seats (a diner paying for 2 counts as 2), so
+  // shared items and the tip divide by real heads, not app users. With every
+  // seats = 1 this is exactly the old people.length behaviour.
+  const totalSeats = people.reduce((acc, p) => acc + seatsOf(p), 0);
+  const fallbackDivisor = Math.max(1, groupSize, totalSeats);
   let unassignedOre = 0;
 
   for (const item of items) {
-    const claimers = item.claimedBy.filter((id) => subtotals.has(id));
+    const claimers = item.claimedBy
+      .map((id) => byId.get(id))
+      .filter((p): p is Diner => !!p);
     if (item.shared) {
       const rawDivisor = item.shareCount && item.shareCount > 0 ? item.shareCount : fallbackDivisor;
       const divisor = groupSize > 0 ? Math.min(rawDivisor, fallbackDivisor) : rawDivisor;
       const parts = splitOre(item.priceOre, divisor);
-      claimers.forEach((id, i) => {
-        if (i < parts.length) subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]);
-      });
-      const covered = parts.slice(0, claimers.length).reduce((a, b) => a + b, 0);
+      // Hand each claimer `seats` of the equal parts, in claim order, capped at
+      // what's left — so a diner paying for 2 covers two of the shared portions.
+      let cursor = 0;
+      for (const p of claimers) {
+        if (cursor >= parts.length) break;
+        const take = Math.min(seatsOf(p), parts.length - cursor);
+        let sum = 0;
+        for (let k = 0; k < take; k++) sum += parts[cursor + k];
+        cursor += take;
+        subtotals.set(p.id, (subtotals.get(p.id) ?? 0) + sum);
+      }
+      const covered = parts.slice(0, cursor).reduce((a, b) => a + b, 0);
       unassignedOre += item.priceOre - covered;
     } else if (claimers.length === 0) {
       unassignedOre += item.priceOre;
     } else {
+      // A specific (non-shared) dish splits by number of claimers, not seats.
       const parts = splitOre(item.priceOre, claimers.length);
-      claimers.forEach((id, i) => subtotals.set(id, (subtotals.get(id) ?? 0) + parts[i]));
+      claimers.forEach((p, i) => subtotals.set(p.id, (subtotals.get(p.id) ?? 0) + parts[i]));
     }
   }
 
-  const tipParts = n > 0 ? splitOre(Math.max(0, Math.round(tipOre)), n) : [];
-  const shares: Share[] = people.map((p, i) => {
+  // Tip divides across all seats; each diner pays for the seats they cover.
+  const tipParts = totalSeats > 0 ? splitOre(Math.max(0, Math.round(tipOre)), totalSeats) : [];
+  let tipCursor = 0;
+  const shares: Share[] = people.map((p) => {
     const subtotalOre = subtotals.get(p.id) ?? 0;
-    const tip = tipParts[i] ?? 0;
+    let tip = 0;
+    const take = seatsOf(p);
+    for (let k = 0; k < take && tipCursor < tipParts.length; k++) tip += tipParts[tipCursor++];
     return { dinerId: p.id, name: p.name, subtotalOre, tipOre: tip, totalOre: subtotalOre + tip };
   });
   return { shares, unassignedOre };

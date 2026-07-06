@@ -32,6 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let body: {
     action?: string;
     name?: string;
+    seats?: number;
     personId?: string;
     itemId?: string;
     targetId?: string;
@@ -55,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   switch (body.action) {
     case "join": {
-      const r = await stub.join(String(body.name ?? ""));
+      const r = await stub.join(String(body.name ?? ""), Number(body.seats) || 1);
       if (!r) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json(r);
     }

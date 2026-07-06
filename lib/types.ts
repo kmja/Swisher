@@ -14,6 +14,10 @@ export type LineItem = {
 export type Diner = {
   id: string;
   name: string;
+  /** How many people this diner is paying for (seats), default 1. Weights their
+   *  shared-item portions and their slice of the tip, so shared items get fully
+   *  covered even when not everyone at the table is using the app. */
+  seats?: number;
 };
 
 /** Raw structured result from the OCR step (kronor as numbers, comma already parsed). */

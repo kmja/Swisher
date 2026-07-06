@@ -976,6 +976,10 @@ export default function RoomPage() {
     }
   });
   const [name, setName] = useState("");
+  // How many people the joining guest is paying for (seats). Defaults to 1;
+  // >1 covers table-mates who aren't using the app so shared items + tip get
+  // fully allocated.
+  const [joinSeats, setJoinSeats] = useState(1);
   const [joining, setJoining] = useState(false);
   // Mount/visibility split so the join dialog can fade its backdrop +
   // card out (rather than vanishing) once the guest joins. `mounted`
@@ -1936,7 +1940,7 @@ export default function RoomPage() {
       const res = await fetch(`/api/room/${code}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "join", name }),
+        body: JSON.stringify({ action: "join", name, seats: joinSeats }),
       });
       if (res.ok) {
         const data = (await res.json()) as { personId: string; state: RoomState };
@@ -2284,7 +2288,7 @@ export default function RoomPage() {
 
   const { shares, unassignedOre } = useMemo(() => {
     if (!state) return { shares: [] as Share[], unassignedOre: 0 };
-    const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name }));
+    const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name, seats: p.seats }));
     return computeRoomShares(state.items, diners, state.tipOre, state.groupSize ?? 0);
   }, [state]);
 
@@ -2348,6 +2352,34 @@ export default function RoomPage() {
               {t.joinFailed}
             </p>
           )}
+          {/* How many people the guest is paying for — huddled person icons
+              that grow with the count. Defaults to 1; >1 covers table-mates
+              who aren't on the app so shared items + tip get fully split. */}
+          <div className="mt-4">
+            <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
+                onClick={() => setJoinSeats((s) => Math.max(1, s - 1))}
+                disabled={joinSeats <= 1}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+              >
+                <span aria-hidden>−</span>
+              </button>
+              <div className="flex min-w-[3.5rem] items-center justify-center">
+                <SeatCluster count={joinSeats} />
+              </div>
+              <button
+                type="button"
+                aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
+                onClick={() => setJoinSeats((s) => Math.min(20, s + 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+              >
+                <span aria-hidden>+</span>
+              </button>
+            </div>
+          </div>
           <button
             type="button"
             onClick={(e) => {
@@ -4086,6 +4118,33 @@ function HomeLink({ label }: { label: string }) {
   );
 }
 
+// A cluster of person icons for the join-dialog seat picker — like the host's
+// group-size visual but without the table: the heads just huddle together
+// (overlapping) as the count grows, capped with a "+N" past five.
+function SeatCluster({ count }: { count: number }) {
+  const shown = Math.min(Math.max(1, count), 5);
+  const overflow = Math.max(0, count - shown);
+  return (
+    <div aria-hidden className="flex items-center justify-center">
+      <div className="flex items-center -space-x-2.5">
+        {Array.from({ length: shown }).map((_, i) => (
+          <span
+            key={i}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-swish/15 ring-2 ring-white"
+            style={{ zIndex: shown - i }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5 text-swish-dark">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5.5 20a6.5 6.5 0 0 1 13 0" strokeLinecap="round" />
+            </svg>
+          </span>
+        ))}
+      </div>
+      {overflow > 0 && <span className="ml-1.5 text-sm font-bold tabular-nums text-swish-dark">+{overflow}</span>}
+    </div>
+  );
+}
+
 // Secondary "try again" action for the notfound/unavailable dead-ends.
 function RetryButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -4113,6 +4172,24 @@ const REMIND_LABEL: Record<Lang, string> = {
   sv: "Påminn", en: "Remind", de: "Erinnern", fr: "Rappeler", es: "Recordar", it: "Ricorda",
   nl: "Herinneren", da: "Påmind", no: "Påminn", fi: "Muistuta", pl: "Przypomnij", pt: "Lembrar",
 };
+// Join dialog: "how many are you paying for?" question + its stepper labels.
+const SEATS_QUESTION: Record<Lang, string> = {
+  sv: "Hur många betalar du för?", en: "How many are you paying for?",
+  de: "Für wie viele zahlst du?", fr: "Pour combien de personnes paies-tu ?",
+  es: "¿Para cuántas personas pagas?", it: "Per quante persone paghi?",
+  nl: "Voor hoeveel mensen betaal je?", da: "Hvor mange betaler du for?",
+  no: "Hvor mange betaler du for?", fi: "Kuinka monelle maksat?",
+  pl: "Za ile osób płacisz?", pt: "Para quantas pessoas pagas?",
+};
+const SEATS_STEP: Record<Lang, { less: string; more: string }> = {
+  sv: { less: "En färre", more: "En till" }, en: { less: "One fewer", more: "One more" },
+  de: { less: "Einer weniger", more: "Einer mehr" }, fr: { less: "Un de moins", more: "Un de plus" },
+  es: { less: "Uno menos", more: "Uno más" }, it: { less: "Uno in meno", more: "Uno in più" },
+  nl: { less: "Eén minder", more: "Eén meer" }, da: { less: "Én færre", more: "Én mere" },
+  no: { less: "Én færre", more: "Én til" }, fi: { less: "Yksi vähemmän", more: "Yksi lisää" },
+  pl: { less: "O jedną mniej", more: "O jedną więcej" }, pt: { less: "Menos um", more: "Mais um" },
+};
+
 // Prompt for a joined guest who hasn't claimed anything yet (incl. late joiners
 // of an already-settled bill) — otherwise they see a blank action area.
 const CLAIM_HINT: Record<Lang, string> = {
