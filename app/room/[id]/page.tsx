@@ -3667,19 +3667,20 @@ export default function RoomPage() {
         };
         return (
           <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-white/10 bg-[#1b1b1f]/95 pb-[env(safe-area-inset-bottom)] text-white shadow-lg backdrop-blur">
-            {/* Big pull-handle chevron centred at the top of the cart —
-                the primary control for expanding / collapsing the item
-                breakdown. Points up when collapsed (tap to reveal the
-                list above), flips down when open. */}
+            {/* Chevron handle at the very top edge of the cart sheet —
+                absolutely positioned so it reads as a grabber without
+                taking a row of its own. Points up when collapsed (tap to
+                reveal the list above), flips down when open. Toggles the
+                breakdown; the summary bar toggles too. */}
             <button
               type="button"
               onClick={() => setCartOpen((v) => !v)}
               aria-expanded={cartOpen}
               aria-controls="cart-breakdown"
               aria-label={cartSummary}
-              className="flex w-full items-center justify-center py-1.5 active:bg-white/5"
+              className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 items-center justify-center px-8 py-0.5 active:opacity-60"
             >
-              <ChevronRightIcon className={`h-7 w-7 text-white/45 transition-transform duration-200 ${cartOpen ? "rotate-90" : "-rotate-90"}`} />
+              <ChevronRightIcon className={`h-6 w-6 text-white/45 transition-transform duration-200 ${cartOpen ? "rotate-90" : "-rotate-90"}`} />
             </button>
             {/* Cart expansion uses a grid-template-rows trick to
                 animate height from 0 to auto. The outer grid switches
