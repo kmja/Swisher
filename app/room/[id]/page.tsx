@@ -2366,9 +2366,12 @@ export default function RoomPage() {
                 // Opting in means paying for more than yourself — start at 2.
                 setJoinSeats((s) => Math.max(2, s));
               }}
-              className="mt-3 ml-auto block w-fit text-sm font-normal text-gray-500 active:text-gray-700"
+              className="mt-3 ml-auto block w-fit font-normal text-gray-500 active:text-gray-700"
             >
-              {PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}
+              {/* Size lives on a child span: the global `button { font-size:16px }`
+                  rule is unlayered and overrides text-* utilities set directly on
+                  a <button>, but not on its children. */}
+              <span className="text-[11px]">{PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}</span>
             </button>
           ) : (
             <div className="mt-4">
