@@ -1671,6 +1671,21 @@ export default function RoomPage() {
   // healthy). `next dev` has no DO — the socket just fails and polling
   // carries the room like before.
   const [wsConnected, setWsConnected] = useState(false);
+  // Actual-offline detection. The socket layer self-heals (reconnect + the
+  // polling fallback), so a flaky-but-connected phone still reconciles
+  // silently — we only surface a banner when the device is truly offline,
+  // where claims genuinely can't sync until it's back.
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   // Socket messages must not clobber the edit form mid-typing; mirror the
   // edit state into a ref so the handler sees it without resubscribing.
   const editingRef = useRef(false);
@@ -2844,8 +2859,33 @@ export default function RoomPage() {
     );
   }
 
+  // Offline banner copy. Kept as a local map rather than threaded through the
+  // big per-locale `R` dict — a single auxiliary string not worth 12 edits.
+  const offlineMsg: Record<Lang, string> = {
+    sv: "Offline – ändringar synkas när du är uppkopplad igen",
+    en: "You're offline — changes sync when you reconnect",
+    de: "Offline – Änderungen werden synchronisiert, sobald du wieder online bist",
+    fr: "Hors ligne — les modifications se synchroniseront à la reconnexion",
+    es: "Sin conexión — los cambios se sincronizarán al reconectar",
+    it: "Offline — le modifiche si sincronizzeranno alla riconnessione",
+    nl: "Offline — wijzigingen synchroniseren zodra je weer verbonden bent",
+    da: "Offline – ændringer synkroniseres, når du er online igen",
+    no: "Frakoblet – endringer synkroniseres når du er tilkoblet igjen",
+    fi: "Offline — muutokset synkronoidaan, kun yhteys palaa",
+    pl: "Offline — zmiany zsynchronizują się po ponownym połączeniu",
+    pt: "Offline — as alterações sincronizam ao reconectar",
+  };
   return (
     <FxProvider value={roomFx}>
+    {!online && (
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed inset-x-0 top-0 z-50 bg-amber-500 px-4 py-2 text-center text-xs font-semibold text-white shadow-md"
+      >
+        {offlineMsg[lang] ?? offlineMsg.en}
+      </div>
+    )}
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pb-56">
       {/* Sticky nav. Three-column grid (matches the home page) keeps
           the wordmark dead-centre. Left column carries the room
