@@ -1098,6 +1098,38 @@ const OCR_NETWORK_BODY: Record<Lang, string> = {
   pt: "O teu dispositivo parece estar offline. Liga-te novamente e tenta outra vez — a foto está boa.",
 };
 
+// Accessible labels for the group-size +/− steppers — screen readers otherwise
+// announce the raw "−"/"+" glyphs as "minus"/"plus".
+const GROUP_STEP_LABEL: Record<Lang, { less: string; more: string }> = {
+  sv: { less: "En person färre", more: "En person till" },
+  en: { less: "One fewer person", more: "One more person" },
+  de: { less: "Eine Person weniger", more: "Eine Person mehr" },
+  fr: { less: "Une personne de moins", more: "Une personne de plus" },
+  es: { less: "Una persona menos", more: "Una persona más" },
+  it: { less: "Una persona in meno", more: "Una persona in più" },
+  nl: { less: "Eén persoon minder", more: "Eén persoon meer" },
+  da: { less: "Én person færre", more: "Én person mere" },
+  no: { less: "Én person færre", more: "Én person til" },
+  fi: { less: "Yksi henkilö vähemmän", more: "Yksi henkilö lisää" },
+  pl: { less: "O jedną osobę mniej", more: "O jedną osobę więcej" },
+  pt: { less: "Menos uma pessoa", more: "Mais uma pessoa" },
+};
+// Accessible labels for the shared-item "split N ways" +/− steppers.
+const SHARE_STEP_LABEL: Record<Lang, { less: string; more: string }> = {
+  sv: { less: "Dela på färre", more: "Dela på fler" },
+  en: { less: "Split among fewer", more: "Split among more" },
+  de: { less: "Auf weniger aufteilen", more: "Auf mehr aufteilen" },
+  fr: { less: "Partager entre moins", more: "Partager entre plus" },
+  es: { less: "Dividir entre menos", more: "Dividir entre más" },
+  it: { less: "Dividi tra meno", more: "Dividi tra più" },
+  nl: { less: "Onder minder verdelen", more: "Onder meer verdelen" },
+  da: { less: "Del mellem færre", more: "Del mellem flere" },
+  no: { less: "Del på færre", more: "Del på flere" },
+  fi: { less: "Jaa harvemman kesken", more: "Jaa useamman kesken" },
+  pl: { less: "Podziel na mniej", more: "Podziel na więcej" },
+  pt: { less: "Dividir entre menos", more: "Dividir entre mais" },
+};
+
 export default function Page() {
   const [lang, setLang] = useState<Lang>("sv");
   const t = translations[lang];
@@ -2133,10 +2165,18 @@ export default function Page() {
       const targetCount = n;
       const duration = Math.max(450, Math.min(900, (targetCount - startCount) * 90));
       const start = performance.now();
+      // The eased value only crosses a handful of integers over the run, but
+      // rAF fires every frame — only push state when the rounded count actually
+      // changes so we're not queueing ~30-55 no-op renders per count-up.
+      let shown = startCount;
       const step = (now: number) => {
         const t = Math.min(1, (now - start) / duration);
         const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-        setScanCount(Math.round(startCount + eased * (targetCount - startCount)));
+        const v = Math.round(startCount + eased * (targetCount - startCount));
+        if (v !== shown) {
+          shown = v;
+          setScanCount(v);
+        }
         if (t < 1) {
           requestAnimationFrame(step);
         } else {
@@ -3187,20 +3227,20 @@ export default function Page() {
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
-                      aria-label="−"
+                      aria-label={(GROUP_STEP_LABEL[lang] ?? GROUP_STEP_LABEL.en).less}
                       onClick={() => setGroupSize(Math.max(2, (groupSize || 2) - 1))}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-3xl font-bold leading-none text-gray-600 active:bg-gray-300"
                     >
-                      −
+                      <span aria-hidden>−</span>
                     </button>
                     <GroupVisual count={groupSize} />
                     <button
                       type="button"
-                      aria-label="+"
+                      aria-label={(GROUP_STEP_LABEL[lang] ?? GROUP_STEP_LABEL.en).more}
                       onClick={() => setGroupSize(Math.min(50, Math.max(2, (groupSize || 1) + 1)))}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-200 text-3xl font-bold leading-none text-gray-600 active:bg-gray-300"
                     >
-                      +
+                      <span aria-hidden>+</span>
                     </button>
                   </div>
                 </div>
@@ -3605,23 +3645,23 @@ export default function Page() {
                             <div className="flex items-center gap-1.5 pl-1">
                               <button
                                 type="button"
-                                aria-label="−"
+                                aria-label={(SHARE_STEP_LABEL[lang] ?? SHARE_STEP_LABEL.en).less}
                                 tabIndex={rep.shared ? 0 : -1}
                                 onClick={() => updateGroup(rep, { shareCount: Math.max(2, d - 1) })}
                                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200"
                               >
-                                −
+                                <span aria-hidden>−</span>
                               </button>
                               <span className="w-12 text-center text-lg font-normal tabular-nums text-ink">{d}/{groupSize}</span>
                               <button
                                 type="button"
-                                aria-label="+"
+                                aria-label={(SHARE_STEP_LABEL[lang] ?? SHARE_STEP_LABEL.en).more}
                                 tabIndex={rep.shared ? 0 : -1}
                                 disabled={d >= groupSize}
                                 onClick={() => updateGroup(rep, { shareCount: d + 1 >= groupSize ? undefined : d + 1 })}
                                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-base font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                               >
-                                +
+                                <span aria-hidden>+</span>
                               </button>
                             </div>
                           </div>
@@ -3729,20 +3769,20 @@ export default function Page() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    aria-label="−"
+                    aria-label={(GROUP_STEP_LABEL[lang] ?? GROUP_STEP_LABEL.en).less}
                     onClick={() => setGroupSize((g) => Math.max(2, g - 1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
                   >
-                    −
+                    <span aria-hidden>−</span>
                   </button>
                   <span className="w-6 text-center text-sm font-semibold tabular-nums text-ink">{groupSize}</span>
                   <button
                     type="button"
-                    aria-label="+"
+                    aria-label={(GROUP_STEP_LABEL[lang] ?? GROUP_STEP_LABEL.en).more}
                     onClick={() => setGroupSize((g) => Math.min(50, g + 1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-sm font-bold leading-none text-gray-600 active:bg-gray-200"
                   >
-                    +
+                    <span aria-hidden>+</span>
                   </button>
                 </div>
               </div>
@@ -3904,21 +3944,21 @@ export default function Page() {
                       <span>{t.splitWays}</span>
                       <button
                         type="button"
-                        aria-label="−"
+                        aria-label={(SHARE_STEP_LABEL[lang] ?? SHARE_STEP_LABEL.en).less}
                         onClick={() => setShareCount(it.id, d - 1)}
                         className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
                       >
-                        −
+                        <span aria-hidden>−</span>
                       </button>
                       <span className="min-w-[3.5rem] text-center text-2xl font-normal tabular-nums text-ink">{d}/{groupSize}</span>
                       <button
                         type="button"
-                        aria-label="+"
+                        aria-label={(SHARE_STEP_LABEL[lang] ?? SHARE_STEP_LABEL.en).more}
                         disabled={d >= groupSize}
                         onClick={() => setShareCount(it.id, d + 1)}
                         className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
                       >
-                        +
+                        <span aria-hidden>+</span>
                       </button>
                       <span className="text-gray-400">≈ {formatOre(per)} SEK</span>
                     </span>
