@@ -978,8 +978,10 @@ export default function RoomPage() {
   const [name, setName] = useState("");
   // How many people the joining guest is paying for (seats). Defaults to 1;
   // >1 covers table-mates who aren't using the app so shared items + tip get
-  // fully allocated.
+  // fully allocated. Hidden behind an "I'm paying for others" link so the
+  // common (just-me) case keeps the dialog minimal.
   const [joinSeats, setJoinSeats] = useState(1);
+  const [showSeats, setShowSeats] = useState(false);
   const [joining, setJoining] = useState(false);
   // Mount/visibility split so the join dialog can fade its backdrop +
   // card out (rather than vanishing) once the guest joins. `mounted`
@@ -2352,34 +2354,45 @@ export default function RoomPage() {
               {t.joinFailed}
             </p>
           )}
-          {/* How many people the guest is paying for — huddled person icons
-              that grow with the count. Defaults to 1; >1 covers table-mates
-              who aren't on the app so shared items + tip get fully split. */}
-          <div className="mt-4">
-            <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                type="button"
-                aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
-                onClick={() => setJoinSeats((s) => Math.max(1, s - 1))}
-                disabled={joinSeats <= 1}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-              >
-                <span aria-hidden>−</span>
-              </button>
-              <div className="flex min-w-[3.5rem] items-center justify-center">
-                <SeatCluster count={joinSeats} />
+          {/* Seat picker — hidden behind a link so the common "just me" case
+              stays a one-tap join. Revealing it shows huddled person icons
+              that grow with the count; >1 covers table-mates who aren't on
+              the app so shared items + tip get fully split. */}
+          {!showSeats ? (
+            <button
+              type="button"
+              onClick={() => setShowSeats(true)}
+              className="mx-auto mt-3 block text-sm font-medium text-swish-dark underline underline-offset-2 active:text-swish"
+            >
+              {PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}
+            </button>
+          ) : (
+            <div className="mt-4">
+              <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
+                  onClick={() => setJoinSeats((s) => Math.max(1, s - 1))}
+                  disabled={joinSeats <= 1}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                >
+                  <span aria-hidden>−</span>
+                </button>
+                <div className="flex min-w-[3.5rem] items-center justify-center">
+                  <SeatCluster count={joinSeats} />
+                </div>
+                <button
+                  type="button"
+                  aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
+                  onClick={() => setJoinSeats((s) => Math.min(20, s + 1))}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                >
+                  <span aria-hidden>+</span>
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
-                onClick={() => setJoinSeats((s) => Math.min(20, s + 1))}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-              >
-                <span aria-hidden>+</span>
-              </button>
             </div>
-          </div>
+          )}
           <button
             type="button"
             onClick={(e) => {
@@ -4126,21 +4139,24 @@ function SeatCluster({ count }: { count: number }) {
   const overflow = Math.max(0, count - shown);
   return (
     <div aria-hidden className="flex items-center justify-center">
+      {/* Gray "pebble" avatars matching the host group-size chips. They
+          overlap as the count grows; a white ring (the card colour) keeps
+          each head cleanly separated from the one behind it. */}
       <div className="flex items-center -space-x-2.5">
         {Array.from({ length: shown }).map((_, i) => (
           <span
             key={i}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-swish/15 ring-2 ring-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-500 ring-2 ring-white"
             style={{ zIndex: shown - i }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5 text-swish-dark">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="3.5" />
-              <path d="M5.5 20a6.5 6.5 0 0 1 13 0" strokeLinecap="round" />
+              <path d="M5 21v-1a7 7 0 0 1 14 0v1" />
             </svg>
           </span>
         ))}
       </div>
-      {overflow > 0 && <span className="ml-1.5 text-sm font-bold tabular-nums text-swish-dark">+{overflow}</span>}
+      {overflow > 0 && <span className="ml-1.5 text-sm font-bold tabular-nums text-gray-500">+{overflow}</span>}
     </div>
   );
 }
@@ -4171,6 +4187,13 @@ const TRY_AGAIN: Record<Lang, string> = {
 const REMIND_LABEL: Record<Lang, string> = {
   sv: "Påminn", en: "Remind", de: "Erinnern", fr: "Rappeler", es: "Recordar", it: "Ricorda",
   nl: "Herinneren", da: "Påmind", no: "Påminn", fi: "Muistuta", pl: "Przypomnij", pt: "Lembrar",
+};
+// Link that reveals the seat picker in the join dialog.
+const PAYING_FOR_OTHERS: Record<Lang, string> = {
+  sv: "Jag betalar för fler", en: "I'm paying for others", de: "Ich zahle für andere",
+  fr: "Je paie pour d'autres", es: "Pago por otros", it: "Pago per altri",
+  nl: "Ik betaal voor anderen", da: "Jeg betaler for andre", no: "Jeg betaler for andre",
+  fi: "Maksan muidenkin puolesta", pl: "Płacę za innych", pt: "Pago por outros",
 };
 // Join dialog: "how many are you paying for?" question + its stepper labels.
 const SEATS_QUESTION: Record<Lang, string> = {
