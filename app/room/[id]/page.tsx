@@ -2361,8 +2361,12 @@ export default function RoomPage() {
           {!showSeats ? (
             <button
               type="button"
-              onClick={() => setShowSeats(true)}
-              className="mt-3 block w-fit text-sm font-medium text-gray-500 active:text-gray-700"
+              onClick={() => {
+                setShowSeats(true);
+                // Opting in means paying for more than yourself — start at 2.
+                setJoinSeats((s) => Math.max(2, s));
+              }}
+              className="mt-3 ml-auto block w-fit text-sm font-normal text-gray-500 active:text-gray-700"
             >
               {PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}
             </button>
