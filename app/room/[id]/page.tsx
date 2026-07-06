@@ -2868,6 +2868,18 @@ export default function RoomPage() {
     );
   }
 
+  // Nudge an unpaid guest: share their name + amount + the room link via the
+  // native share sheet (SMS/WhatsApp/etc.), falling back to an SMS deep link.
+  const remindGuest = (dinerId: string, ore: number) => {
+    const name = nameById.get(dinerId) ?? "";
+    const amount = roomFx ? (formatNative(ore, roomFx) || `${formatOre(ore)} kr`) : `${formatOre(ore)} kr`;
+    const text = `${(REMIND_MSG[lang] ?? REMIND_MSG.en)(name, amount)} ${shareUrl}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      void navigator.share({ text, url: shareUrl }).catch(() => {});
+    } else if (typeof window !== "undefined") {
+      window.open(`sms:?&body=${encodeURIComponent(text)}`, "_blank");
+    }
+  };
   // Offline banner copy. Kept as a local map rather than threaded through the
   // big per-locale `R` dict — a single auxiliary string not worth 12 edits.
   const offlineMsg: Record<Lang, string> = {
@@ -3141,6 +3153,15 @@ export default function RoomPage() {
                           className={`text-[11px] tabular-nums ${isPaid ? "text-gray-400 line-through" : "text-gray-500"}`}
                         />
                       </span>
+                      {!isPaid && (
+                        <button
+                          type="button"
+                          onClick={() => remindGuest(s.dinerId, s.totalOre)}
+                          className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-swish-dark ring-1 ring-swish/30 active:bg-swish/10"
+                        >
+                          {REMIND_LABEL[lang] ?? REMIND_LABEL.en}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => togglePaid(s.dinerId)}
@@ -3497,6 +3518,15 @@ export default function RoomPage() {
           </section>
           )}
         </>
+      )}
+      {/* Joined guest who hasn't claimed anything yet (incl. someone who
+          opened the link after the bill settled): the pay footer below is
+          gated on a non-zero share, so without this they'd see a blank
+          action area. Nudge them to tap their items. */}
+      {personId && !isPayee && (!myShare || myShare.totalOre === 0) && (
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-black/5 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center backdrop-blur">
+          <p className="text-sm font-medium text-gray-600">👆 {CLAIM_HINT[lang] ?? CLAIM_HINT.en}</p>
+        </div>
       )}
       {!isPayee && myShare && myShare.totalOre > 0 && (() => {
         const iAmDone = !!personId && (state.doneBy ?? []).includes(personId);
@@ -4050,6 +4080,35 @@ const TRY_AGAIN: Record<Lang, string> = {
   sv: "Försök igen", en: "Try again", de: "Erneut versuchen", fr: "Réessayer",
   es: "Intentar de nuevo", it: "Riprova", nl: "Opnieuw proberen", da: "Prøv igen",
   no: "Prøv igjen", fi: "Yritä uudelleen", pl: "Spróbuj ponownie", pt: "Tentar novamente",
+};
+
+// "Remind" button + the message the host shares with an unpaid guest. Local
+// maps for the same reason — auxiliary strings not worth 12 R-dict edits.
+const REMIND_LABEL: Record<Lang, string> = {
+  sv: "Påminn", en: "Remind", de: "Erinnern", fr: "Rappeler", es: "Recordar", it: "Ricorda",
+  nl: "Herinneren", da: "Påmind", no: "Påminn", fi: "Muistuta", pl: "Przypomnij", pt: "Lembrar",
+};
+// Prompt for a joined guest who hasn't claimed anything yet (incl. late joiners
+// of an already-settled bill) — otherwise they see a blank action area.
+const CLAIM_HINT: Record<Lang, string> = {
+  sv: "Tryck på det du åt", en: "Tap the items you had", de: "Tippe auf das, was du hattest",
+  fr: "Touche ce que tu as pris", es: "Toca lo que tomaste", it: "Tocca ciò che hai preso",
+  nl: "Tik aan wat jij had", da: "Tryk på det, du fik", no: "Trykk på det du tok",
+  fi: "Napauta ottamiasi", pl: "Dotknij tego, co jadłeś", pt: "Toca no que tiveste",
+};
+const REMIND_MSG: Record<Lang, (name: string, amount: string) => string> = {
+  sv: (n, a) => `Hej ${n}! Din del av notan är ${a}. Betala här:`,
+  en: (n, a) => `Hi ${n}! Your share of the bill is ${a}. Pay here:`,
+  de: (n, a) => `Hallo ${n}! Dein Anteil an der Rechnung ist ${a}. Hier bezahlen:`,
+  fr: (n, a) => `Salut ${n} ! Ta part de l'addition est ${a}. Paie ici :`,
+  es: (n, a) => `¡Hola ${n}! Tu parte de la cuenta es ${a}. Paga aquí:`,
+  it: (n, a) => `Ciao ${n}! La tua parte del conto è ${a}. Paga qui:`,
+  nl: (n, a) => `Hoi ${n}! Jouw deel van de rekening is ${a}. Betaal hier:`,
+  da: (n, a) => `Hej ${n}! Din del af regningen er ${a}. Betal her:`,
+  no: (n, a) => `Hei ${n}! Din del av regningen er ${a}. Betal her:`,
+  fi: (n, a) => `Hei ${n}! Osuutesi laskusta on ${a}. Maksa tästä:`,
+  pl: (n, a) => `Cześć ${n}! Twoja część rachunku to ${a}. Zapłać tutaj:`,
+  pt: (n, a) => `Olá ${n}! A tua parte da conta é ${a}. Paga aqui:`,
 };
 
 // Lucide "pencil" — flat stroked icon. Used for the per-item edit buttons.
