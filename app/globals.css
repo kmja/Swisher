@@ -258,44 +258,42 @@ textarea {
   animation: count-pop 0.25s ease-out;
 }
 
-/* OCR emoji toss: each dish the model reads gets flung into the air on a
-   parabolic arc — fast decelerating rise to the apex, accelerating fall
-   (gravity), fading away on the way down. Split across two nested layers:
-   the outer runs constant-velocity horizontal drift + tumble (linear, like
-   real ballistics), the inner runs the vertical parabola via per-keyframe
-   easing. Both run once (forwards) so spent sprites end invisible. */
-@keyframes emoji-toss-x {
-  from { transform: translateX(0) rotate(0deg); }
-  to { transform: translateX(var(--toss-x, 36px)) rotate(var(--toss-rot, 24deg)); }
-}
-.emoji-toss-x {
-  animation: emoji-toss-x 1.9s linear forwards;
-}
-@keyframes emoji-toss-y {
+/* OCR emoji float: each dish the model reads drifts upward and fades like a
+   social-media live reaction — a balloon rising off the receipt. Two nested
+   layers: the inner pops in, rises by --rise and fades out (once, forwards);
+   the outer sways gently side-to-side (a couple of oscillations over the rise)
+   so the ascent wobbles instead of tracking a straight line. Spent sprites end
+   at opacity 0. */
+@keyframes emoji-rise {
   0% {
-    transform: translateY(14px) scale(0.5);
+    transform: translateY(0) scale(0.45);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.2, 0.9, 0.35, 1); /* launch: decelerate to apex */
   }
-  10% { opacity: 1; }
-  48% {
-    transform: translateY(-64px) scale(1.05);
+  14% {
+    transform: translateY(-10px) scale(1);
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.6, 0.03, 0.9, 0.4); /* gravity: accelerate down */
   }
-  78% { opacity: 0.5; }
+  80% { opacity: 1; }
   100% {
-    transform: translateY(28px) scale(0.95);
+    transform: translateY(var(--rise, -150px)) scale(0.9);
     opacity: 0;
   }
 }
-.emoji-toss-y {
-  animation: emoji-toss-y 1.9s linear forwards;
+.emoji-rise {
+  animation: emoji-rise var(--rise-dur, 3s) cubic-bezier(0.25, 0.6, 0.4, 1) forwards;
+}
+@keyframes emoji-sway {
+  0% { transform: translateX(calc(var(--sway, 10px) * -1)); }
+  50% { transform: translateX(var(--sway, 10px)); }
+  100% { transform: translateX(calc(var(--sway, 10px) * -1)); }
+}
+.emoji-sway {
+  animation: emoji-sway var(--sway-dur, 1.5s) ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Purely decorative — skip it entirely rather than pinning sprites on. */
-  .emoji-toss-x,
-  .emoji-toss-y { animation: none; opacity: 0; }
+  .emoji-rise,
+  .emoji-sway { animation: none; opacity: 0; }
 }
 
 /* Person icon pops in when added to the group. */

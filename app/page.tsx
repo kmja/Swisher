@@ -2834,17 +2834,21 @@ export default function Page() {
                     consecutive pops apart but deterministic. Rendered BEFORE
                     the pill so the count stays legible on top. */}
                 {scanEmojis.length > 0 && (
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-44">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-52">
                     {scanEmojis.map((it, idx) => {
-                      // Launch origin hops around the ticker; toss direction,
-                      // tumble and size vary per sprite — all deterministic
-                      // from the index so nothing reshuffles on re-render.
-                      const left = 28 + ((idx * 61.8034) % 44);
-                      const top = 44 + ((idx * 43.7) % 60);
-                      const dx = Math.round(((idx * 37.9) % 88) - 44);
-                      const rot = Math.round(((idx * 83) % 70) - 35);
+                      // Each sprite rises off the receipt and fades like a live
+                      // reaction. Spawn spot, rise height, sway amount/period,
+                      // size and duration all vary — deterministic from the
+                      // index so nothing reshuffles on re-render.
+                      const left = 26 + ((idx * 61.8034) % 48);
+                      const top = 96 + ((idx * 37.3) % 44);
+                      const rise = -(120 + ((idx * 29.7) % 60)); // -120..-180px
+                      const swaySign = idx % 2 === 0 ? 1 : -1;
+                      const sway = (7 + ((idx * 13.1) % 12)) * swaySign; // ±7..19px
+                      const riseDur = (2.6 + ((idx * 0.37) % 1.0)).toFixed(2); // 2.6..3.6s
+                      const swayDur = (1.3 + ((idx * 0.23) % 0.7)).toFixed(2); // 1.3..2.0s
                       const size = ["text-3xl", "text-4xl", "text-2xl"][idx % 3];
-                      const delay = `${(idx % 3) * 90}ms`;
+                      const delay = `${(idx % 4) * 80}ms`;
                       return (
                         <span
                           key={idx}
@@ -2852,10 +2856,13 @@ export default function Page() {
                           style={{ left: `${left}%`, top: `${top}px` }}
                         >
                           <span
-                            className="emoji-toss-x block"
-                            style={{ "--toss-x": `${dx}px`, "--toss-rot": `${rot}deg`, animationDelay: delay } as React.CSSProperties}
+                            className="emoji-sway block"
+                            style={{ "--sway": `${sway}px`, "--sway-dur": `${swayDur}s`, animationDelay: delay } as React.CSSProperties}
                           >
-                            <span className="emoji-toss-y block drop-shadow-lg" style={{ animationDelay: delay }}>
+                            <span
+                              className="emoji-rise block drop-shadow-lg"
+                              style={{ "--rise": `${rise}px`, "--rise-dur": `${riseDur}s`, animationDelay: delay } as React.CSSProperties}
+                            >
                               <ItemEmoji description={it.description} hint={it.category} modelEmoji={it.emoji} />
                             </span>
                           </span>
