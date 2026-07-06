@@ -1075,6 +1075,29 @@ function pushScanLog(entry: ScanLogEntry): ScanLogEntry[] {
   return log;
 }
 
+// Network-failure copy for the OCR failure card. Kept as local maps rather
+// than threaded through the central i18n interface — a network drop means the
+// photo is fine, so the message must not say "retake with better lighting".
+const OCR_NETWORK_TITLE: Record<Lang, string> = {
+  sv: "Ingen anslutning", en: "No connection", de: "Keine Verbindung", fr: "Pas de connexion",
+  es: "Sin conexión", it: "Nessuna connessione", nl: "Geen verbinding", da: "Ingen forbindelse",
+  no: "Ingen tilkobling", fi: "Ei yhteyttä", pl: "Brak połączenia", pt: "Sem ligação",
+};
+const OCR_NETWORK_BODY: Record<Lang, string> = {
+  sv: "Enheten verkar vara offline. Anslut igen och försök på nytt – fotot är okej.",
+  en: "Your device looks offline. Reconnect and try again — the photo is fine.",
+  de: "Dein Gerät ist offline. Stell die Verbindung wieder her und versuch es erneut – das Foto ist in Ordnung.",
+  fr: "Votre appareil semble hors ligne. Reconnectez-vous et réessayez — la photo est bonne.",
+  es: "Tu dispositivo parece estar sin conexión. Vuelve a conectarte e inténtalo de nuevo — la foto está bien.",
+  it: "Il dispositivo sembra offline. Riconnettiti e riprova — la foto va bene.",
+  nl: "Je apparaat lijkt offline. Verbind opnieuw en probeer het nog eens — de foto is prima.",
+  da: "Din enhed ser ud til at være offline. Opret forbindelse igen og prøv igen — billedet er fint.",
+  no: "Enheten ser ut til å være frakoblet. Koble til igjen og prøv på nytt — bildet er greit.",
+  fi: "Laite näyttää olevan offline-tilassa. Yhdistä uudelleen ja yritä uudelleen — kuva on kunnossa.",
+  pl: "Twoje urządzenie jest offline. Połącz się ponownie i spróbuj jeszcze raz — zdjęcie jest dobre.",
+  pt: "O teu dispositivo parece estar offline. Liga-te novamente e tenta outra vez — a foto está boa.",
+};
+
 export default function Page() {
   const [lang, setLang] = useState<Lang>("sv");
   const t = translations[lang];
@@ -1168,7 +1191,7 @@ export default function Page() {
   // the failure card. "general" = couldn't read the photo at all;
   // "noPrices" = OCR found item lines but none had a price (e.g. an
   // online-order pickup slip lists the order but no money).
-  const [ocrFailReason, setOcrFailReason] = useState<"general" | "noPrices">("general");
+  const [ocrFailReason, setOcrFailReason] = useState<"general" | "noPrices" | "network">("general");
   // True between OCR-complete and host-info-complete: the scan overlay keeps
   // its setup card up so the host can finish typing their name & phone
   // before the app advances to the items step.
@@ -2127,10 +2150,14 @@ export default function Page() {
       };
       requestAnimationFrame(step);
     } catch (err) {
-      // An AbortError here is the 65s timeout firing on a stalled stream.
+      // Distinguish a network failure from a genuine can't-read: an AbortError
+      // is the 65s timeout on a stalled stream, a TypeError from fetch (or an
+      // offline device) is a dropped connection. In those cases the photo is
+      // fine — don't tell the host to retake it with better lighting.
       const aborted = err instanceof DOMException && err.name === "AbortError";
-      setOcrError(aborted ? "Scan timed out." : err instanceof Error ? err.message : "OCR failed.");
-      setOcrFailReason("general");
+      const network = aborted || err instanceof TypeError || (typeof navigator !== "undefined" && !navigator.onLine);
+      setOcrError(err instanceof Error ? err.message : "OCR failed.");
+      setOcrFailReason(network ? "network" : "general");
       setOcrFailed(true);
       setOcrLoading(false);
     } finally {
@@ -2765,8 +2792,8 @@ export default function Page() {
                       <path d="m6 6 12 12" />
                     </svg>
                   </div>
-                  <h2 className="mt-3 text-base font-bold text-ink">{ocrFailReason === "noPrices" ? t.ocrNoPricesTitle : t.ocrFailedTitle}</h2>
-                  <p className="mt-1 text-sm leading-snug text-gray-600">{ocrFailReason === "noPrices" ? t.ocrNoPricesBody : t.ocrFailedBody}</p>
+                  <h2 className="mt-3 text-base font-bold text-ink">{ocrFailReason === "noPrices" ? t.ocrNoPricesTitle : ocrFailReason === "network" ? (OCR_NETWORK_TITLE[lang] ?? OCR_NETWORK_TITLE.en) : t.ocrFailedTitle}</h2>
+                  <p className="mt-1 text-sm leading-snug text-gray-600">{ocrFailReason === "noPrices" ? t.ocrNoPricesBody : ocrFailReason === "network" ? (OCR_NETWORK_BODY[lang] ?? OCR_NETWORK_BODY.en) : t.ocrFailedBody}</p>
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
                       type="button"
