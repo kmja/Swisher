@@ -2360,7 +2360,7 @@ export default function RoomPage() {
               0fr↔1fr containers (the app's expand trick) cross-fading on
               opacity, so the swap animates instead of snapping. */}
           <div
-            className={`mt-1 grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
+            className={`mt-2 grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
               showSeats ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
             }`}
           >
@@ -2372,7 +2372,10 @@ export default function RoomPage() {
                   // Opting in means paying for more than yourself — start at 2.
                   setJoinSeats((s) => Math.max(2, s));
                 }}
-                className="flex w-fit font-normal text-gray-500 active:text-gray-700"
+                // pb-1 gives the leading-none text's descenders room so the
+                // container's overflow-hidden (needed for the collapse) doesn't
+                // clip the 'y'/'g' tails.
+                className="flex w-fit pb-1 font-normal text-gray-500 active:text-gray-700"
               >
                 {/* Size lives on a child span: the global `button { font-size:16px }`
                     rule is unlayered and overrides text-* utilities set directly on
