@@ -2354,52 +2354,68 @@ export default function RoomPage() {
               {t.joinFailed}
             </p>
           )}
-          {/* Seat picker — hidden behind a link so the common "just me" case
-              stays a one-tap join. Revealing it shows huddled person icons
-              that grow with the count; >1 covers table-mates who aren't on
-              the app so shared items + tip get fully split. */}
-          {!showSeats ? (
-            <button
-              type="button"
-              onClick={() => {
-                setShowSeats(true);
-                // Opting in means paying for more than yourself — start at 2.
-                setJoinSeats((s) => Math.max(2, s));
-              }}
-              className="mt-1.5 ml-auto block w-fit font-normal text-gray-500 active:text-gray-700"
-            >
-              {/* Size lives on a child span: the global `button { font-size:16px }`
-                  rule is unlayered and overrides text-* utilities set directly on
-                  a <button>, but not on its children. */}
-              <span className="text-[11px]">{PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}</span>
-            </button>
-          ) : (
-            <div className="mt-4">
-              <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
-                  onClick={() => setJoinSeats((s) => Math.max(1, s - 1))}
-                  disabled={joinSeats <= 1}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
-                >
-                  <span aria-hidden>−</span>
-                </button>
-                <div className="flex min-w-[3.5rem] items-center justify-center">
-                  <SeatCluster count={joinSeats} />
+          {/* Seat picker — hidden behind a small left-aligned link so the
+              common "just me" case stays a one-tap join. Clicking it smoothly
+              collapses the link and expands the picker: both are grid-rows
+              0fr↔1fr containers (the app's expand trick) cross-fading on
+              opacity, so the swap animates instead of snapping. */}
+          <div
+            className={`mt-1 grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
+              showSeats ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+            }`}
+          >
+            <div className="min-h-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSeats(true);
+                  // Opting in means paying for more than yourself — start at 2.
+                  setJoinSeats((s) => Math.max(2, s));
+                }}
+                className="flex w-fit font-normal text-gray-500 active:text-gray-700"
+              >
+                {/* Size lives on a child span: the global `button { font-size:16px }`
+                    rule is unlayered and overrides text-* utilities set directly on
+                    a <button>, but not on its children. `flex` + leading-none also
+                    collapse the button's 16px line-box strut so it hugs the 11px
+                    text — otherwise ~6px of phantom padding swamps the top margin. */}
+                <span className="text-[11px] leading-none">{PAYING_FOR_OTHERS[lang] ?? PAYING_FOR_OTHERS.en}</span>
+              </button>
+            </div>
+          </div>
+          <div
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
+              showSeats ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="min-h-0">
+              <div className="pt-4">
+                <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
+                    onClick={() => setJoinSeats((s) => Math.max(1, s - 1))}
+                    disabled={joinSeats <= 1}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200 disabled:opacity-40"
+                  >
+                    <span aria-hidden>−</span>
+                  </button>
+                  <div className="flex min-w-[3.5rem] items-center justify-center">
+                    <SeatCluster count={joinSeats} />
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
+                    onClick={() => setJoinSeats((s) => Math.min(20, s + 1))}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
+                  >
+                    <span aria-hidden>+</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
-                  onClick={() => setJoinSeats((s) => Math.min(20, s + 1))}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl font-bold leading-none text-gray-600 active:bg-gray-200"
-                >
-                  <span aria-hidden>+</span>
-                </button>
               </div>
             </div>
-          )}
+          </div>
           <button
             type="button"
             onClick={(e) => {
