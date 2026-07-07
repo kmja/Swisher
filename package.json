@@ -1,6 +1,6 @@
 {
   "name": "swisher",
-  "version": "1.85.53",
+  "version": "1.85.54",
   "private": true,
   "description": "Swish Receipt Splitter — photograph a receipt, assign items, generate a locked Swish QR + swish:// link per person.",
   "scripts": {

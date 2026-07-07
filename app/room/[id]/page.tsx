@@ -2360,8 +2360,10 @@ export default function RoomPage() {
               0fr↔1fr containers (the app's expand trick) cross-fading on
               opacity, so the swap animates instead of snapping. */}
           <div
-            className={`mt-2 grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
-              showSeats ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
+              // mt-2 only while the link is shown; drop it when collapsed so it
+              // leaves no residual gap above the expanding picker.
+              showSeats ? "grid-rows-[0fr] opacity-0" : "mt-2 grid-rows-[1fr] opacity-100"
             }`}
           >
             <div className="min-h-0">
@@ -2392,7 +2394,9 @@ export default function RoomPage() {
             }`}
           >
             <div className="min-h-0">
-              <div className="pt-4">
+              {/* pt-3 matches the Join button's mt-3 so the picker sits the
+                  same distance below the input as Join sits below the picker. */}
+              <div className="pt-3">
                 <p className="mb-2 text-center text-sm text-gray-500">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</p>
                 <div className="flex items-center justify-center gap-4">
                   <button
