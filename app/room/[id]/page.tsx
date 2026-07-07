@@ -3215,7 +3215,9 @@ export default function RoomPage() {
           ? t.nobodyOwes
           : t.paidProgress(paidCount, otherShares.length);
         return (
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+          // order-first pins the host's collect summary to the very top of the
+          // flex column, above the items grid and the (order-last) share card.
+          <section className="order-first rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t.remainingToCollect}</span>
             <div className="mt-1">
               <Money ore={toCollectOre} className="block text-4xl font-bold text-swish-dark" />
