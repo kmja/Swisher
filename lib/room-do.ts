@@ -271,6 +271,19 @@ export class RoomDO extends DurableObject {
     return { personId: person.id, state };
   }
 
+  /** Update how many people a diner is paying for (seats). Weights their
+   *  shared-item portions and tip; a diner covering >1 seat fully allocates
+   *  shared items even when not everyone at the table uses the app. */
+  async setSeats(personId: string, seats: number): Promise<RoomState | null> {
+    const state = await this.load();
+    if (!state) return null;
+    const person = state.people.find((p) => p.id === personId);
+    if (!person) return state;
+    person.seats = Math.max(1, Math.min(20, Math.round(seats) || 1));
+    await this.save(state);
+    return state;
+  }
+
   async toggleClaim(personId: string, itemId: string): Promise<RoomState | null> {
     const state = await this.load();
     if (!state) return null;

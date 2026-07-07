@@ -65,6 +65,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
       return NextResponse.json({ state });
     }
+    case "seats": {
+      const state = await stub.setSeats(String(body.personId ?? ""), Number(body.seats) || 1);
+      if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+      return NextResponse.json({ state });
+    }
     case "paid": {
       const state = await stub.togglePaid(String(body.personId ?? ""), String(body.targetId ?? ""));
       if (!state) return NextResponse.json({ error: "Room not found." }, { status: 404 });

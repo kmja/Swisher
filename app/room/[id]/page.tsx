@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useParams, useSearchParams } from "next/navigation";
 import QrCard from "@/components/QrCard";
 import SwishLogo from "@/components/SwishLogo";
-import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared } from "@/lib/money";
+import { computeRoomShares, formatOre, parseAmountToOre, isFullyShared, type ItemOwe } from "@/lib/money";
 import { translations } from "@/lib/i18n";
 import { categoryFor, emojiFor, CATEGORY_EMOJI, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from "@/lib/categories";
 import { formatReceiptDate } from "@/lib/date";
@@ -1020,7 +1020,6 @@ export default function RoomPage() {
   // the deep link.
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const [nameToast, setNameToast] = useState<string | null>(null);
-  const [coveringPersonId, setCoveringPersonId] = useState<string | null>(null);
   const [expandedDiners, setExpandedDiners] = useState<Set<string>>(new Set());
   const nameToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sharedOpen, setSharedOpen] = useState(false);
@@ -2000,6 +1999,27 @@ export default function RoomPage() {
     }
   }
 
+  async function setMySeats(seats: number) {
+    if (!personId) return;
+    const clamped = Math.max(1, Math.min(20, Math.round(seats) || 1));
+    // Optimistic: update seats locally so the share (computeRoomShares weights
+    // by seats) recomputes instantly; the server response reconciles.
+    setState((prev) =>
+      prev ? { ...prev, people: prev.people.map((p) => (p.id === personId ? { ...p, seats: clamped } : p)) } : prev,
+    );
+    try {
+      const res = await fetch(`/api/room/${code}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "seats", personId, seats: clamped }),
+      });
+      if (res.ok) setState(((await res.json()) as { state: RoomState }).state);
+      else refresh();
+    } catch {
+      refresh();
+    }
+  }
+
   async function toggleDone() {
     if (!personId) return;
     setState((prev) => {
@@ -2290,8 +2310,8 @@ export default function RoomPage() {
     }
   }
 
-  const { shares, unassignedOre } = useMemo(() => {
-    if (!state) return { shares: [] as Share[], unassignedOre: 0 };
+  const { shares, unassignedOre, perItem } = useMemo(() => {
+    if (!state) return { shares: [] as Share[], unassignedOre: 0, perItem: new Map<string, Map<string, ItemOwe>>() };
     const diners: Diner[] = state.people.map((p) => ({ id: p.id, name: p.name, seats: p.seats }));
     return computeRoomShares(state.items, diners, state.tipOre, state.groupSize ?? 0);
   }, [state]);
@@ -3649,8 +3669,12 @@ export default function RoomPage() {
         // is one line with a counter.
         type CartLine = {
           description: string;
+          /** Portions on the hook for: copies for own items, seats covered for
+           *  shared ones — so paying for >1 shows every extra share. */
           count: number;
-          oreEach: number;
+          /** Exact öre this line contributes (from the share breakdown), so the
+           *  cart sums to the share total to the öre. */
+          oreTotal: number;
           emoji?: string;
           rawCategory?: string;
           category: Category;
@@ -3659,27 +3683,33 @@ export default function RoomPage() {
            *  "/N" secondary-font marker next to the line. */
           shareCount?: number;
         };
+        // Build cart lines straight from the authoritative per-item breakdown
+        // (seats-weighted), so the total always reconciles to YOUR SHARE.
+        const myOwe = personId ? perItem.get(personId) : undefined;
         const lineMap = new Map<string, CartLine>();
         for (const it of state.items) {
           if (!personId || !it.claimedBy.includes(personId)) continue;
-          const denom = it.shared
-            ? (it.shareCount && it.shareCount > 0 ? Math.min(it.shareCount, groupSize) : groupSize)
-            : Math.max(1, it.claimedBy.length);
-          const oreEach = Math.floor(it.priceOre / denom);
+          const o = myOwe?.get(it.id);
+          if (!o || o.ore <= 0) continue;
           const isShared = isFullyShared(it, groupSize);
-          const k = `${it.description}|${oreEach}|${isShared ? 1 : 0}|${isShared ? denom : 0}`;
+          const shareCount = isShared
+            ? (it.shareCount && it.shareCount > 0 ? Math.min(it.shareCount, groupSize) : groupSize)
+            : undefined;
+          const k = `${it.description}|${isShared ? 1 : 0}|${shareCount ?? 0}`;
           const ex = lineMap.get(k);
-          if (ex) ex.count++;
-          else
+          if (ex) {
+            ex.oreTotal += o.ore;
+            ex.count += o.portions;
+          } else
             lineMap.set(k, {
               description: it.description,
-              count: 1,
-              oreEach,
+              count: o.portions,
+              oreTotal: o.ore,
               emoji: it.emoji,
               rawCategory: it.category,
               category: categoryFor(it.description, it.category),
               isShared,
-              shareCount: isShared ? denom : undefined,
+              shareCount,
             });
         }
         const linesByCategory: Partial<Record<Category, CartLine[]>> = {};
@@ -3693,7 +3723,7 @@ export default function RoomPage() {
         for (const cat of CATEGORY_ORDER) {
           linesByCategory[cat]?.sort((a, b) => {
             if (a.isShared !== b.isShared) return a.isShared ? 1 : -1;
-            return b.oreEach * b.count - a.oreEach * a.count;
+            return b.oreTotal - a.oreTotal;
           });
         }
         // Split the cart count into "items I picked for myself" vs
@@ -3717,18 +3747,15 @@ export default function RoomPage() {
             ? t.cartPickedItems(mineCount)
             : `${t.cartPickedItems(mineCount)} · ${t.cartSharedShort(sharedCount)}`;
         const canSwish = !!state.payeeNumber;
-        const coverShare = coveringPersonId ? shares.find((s) => s.dinerId === coveringPersonId) : null;
-        const coverOre = coverShare?.totalOre ?? 0;
+        // myShare.totalOre already includes this guest's seats-weighting (extra
+        // shared portions + tip), so the Swish amount needs no cover add-on.
         const swishUri = canSwish
           ? buildSwishUri({
               payee: state.payeeNumber!,
-              amountOre: myShare.totalOre + coverOre,
-              message: `${myShare.name}${coverShare ? ` + ${coverShare.name}` : ""} - ${state.message ?? ""}`.slice(0, 50),
+              amountOre: myShare.totalOre,
+              message: `${myShare.name} - ${state.message ?? ""}`.slice(0, 50),
             })
           : null;
-        const coverableShares = shares.filter(
-          (s) => s.dinerId !== personId && s.dinerId !== state.payeePersonId && s.totalOre > 0,
-        );
         // Explicit "mark me done" — fires when the guest taps the
         // I'm-done half of the split button (no longer wired to
         // the Swish deep-link tap, so opening Swish doesn't silently
@@ -3738,7 +3765,6 @@ export default function RoomPage() {
         const markDone = () => {
           if (iAmDone || !personId) return;
           const newDoneBy = [...(state.doneBy ?? []), personId];
-          if (coveringPersonId && !newDoneBy.includes(coveringPersonId)) newDoneBy.push(coveringPersonId);
           setState((prev) =>
             prev ? { ...prev, doneBy: newDoneBy } : prev,
           );
@@ -3749,14 +3775,6 @@ export default function RoomPage() {
               body: JSON.stringify({ action: "done", personId }),
               keepalive: true,
             });
-            if (coveringPersonId) {
-              fetch(`/api/room/${code}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "done", personId: coveringPersonId }),
-                keepalive: true,
-              });
-            }
           } catch {
             /* navigation continues; next refresh reconciles */
           }
@@ -3819,13 +3837,22 @@ export default function RoomPage() {
                                   <span className="ml-1 text-xs tabular-nums text-white/45" aria-label={tx.sharedToggle}>/{line.shareCount}</span>
                                 )}
                               </span>
-                              <Money ore={line.count * line.oreEach} className="shrink-0 tabular-nums text-white/85" nativeClassName="hidden" />
+                              <Money ore={line.oreTotal} className="shrink-0 tabular-nums text-white/85" nativeClassName="hidden" />
                             </li>
                           ))}
                         </ul>
                       </div>
                     );
                   })}
+                  {/* Tip line so the cart sums to YOUR SHARE (which includes the
+                      guest's seats-weighted slice of the tip). */}
+                  {myShare.tipOre > 0 && (
+                    <div className="flex items-center gap-2 border-t border-white/10 pt-2">
+                      <span aria-hidden className="inline-flex w-7 shrink-0 items-center justify-center text-lg leading-none">💝</span>
+                      <span className="min-w-0 flex-1 truncate text-white/90">{t.tip}</span>
+                      <Money ore={myShare.tipOre} className="shrink-0 tabular-nums text-white/85" nativeClassName="hidden" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -3850,27 +3877,37 @@ export default function RoomPage() {
                 )}
               </span>
             </button>
-            {coverableShares.length > 0 && (
-              <div className="flex items-center gap-2 border-t border-white/10 px-4 py-2">
-                <span className="shrink-0 text-[11px] text-white/55">{t.coverFor}:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {coverableShares.map((cs) => (
+            {/* How many people this guest is paying for (seats). Mirrors the
+                join-dialog picker; changing it re-weights their shared-item
+                portions + tip (the cart above reconciles). */}
+            {personId && (() => {
+              const mySeats = state.people.find((p) => p.id === personId)?.seats ?? 1;
+              return (
+                <div className="flex items-center justify-between gap-3 border-t border-white/10 px-4 py-2.5">
+                  <span className="min-w-0 truncate text-[11px] text-white/55">{SEATS_QUESTION[lang] ?? SEATS_QUESTION.en}</span>
+                  <div className="flex shrink-0 items-center gap-3">
                     <button
-                      key={cs.dinerId}
                       type="button"
-                      onClick={() => setCoveringPersonId((prev) => prev === cs.dinerId ? null : cs.dinerId)}
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 transition ${
-                        coveringPersonId === cs.dinerId
-                          ? "bg-swish text-white ring-swish-dark"
-                          : "bg-white/10 text-white/70 ring-white/20 active:bg-white/20"
-                      }`}
+                      aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).less}
+                      onClick={() => setMySeats(mySeats - 1)}
+                      disabled={mySeats <= 1}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 active:bg-white/20 disabled:opacity-40"
                     >
-                      {cs.name}
+                      <span aria-hidden className="text-xl font-bold leading-none text-white/80">−</span>
                     </button>
-                  ))}
+                    <SeatCluster count={mySeats} onDark />
+                    <button
+                      type="button"
+                      aria-label={(SEATS_STEP[lang] ?? SEATS_STEP.en).more}
+                      onClick={() => setMySeats(mySeats + 1)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 active:bg-white/20"
+                    >
+                      <span aria-hidden className="text-xl font-bold leading-none text-white/80">+</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {/* Primary action. The first tap of "Betala" only OPENS
                 the Swish deep link and sets paymentInitiated, which
                 splits the button into a Pay (re-tap to retry) +
@@ -4185,22 +4222,24 @@ function HomeLink({ label }: { label: string }) {
 // A cluster of person icons for the join-dialog seat picker — like the host's
 // group-size visual but without the table: the heads just huddle together
 // (overlapping) as the count grows, capped with a "+N" past five.
-function SeatCluster({ count }: { count: number }) {
+function SeatCluster({ count, onDark = false }: { count: number; onDark?: boolean }) {
   const shown = Math.min(Math.max(1, count), 5);
   const overflow = Math.max(0, count - shown);
+  // Gray "pebble" avatars matching the host group-size chips; the ring in the
+  // surrounding surface colour keeps overlapping heads separated. onDark tunes
+  // the palette for the always-dark cart footer (light chips, footer-coloured
+  // ring); the default is for the white join card (surface-var ring, theme-aware).
+  const chip = onDark
+    ? "bg-white/15 text-white/75 ring-[#1b1b1f]"
+    : "bg-gray-200 text-gray-500 ring-[var(--color-surface)]";
+  const plus = onDark ? "text-white/70" : "text-gray-500";
   return (
     <div aria-hidden className="flex items-center justify-center">
-      {/* Gray "pebble" avatars matching the host group-size chips. They
-          overlap as the count grows; a ring in the card's own surface colour
-          (white in light, dark-gray in dark — bg-white maps to
-          --color-surface) keeps each head cleanly separated from the one
-          behind it in BOTH themes. Plain ring-white would stay bright white
-          on the dark card. */}
       <div className="flex items-center -space-x-2.5">
         {Array.from({ length: shown }).map((_, i) => (
           <span
             key={i}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-500 ring-2 ring-[var(--color-surface)]"
+            className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 ${chip}`}
             style={{ zIndex: shown - i }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -4210,7 +4249,7 @@ function SeatCluster({ count }: { count: number }) {
           </span>
         ))}
       </div>
-      {overflow > 0 && <span className="ml-1.5 text-sm font-bold tabular-nums text-gray-500">+{overflow}</span>}
+      {overflow > 0 && <span className={`ml-1.5 text-sm font-bold tabular-nums ${plus}`}>+{overflow}</span>}
     </div>
   );
 }

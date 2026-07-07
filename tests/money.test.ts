@@ -188,6 +188,26 @@ describe("computeRoomShares", () => {
     expect(shares.find((s) => s.dinerId === "A")?.tipOre).toBe(2000);
     expect(shares.find((s) => s.dinerId === "B")?.tipOre).toBe(1000);
   });
+
+  it("perItem breakdown sums per person to their subtotal (cart reconciles)", () => {
+    const seated: Diner[] = [
+      { id: "A", name: "Ada", seats: 2 },
+      { id: "B", name: "Bo", seats: 1 },
+    ];
+    const items = [
+      { id: "w", priceOre: 9001, shared: true, claimedBy: ["A", "B"] }, // odd → remainder
+      { id: "p", priceOre: 4200, claimedBy: ["A"] },
+      { id: "q", priceOre: 3333, claimedBy: ["A", "B"] },
+    ];
+    const { shares, perItem } = computeRoomShares(items, seated, 1000, 3);
+    for (const s of shares) {
+      const sum = [...(perItem.get(s.dinerId)?.values() ?? [])].reduce((a, o) => a + o.ore, 0);
+      expect(sum).toBe(s.subtotalOre); // items reconcile to subtotal…
+      expect(sum + s.tipOre).toBe(s.totalOre); // …and + tip to the share total
+    }
+    // Ada (2 seats) covers 2 of the 3 shared portions of item w.
+    expect(perItem.get("A")?.get("w")?.portions).toBe(2);
+  });
 });
 
 describe("estimateGroupSize", () => {
