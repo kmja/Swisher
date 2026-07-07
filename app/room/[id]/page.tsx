@@ -66,7 +66,7 @@ const R = {
     peopleTitle: "Vilka är med",
     unclaimed: (n: number) => `${n} rätt${n === 1 ? "" : "er"} ofördelade`,
     allClaimed: "Allt är fördelat",
-    claimedTitle: (n: number) => `✓ ${n} klara`,
+    claimedTitle: "Redan tagna av andra",
     you: "du",
     tip: "Dricks",
     none: "Ingen",
@@ -140,7 +140,7 @@ const R = {
     peopleTitle: "Who's in",
     unclaimed: (n: number) => `${n} item${n === 1 ? "" : "s"} unassigned`,
     allClaimed: "Everything's assigned",
-    claimedTitle: (n: number) => `✓ ${n} claimed`,
+    claimedTitle: "Already claimed by others",
     you: "you",
     tip: "Tip",
     none: "None",
@@ -214,7 +214,7 @@ const R = {
     peopleTitle: "Wer ist dabei",
     unclaimed: (n: number) => `${n} ${n === 1 ? "Artikel" : "Artikel"} nicht zugewiesen`,
     allClaimed: "Alles zugewiesen",
-    claimedTitle: (n: number) => `✓ ${n} ausgewählt`,
+    claimedTitle: "Bereits von anderen gewählt",
     you: "du",
     tip: "Trinkgeld",
     none: "Keins",
@@ -288,7 +288,7 @@ const R = {
     peopleTitle: "Qui est là",
     unclaimed: (n: number) => `${n} article${n === 1 ? "" : "s"} non attribué${n === 1 ? "" : "s"}`,
     allClaimed: "Tout est attribué",
-    claimedTitle: (n: number) => `✓ ${n} sélectionné${n === 1 ? "" : "s"}`,
+    claimedTitle: "Déjà pris par d'autres",
     you: "toi",
     tip: "Pourboire",
     none: "Aucun",
@@ -362,7 +362,7 @@ const R = {
     peopleTitle: "Quién está",
     unclaimed: (n: number) => `${n} artículo${n === 1 ? "" : "s"} sin asignar`,
     allClaimed: "Todo asignado",
-    claimedTitle: (n: number) => `✓ ${n} seleccionado${n === 1 ? "" : "s"}`,
+    claimedTitle: "Ya elegido por otros",
     you: "tú",
     tip: "Propina",
     none: "Ninguna",
@@ -436,7 +436,7 @@ const R = {
     peopleTitle: "Chi c'è",
     unclaimed: (n: number) => `${n} articolo${n === 1 ? "" : "i"} non assegnato${n === 1 ? "" : "i"}`,
     allClaimed: "Tutto assegnato",
-    claimedTitle: (n: number) => `✓ ${n} selezionato${n === 1 ? "" : "i"}`,
+    claimedTitle: "Già preso da altri",
     you: "tu",
     tip: "Mancia",
     none: "Nessuna",
@@ -510,7 +510,7 @@ const R = {
     peopleTitle: "Wie zijn er",
     unclaimed: (n: number) => `${n} artikel${n === 1 ? "" : "en"} niet toegewezen`,
     allClaimed: "Alles toegewezen",
-    claimedTitle: (n: number) => `✓ ${n} geselecteerd`,
+    claimedTitle: "Al gekozen door anderen",
     you: "jij",
     tip: "Fooi",
     none: "Geen",
@@ -584,7 +584,7 @@ const R = {
     peopleTitle: "Hvem er med",
     unclaimed: (n: number) => `${n} vare${n === 1 ? "" : "r"} ikke tildelt`,
     allClaimed: "Alt er tildelt",
-    claimedTitle: (n: number) => `✓ ${n} valgt`,
+    claimedTitle: "Allerede taget af andre",
     you: "dig",
     tip: "Drikkepenge",
     none: "Ingen",
@@ -658,7 +658,7 @@ const R = {
     peopleTitle: "Hvem er med",
     unclaimed: (n: number) => `${n} vare${n === 1 ? "" : "r"} ikke tildelt`,
     allClaimed: "Alt er tildelt",
-    claimedTitle: (n: number) => `✓ ${n} valgt`,
+    claimedTitle: "Allerede tatt av andre",
     you: "deg",
     tip: "Tips",
     none: "Ingen",
@@ -732,7 +732,7 @@ const R = {
     peopleTitle: "Ketkä ovat mukana",
     unclaimed: (n: number) => `${n} tuote${n === 1 ? "" : "tta"} ei jaettu`,
     allClaimed: "Kaikki jaettu",
-    claimedTitle: (n: number) => `✓ ${n} valittu`,
+    claimedTitle: "Muiden jo valitsemat",
     you: "sinä",
     tip: "Tippi",
     none: "Ei mitään",
@@ -806,7 +806,7 @@ const R = {
     peopleTitle: "Kto jest",
     unclaimed: (n: number) => `${n} pozycja${n === 1 ? " nieprzypisana" : " nieprzypisane"}`,
     allClaimed: "Wszystko przypisane",
-    claimedTitle: (n: number) => `✓ ${n} wybrane`,
+    claimedTitle: "Już wybrane przez innych",
     you: "ty",
     tip: "Napiwek",
     none: "Brak",
@@ -880,7 +880,7 @@ const R = {
     peopleTitle: "Quem está",
     unclaimed: (n: number) => `${n} item${n === 1 ? "" : "s"} não atribuído${n === 1 ? "" : "s"}`,
     allClaimed: "Tudo atribuído",
-    claimedTitle: (n: number) => `✓ ${n} selecionado${n === 1 ? "" : "s"}`,
+    claimedTitle: "Já escolhido por outros",
     you: "tu",
     tip: "Gorjeta",
     none: "Nenhuma",
@@ -1024,6 +1024,8 @@ export default function RoomPage() {
   const [expandedDiners, setExpandedDiners] = useState<Set<string>>(new Set());
   const nameToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sharedOpen, setSharedOpen] = useState(false);
+  // Which categories' "already claimed by others" sections are expanded.
+  const [openClaimed, setOpenClaimed] = useState<Set<string>>(new Set());
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   // Buffered edits while the pencil-driven editor is open. Save flushes the
   // draft to the server in one editItem call; Cancel just discards.
@@ -3319,7 +3321,7 @@ export default function RoomPage() {
                   Array.from(new Set(g.copies.flatMap((c) => c.claimedBy)))
                     .map((id) => (id === personId ? t.you : nameById.get(id) ?? "?"))
                     .join(", ");
-                const othersTotal = othersGroups.reduce((acc, g) => acc + g.copies.length, 0);
+                const claimedOpen = openClaimed.has(cat);
                 return (
                   <div key={cat} className="space-y-2">
                     <div className="flex items-center gap-2 text-base font-bold text-gray-700">
@@ -3328,47 +3330,64 @@ export default function RoomPage() {
                     </div>
                     {mainGroups.map(renderClaimGroup)}
                     {othersGroups.length > 0 && (
-                      <details className="group rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
-                        <summary className="flex cursor-pointer list-none items-center gap-2.5 [&::-webkit-details-marker]:hidden">
+                      <div className="rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-black/5">
+                        <button
+                          type="button"
+                          aria-expanded={claimedOpen}
+                          onClick={() =>
+                            setOpenClaimed((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(cat)) next.delete(cat);
+                              else next.add(cat);
+                              return next;
+                            })
+                          }
+                          className="flex w-full cursor-pointer items-center gap-2.5"
+                        >
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-                            <ChevronRightIcon className="h-5 w-5 text-gray-400 transition-transform duration-200 group-open:rotate-90" />
+                            <ChevronRightIcon className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${claimedOpen ? "rotate-90" : ""}`} />
                           </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2">
                             <span className="inline-flex w-8 shrink-0 items-center justify-center text-xs text-gray-400">✓</span>
-                            <span className="min-w-0 flex-1 text-xs font-medium text-gray-500">{t.claimedTitle(othersTotal)}</span>
+                            <span className="min-w-0 flex-1 text-left text-xs font-medium text-gray-500">{t.claimedTitle}</span>
                           </span>
-                        </summary>
-                        <div className="mt-2 space-y-1">
-                          {othersGroups.map((g) => {
-                            const rep = g.copies[0];
-                            const totalCount = g.copies.length;
-                            return (
-                              <div
-                                key={rep.id}
-                                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-sm"
-                                onPointerDown={startLongPress(() => showNameToast(rep.description))}
-                                onPointerMove={moveLongPress}
-                                onPointerUp={cancelLongPress}
-                                onPointerCancel={cancelLongPress}
-                                onClick={swallowLongPressClick}
-                                onContextMenu={(e) => e.preventDefault()}
-                              >
-                                <span aria-hidden className="inline-flex w-5 shrink-0 items-center justify-center text-base leading-none">
-                                  <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />
-                                </span>
-                                <span className="min-w-0 flex-1 truncate text-gray-400">
-                                  {rep.description}
-                                </span>
-                                {totalCount > 1 && (
-                                  <span className="shrink-0 text-gray-400">×{totalCount}</span>
-                                )}
-                                <span className="shrink-0 text-xs text-gray-400">{othersClaimerNames(g)}</span>
-                                <span className="shrink-0 text-gray-400">{formatOre(rep.priceOre)}</span>
-                              </div>
-                            );
-                          })}
+                        </button>
+                        {/* Smooth expand/collapse via the grid-rows 0fr↔1fr trick. */}
+                        <div className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out ${claimedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                          <div className="min-h-0">
+                            <div className="space-y-1 pt-2">
+                              {othersGroups.map((g) => {
+                                const rep = g.copies[0];
+                                const totalCount = g.copies.length;
+                                return (
+                                  <div
+                                    key={rep.id}
+                                    className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-sm"
+                                    onPointerDown={startLongPress(() => showNameToast(rep.description))}
+                                    onPointerMove={moveLongPress}
+                                    onPointerUp={cancelLongPress}
+                                    onPointerCancel={cancelLongPress}
+                                    onClick={swallowLongPressClick}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                  >
+                                    <span aria-hidden className="inline-flex w-5 shrink-0 items-center justify-center text-base leading-none">
+                                      <ItemEmoji description={rep.description} hint={rep.category} modelEmoji={rep.emoji} />
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate text-gray-400">
+                                      {rep.description}
+                                    </span>
+                                    {totalCount > 1 && (
+                                      <span className="shrink-0 text-gray-400">×{totalCount}</span>
+                                    )}
+                                    <span className="shrink-0 text-xs text-gray-400">{othersClaimerNames(g)}</span>
+                                    <span className="shrink-0 text-gray-400">{formatOre(rep.priceOre)}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
-                      </details>
+                      </div>
                     )}
                   </div>
                 );
